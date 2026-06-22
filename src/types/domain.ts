@@ -78,6 +78,8 @@ export type Round = {
   teeTimes: TeeTime[];
 };
 
+export type ManualMatchResult = Winner;
+
 export type Match = {
   id: string;
   roundId: string;
@@ -85,12 +87,19 @@ export type Match = {
   aPlayers: string[];
   bPlayers: string[];
   points: number;
+  manualResult?: ManualMatchResult;
 };
 
 export type ScoreEntry = {
   roundId: string;
   playerId: string;
   grossScore: number;
+};
+
+export type ScoringSettings = {
+  bestBallHandicapAllowance: number;
+  singlesHandicapAllowance: number;
+  netScoreHandicapAllowance: number;
 };
 
 export type MatchResult = {
@@ -100,6 +109,7 @@ export type MatchResult = {
   aNet?: number;
   bNet?: number;
   waitingOn: string[];
+  isManual?: boolean;
 };
 
 export type LeaderboardRow = {
@@ -128,4 +138,5 @@ export type TripState = {
   rounds: Round[];
   matches: Match[];
   scores: ScoreEntry[];
+  scoringSettings: ScoringSettings;
 };

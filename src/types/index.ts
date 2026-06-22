@@ -7,6 +7,7 @@ export type {
   Round,
   RoundFormat,
   ScoreEntry,
+  ScoringSettings,
   Screen,
   Team,
   TeamId,
@@ -14,5 +15,5 @@ export type {
   TeeTime,
   Trip,
   TripState,
-  Winner
+  Winner,
 } from "./domain";

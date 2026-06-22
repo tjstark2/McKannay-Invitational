@@ -8,17 +8,30 @@ import type { Screen, TeamId } from "@/types";
 
 export function TeamsScreen({
   setActiveScreen,
-  setSelectedTeamId
+  setSelectedTeamId,
 }: {
   setActiveScreen: (screen: Screen) => void;
   setSelectedTeamId: (teamId: TeamId) => void;
 }) {
-  const { teams, players, rounds, matches, scores, courses } = useTripState();
-  const summaries = buildTeamSummaries(teams, players, rounds, matches, scores, courses);
+  const { teams, players, rounds, matches, scores, courses, scoringSettings } =
+    useTripState();
+
+  const summaries = buildTeamSummaries(
+    teams,
+    players,
+    rounds,
+    matches,
+    scores,
+    courses,
+    scoringSettings
+  );
 
   return (
     <div className="space-y-4">
-      <SectionHeader title="Teams" subtitle="Rosters, points, handicaps, and match wins." />
+      <SectionHeader
+        title="Teams"
+        subtitle="Rosters, points, handicaps, and match wins."
+      />
 
       {summaries.map((summary) => (
         <button
@@ -32,14 +45,24 @@ export function TeamsScreen({
           <Card className="p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className={summary.teamId === "A" ? "text-2xl font-black text-red-800" : "text-2xl font-black text-blue-800"}>
+                <h2
+                  className={
+                    summary.teamId === "A"
+                      ? "text-2xl font-black text-red-800"
+                      : "text-2xl font-black text-blue-800"
+                  }
+                >
                   {summary.teamName}
                 </h2>
-                <p className="mt-1 text-sm text-slate-500">{summary.playerCount} players</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  {summary.playerCount} players
+                </p>
               </div>
 
               <div className="flex items-center gap-2">
-                <Pill tone={summary.teamId === "A" ? "red" : "blue"}>{summary.points} pts</Pill>
+                <Pill tone={summary.teamId === "A" ? "red" : "blue"}>
+                  {summary.points} pts
+                </Pill>
                 <ChevronRight className="h-5 w-5 text-slate-400" />
               </div>
             </div>
@@ -47,12 +70,16 @@ export function TeamsScreen({
             <div className="mt-5 grid grid-cols-3 gap-2 text-center">
               <div className="rounded-xl bg-slate-50 p-3">
                 <p className="text-xs font-bold text-slate-500">Avg HCP</p>
-                <p className="mt-1 font-black">{summary.averageHandicap.toFixed(1)}</p>
+                <p className="mt-1 font-black">
+                  {summary.averageHandicap.toFixed(1)}
+                </p>
               </div>
+
               <div className="rounded-xl bg-slate-50 p-3">
                 <p className="text-xs font-bold text-slate-500">Total HCP</p>
                 <p className="mt-1 font-black">{summary.totalHandicap}</p>
               </div>
+
               <div className="rounded-xl bg-slate-50 p-3">
                 <p className="text-xs font-bold text-slate-500">Wins</p>
                 <p className="mt-1 font-black">{summary.completedMatches}</p>

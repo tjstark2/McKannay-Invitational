@@ -1,4 +1,14 @@
-import type { Course, Match, Player, Round, ScoreEntry, Team, Trip, TripState } from "@/types";
+import type {
+  Course,
+  Match,
+  Player,
+  Round,
+  ScoreEntry,
+  ScoringSettings,
+  Team,
+  Trip,
+  TripState,
+} from "@/types";
 
 export const initialTrip: Trip = {
   id: "mckannay-2026",
@@ -11,12 +21,12 @@ export const initialTrip: Trip = {
   totalPoints: 18,
   winningNumber: 9.5,
   retainNumber: 9,
-  defendingTeam: null
+  defendingTeam: null,
 };
 
 export const initialTeams: Team[] = [
   { id: "A", name: "Team North", color: "red" },
-  { id: "B", name: "Team South", color: "blue" }
+  { id: "B", name: "Team South", color: "blue" },
 ];
 
 export const initialPlayers: Player[] = [
@@ -31,7 +41,7 @@ export const initialPlayers: Player[] = [
   { id: "B3", name: "Tyler James", team: "B", handicapIndex: 13, avatarEmoji: "🔥" },
   { id: "B4", name: "Nick Parker", team: "B", handicapIndex: 16, avatarEmoji: "🎯" },
   { id: "B5", name: "Jake Wilson", team: "B", handicapIndex: 19, avatarEmoji: "🌴" },
-  { id: "B6", name: "Luke Bennett", team: "B", handicapIndex: 22, avatarEmoji: "🌊" }
+  { id: "B6", name: "Luke Bennett", team: "B", handicapIndex: 22, avatarEmoji: "🌊" },
 ];
 
 export const initialCourses: Course[] = [
@@ -44,7 +54,7 @@ export const initialCourses: Course[] = [
     rating: 72,
     slope: 130,
     imageUrl: "/images/atlantic-dunes.jpg",
-    notes: "Round 1 course for 2v2 Best Ball."
+    notes: "Round 1 course for 2v2 Best Ball.",
   },
   {
     id: "harbour-town",
@@ -55,7 +65,7 @@ export const initialCourses: Course[] = [
     rating: 71.4,
     slope: 136,
     imageUrl: "/images/harbour-town.jpg",
-    notes: "Round 2 course for 1v1 Match Play."
+    notes: "Round 2 course for 1v1 Match Play.",
   },
   {
     id: "heron-point",
@@ -66,8 +76,8 @@ export const initialCourses: Course[] = [
     rating: 71.2,
     slope: 132,
     imageUrl: "/images/heron-point.jpg",
-    notes: "Round 3 course for Individual Net Score."
-  }
+    notes: "Round 3 course for Individual Net Score.",
+  },
 ];
 
 export const initialRounds: Round[] = [
@@ -83,8 +93,8 @@ export const initialRounds: Round[] = [
     teeTimes: [
       { id: "r1t1", time: "8:00 AM", players: ["A1", "A2", "B1", "B2"] },
       { id: "r1t2", time: "8:10 AM", players: ["A3", "A4", "B3", "B4"] },
-      { id: "r1t3", time: "8:20 AM", players: ["A5", "A6", "B5", "B6"] }
-    ]
+      { id: "r1t3", time: "8:20 AM", players: ["A5", "A6", "B5", "B6"] },
+    ],
   },
   {
     id: "round-2",
@@ -98,8 +108,8 @@ export const initialRounds: Round[] = [
     teeTimes: [
       { id: "r2t1", time: "8:00 AM", players: ["A1", "B1", "A2", "B2"] },
       { id: "r2t2", time: "8:10 AM", players: ["A3", "B3", "A4", "B4"] },
-      { id: "r2t3", time: "8:20 AM", players: ["A5", "B5", "A6", "B6"] }
-    ]
+      { id: "r2t3", time: "8:20 AM", players: ["A5", "B5", "A6", "B6"] },
+    ],
   },
   {
     id: "round-3",
@@ -113,24 +123,96 @@ export const initialRounds: Round[] = [
     teeTimes: [
       { id: "r3t1", time: "8:00 AM", players: ["A1", "A3", "B1", "B3"] },
       { id: "r3t2", time: "8:10 AM", players: ["A2", "A4", "B2", "B4"] },
-      { id: "r3t3", time: "8:20 AM", players: ["A5", "A6", "B5", "B6"] }
-    ]
-  }
+      { id: "r3t3", time: "8:20 AM", players: ["A5", "A6", "B5", "B6"] },
+    ],
+  },
 ];
 
 export const initialMatches: Match[] = [
-  { id: "m1", roundId: "round-1", label: "Best Ball 1", aPlayers: ["A1", "A2"], bPlayers: ["B1", "B2"], points: 2 },
-  { id: "m2", roundId: "round-1", label: "Best Ball 2", aPlayers: ["A3", "A4"], bPlayers: ["B3", "B4"], points: 2 },
-  { id: "m3", roundId: "round-1", label: "Best Ball 3", aPlayers: ["A5", "A6"], bPlayers: ["B5", "B6"], points: 2 },
-  { id: "m4", roundId: "round-2", label: "Singles 1", aPlayers: ["A1"], bPlayers: ["B1"], points: 1 },
-  { id: "m5", roundId: "round-2", label: "Singles 2", aPlayers: ["A2"], bPlayers: ["B2"], points: 1 },
-  { id: "m6", roundId: "round-2", label: "Singles 3", aPlayers: ["A3"], bPlayers: ["B3"], points: 1 },
-  { id: "m7", roundId: "round-2", label: "Singles 4", aPlayers: ["A4"], bPlayers: ["B4"], points: 1 },
-  { id: "m8", roundId: "round-2", label: "Singles 5", aPlayers: ["A5"], bPlayers: ["B5"], points: 1 },
-  { id: "m9", roundId: "round-2", label: "Singles 6", aPlayers: ["A6"], bPlayers: ["B6"], points: 1 }
+  {
+    id: "m1",
+    roundId: "round-1",
+    label: "Best Ball 1",
+    aPlayers: ["A1", "A2"],
+    bPlayers: ["B1", "B2"],
+    points: 2,
+    manualResult: null,
+  },
+  {
+    id: "m2",
+    roundId: "round-1",
+    label: "Best Ball 2",
+    aPlayers: ["A3", "A4"],
+    bPlayers: ["B3", "B4"],
+    points: 2,
+    manualResult: null,
+  },
+  {
+    id: "m3",
+    roundId: "round-1",
+    label: "Best Ball 3",
+    aPlayers: ["A5", "A6"],
+    bPlayers: ["B5", "B6"],
+    points: 2,
+    manualResult: null,
+  },
+  {
+    id: "m4",
+    roundId: "round-2",
+    label: "Singles 1",
+    aPlayers: ["A1"],
+    bPlayers: ["B1"],
+    points: 1,
+  },
+  {
+    id: "m5",
+    roundId: "round-2",
+    label: "Singles 2",
+    aPlayers: ["A2"],
+    bPlayers: ["B2"],
+    points: 1,
+  },
+  {
+    id: "m6",
+    roundId: "round-2",
+    label: "Singles 3",
+    aPlayers: ["A3"],
+    bPlayers: ["B3"],
+    points: 1,
+  },
+  {
+    id: "m7",
+    roundId: "round-2",
+    label: "Singles 4",
+    aPlayers: ["A4"],
+    bPlayers: ["B4"],
+    points: 1,
+  },
+  {
+    id: "m8",
+    roundId: "round-2",
+    label: "Singles 5",
+    aPlayers: ["A5"],
+    bPlayers: ["B5"],
+    points: 1,
+  },
+  {
+    id: "m9",
+    roundId: "round-2",
+    label: "Singles 6",
+    aPlayers: ["A6"],
+    bPlayers: ["B6"],
+    points: 1,
+  },
 ];
 
 export const initialScores: ScoreEntry[] = [];
+
+export const initialScoringSettings: ScoringSettings = {
+  bestBallHandicapAllowance: 0,
+  singlesHandicapAllowance: 100,
+  netScoreHandicapAllowance: 100,
+};
 
 export const initialTripState: TripState = {
   trip: initialTrip,
@@ -139,5 +221,6 @@ export const initialTripState: TripState = {
   courses: initialCourses,
   rounds: initialRounds,
   matches: initialMatches,
-  scores: initialScores
+  scores: initialScores,
+  scoringSettings: initialScoringSettings,
 };

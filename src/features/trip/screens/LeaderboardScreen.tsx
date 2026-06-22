@@ -5,13 +5,33 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 
 export function LeaderboardScreen() {
-  const { courses, matches, players, rounds, scores } = useTripState();
-  const leaderboard = buildLeaderboard(players, rounds, matches, scores, courses);
-  const awards = getTournamentAwards(players, rounds, matches, scores, courses);
+  const { courses, matches, players, rounds, scores, scoringSettings } =
+    useTripState();
+
+  const leaderboard = buildLeaderboard(
+    players,
+    rounds,
+    matches,
+    scores,
+    courses,
+    scoringSettings
+  );
+
+  const awards = getTournamentAwards(
+    players,
+    rounds,
+    matches,
+    scores,
+    courses,
+    scoringSettings
+  );
 
   return (
     <div className="space-y-4">
-      <SectionHeader title="Leaderboard" subtitle="Individual points, net scoring, and awards." />
+      <SectionHeader
+        title="Leaderboard"
+        subtitle="Individual points, net scoring, and awards."
+      />
 
       <div className="grid grid-cols-3 gap-2">
         <Card className="p-3 text-center">
@@ -42,15 +62,29 @@ export function LeaderboardScreen() {
         </div>
 
         {leaderboard.map((row, index) => (
-          <div key={row.player.id} className="grid grid-cols-5 items-center border-b border-slate-50 py-3 text-sm last:border-b-0">
+          <div
+            key={row.player.id}
+            className="grid grid-cols-5 items-center border-b border-slate-50 py-3 text-sm last:border-b-0"
+          >
             <div className="col-span-2">
-              <p className="font-black">{index + 1}. {row.player.name}</p>
+              <p className="font-black">
+                {index + 1}. {row.player.name}
+              </p>
               <p className="text-xs text-slate-500">Team {row.player.team}</p>
             </div>
+
             <div className="text-center font-bold">{row.pointsWon}</div>
-            <div className="text-center font-bold">{formatPlusMinus(row.totalNetToPar)}</div>
+
             <div className="text-center font-bold">
-              {row.averageNetToPar === null ? "-" : row.averageNetToPar > 0 ? `+${row.averageNetToPar.toFixed(1)}` : row.averageNetToPar.toFixed(1)}
+              {formatPlusMinus(row.totalNetToPar)}
+            </div>
+
+            <div className="text-center font-bold">
+              {row.averageNetToPar === null
+                ? "-"
+                : row.averageNetToPar > 0
+                ? `+${row.averageNetToPar.toFixed(1)}`
+                : row.averageNetToPar.toFixed(1)}
             </div>
           </div>
         ))}
