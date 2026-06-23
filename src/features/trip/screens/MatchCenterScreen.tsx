@@ -1,11 +1,17 @@
+import { useState } from "react";
 import { ChevronRight } from "lucide-react";
-import { resolveMatch } from "@/lib/scoring";
+import {
+  allowedCourseHandicap,
+  getScore,
+  netScore,
+  resolveMatch,
+} from "@/lib/scoring";
 import { formatRoundFormat } from "@/lib/format";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useTripState } from "@/features/trip/state/TripStateContext";
-import type { Screen } from "@/types";
+import type { Screen, TeamId } from "@/types";
 
 export function MatchCenterScreen({
   setActiveScreen,
@@ -17,76 +23,249 @@ export function MatchCenterScreen({
   const { courses, matches, players, rounds, scores, scoringSettings } =
     useTripState();
 
+  const [selectedRoundId, setSelectedRoundId] = useState<string>(
+    rounds[0]?.id ?? ""
+  );
+
+  const selectedRound =
+    rounds.find((round) => round.id === selectedRoundId) ?? null;
+
+  const selectedCourse = selectedRound
+    ? courses.find((course) => course.id === selectedRound.courseId) ??
+      courses[0]
+    : null;
+
   const getPlayerName = (playerId: string) =>
     players.find((player) => player.id === playerId)?.name ?? playerId;
+
+  const visibleMatches = matches.filter(
+    (match) => match.roundId === selectedRoundId
+  );
+
+  const netScoreRows =
+    selectedRound && selectedRound.format === "net_score"
+      ? players
+          .map((player) => {
+            const score = getScore(scores, selectedRound.id, player.id);
+
+            const courseHandicap = allowedCourseHandicap(
+              player,
+              selectedRound,
+              courses,
+              scoringSettings
+            );
+
+            return {
+              player,
+              grossScore: score?.grossScore ?? null,
+              handicapAdjustment: courseHandicap,
+              netScore: score
+                ? netScore(
+                    player,
+                    selectedRound,
+                    score.grossScore,
+                    courses,
+                    scoringSettings
+                  )
+                : null,
+            };
+          })
+          .sort((a, b) => {
+            if (a.netScore === null && b.netScore === null) return 0;
+            if (a.netScore === null) return 1;
+            if (b.netScore === null) return -1;
+            return a.netScore - b.netScore;
+          })
+      : [];
+
+  const netScorePoints = netScoreRows
+    .filter((row) => row.netScore !== null)
+    .slice(0, 6)
+    .reduce<Record<TeamId, number>>(
+      (acc, row) => {
+        acc[row.player.team] += 1;
+        return acc;
+      },
+      { A: 0, B: 0 }
+    );
 
   return (
     <div className="space-y-4">
       <SectionHeader
         title="Match Center"
-        subtitle="Pairings, formats, status, and point values."
+        subtitle="View matches by round, format, and status."
       />
 
-      {matches.map((match) => {
-        const result = resolveMatch(
-          match,
-          players,
-          rounds,
-          scores,
-          courses,
-          scoringSettings
-        );
-
-        const round = rounds.find((item) => item.id === match.roundId);
-        const course = courses.find((item) => item.id === round?.courseId);
-
-        return (
+      <div className="grid grid-cols-3 gap-2">
+        {rounds.map((round) => (
           <button
-            key={match.id}
-            onClick={() => {
-              setSelectedMatchId(match.id);
-              setActiveScreen("matchDetail");
-            }}
-            className="block w-full text-left"
+            key={round.id}
+            onClick={() => setSelectedRoundId(round.id)}
+            className={`rounded-xl px-3 py-2 text-sm font-black ${
+              selectedRoundId === round.id
+                ? "bg-fairway-900 text-white"
+                : "bg-slate-100 text-slate-600"
+            }`}
           >
-            <Card className="p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                    {round?.title ?? "Round"} · {course?.name ?? "Course"}
-                  </p>
-                  <h2 className="mt-1 font-black">{match.label}</h2>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {round ? formatRoundFormat(round.format) : ""} ·{" "}
-                    {match.points} pts
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Pill tone={result.status === "final" ? "green" : "amber"}>
-                    {result.status}
-                  </Pill>
-                  <ChevronRight className="h-5 w-5 text-slate-400" />
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
-                <p className="text-sm font-bold text-red-800">
-                  {match.aPlayers.map(getPlayerName).join(" + ")}
-                </p>
-                <p className="text-xs font-bold text-slate-400">VS</p>
-                <p className="text-sm font-bold text-blue-800">
-                  {match.bPlayers.map(getPlayerName).join(" + ")}
-                </p>
-              </div>
-
-              <p className="mt-4 rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-600">
-                {result.label}
-              </p>
-            </Card>
+            Round {round.roundNumber}
           </button>
-        );
-      })}
+        ))}
+      </div>
+
+      {selectedRound?.format === "net_score" ? (
+        <Card className="p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="font-black">
+                {selectedRound.title} Net Leaderboard
+              </h2>
+
+              <p className="mt-1 text-xs text-slate-500">
+                {selectedCourse?.name ?? "Course"} · Net Score ·{" "}
+                {scoringSettings.netScoreHandicapAllowance}% allowance
+              </p>
+            </div>
+
+            <Pill tone="green">
+              {netScorePoints.A}-{netScorePoints.B}
+            </Pill>
+          </div>
+
+          <div className="mt-4 grid grid-cols-5 border-b border-slate-200 pb-2 text-xs font-black uppercase text-slate-500">
+            <div className="col-span-2">Player</div>
+            <div className="text-center">Gross</div>
+            <div className="text-center">HCP</div>
+            <div className="text-center">Net</div>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {netScoreRows.map((row, index) => {
+              const earnsPoint =
+                row.netScore !== null && index < 6;
+
+              return (
+                <div
+                  key={row.player.id}
+                  className="grid grid-cols-5 items-center py-3 text-sm"
+                >
+                  <div className="col-span-2">
+                    <p className="font-black">
+                      {index + 1}. {row.player.name}
+                    </p>
+
+                    <p className="text-xs text-slate-500">
+                      Team {row.player.team}
+                      {earnsPoint ? " · +1 pt" : ""}
+                    </p>
+                  </div>
+
+                  <div className="text-center font-bold">
+                    {row.grossScore ?? "-"}
+                  </div>
+
+                  <div className="text-center font-bold">
+                    -{row.handicapAdjustment}
+                  </div>
+
+                  <div className="text-center font-black">
+                    {row.netScore ?? "-"}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      ) : null}
+
+      {selectedRound?.format !== "net_score" &&
+        visibleMatches.map((match) => {
+          const result = resolveMatch(
+            match,
+            players,
+            rounds,
+            scores,
+            courses,
+            scoringSettings
+          );
+
+          const round = rounds.find(
+            (item) => item.id === match.roundId
+          );
+
+          const course = courses.find(
+            (item) => item.id === round?.courseId
+          );
+
+          return (
+            <button
+              key={match.id}
+              onClick={() => {
+                setSelectedMatchId(match.id);
+                setActiveScreen("matchDetail");
+              }}
+              className="block w-full text-left"
+            >
+              <Card className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                      {round?.title ?? "Round"} ·{" "}
+                      {course?.name ?? "Course"}
+                    </p>
+
+                    <h2 className="mt-1 font-black">
+                      {match.label}
+                    </h2>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                      {round
+                        ? formatRoundFormat(round.format)
+                        : ""}
+                      {" · "}
+                      {match.points} pts
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Pill
+                      tone={
+                        result.status === "final"
+                          ? "green"
+                          : "amber"
+                      }
+                    >
+                      {result.status}
+                    </Pill>
+
+                    <ChevronRight className="h-5 w-5 text-slate-400" />
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
+                  <p className="text-sm font-bold text-red-800">
+                    {match.aPlayers
+                      .map(getPlayerName)
+                      .join(" + ")}
+                  </p>
+
+                  <p className="text-xs font-bold text-slate-400">
+                    VS
+                  </p>
+
+                  <p className="text-sm font-bold text-blue-800">
+                    {match.bPlayers
+                      .map(getPlayerName)
+                      .join(" + ")}
+                  </p>
+                </div>
+
+                <p className="mt-4 rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-600">
+                  {result.label}
+                </p>
+              </Card>
+            </button>
+          );
+        })}
     </div>
   );
 }

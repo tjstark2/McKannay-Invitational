@@ -3,6 +3,7 @@ export type Winner = TeamId | "T" | null;
 
 export type Screen =
   | "overview"
+  | "tournament"
   | "schedule"
   | "scoreboard"
   | "leaderboard"

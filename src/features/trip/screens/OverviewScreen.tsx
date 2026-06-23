@@ -116,7 +116,7 @@ export function OverviewScreen({
 
       <div className="grid grid-cols-2 gap-3">
         <button
-          onClick={() => setActiveScreen("matchCenter")}
+          onClick={() => setActiveScreen("tournament")}
           className="rounded-2xl bg-fairway-900 p-4 text-left text-white shadow-sm"
         >
           <div className="flex items-start justify-between gap-3">
