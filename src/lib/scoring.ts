@@ -915,3 +915,217 @@ export function getTournamentAwards(
 
   return { mvp, coldest, clutch };
 }
+// ===================== Overview insights (Batch A) =====================
+
+export type RoundStatus = "not_started" | "live" | "complete";
+
+export function getRoundStatus(
+  round: Round,
+  players: Player[],
+  scores: ScoreEntry[]
+): RoundStatus {
+  const roundScores = scores.filter((s) => s.roundId === round.id);
+  const finals = roundScores.filter(
+    (s) => typeof s.grossScore === "number"
+  ).length;
+  const fronts = roundScores.filter(
+    (s) => typeof s.frontNineScore === "number"
+  ).length;
+  if (players.length > 0 && finals >= players.length) return "complete";
+  if (finals > 0 || fronts > 0) return "live";
+  return "not_started";
+}
+
+export type AwardResult = { players: Player[]; detail: string } | null;
+
+function fmtPoints(value: number): string {
+  return Number.isInteger(value) ? `${value}` : value.toFixed(1);
+}
+
+function fmtToPar(value: number): string {
+  const rounded = Math.round(value * 10) / 10;
+  if (rounded === 0) return "E";
+  return rounded > 0 ? `+${rounded}` : `${rounded}`;
+}
+
+// Richer awards for the Overview: returns co-leaders on ties and a stat detail.
+export function getOverviewAwards(
+  players: Player[],
+  rounds: Round[],
+  matches: Match[],
+  scores: ScoreEntry[],
+  courses: Course[],
+  scoringSettings: ScoringSettings
+): { mvp: AwardResult; clutch: AwardResult; coldest: AwardResult } {
+  const leaderboard = buildLeaderboard(
+    players,
+    rounds,
+    matches,
+    scores,
+    courses,
+    scoringSettings
+  );
+
+  // MVP — most points won; tiebreak best (lowest) average net.
+  let mvp: AwardResult = null;
+  if (leaderboard.length > 0) {
+    const top = leaderboard[0];
+    if (top.pointsWon > 0) {
+      const co = leaderboard.filter(
+        (r) =>
+          r.pointsWon === top.pointsWon &&
+          (r.averageNetToPar ?? 9999) === (top.averageNetToPar ?? 9999)
+      );
+      mvp = {
+        players: co.map((r) => r.player),
+        detail: `${fmtPoints(top.pointsWon)} pts won`,
+      };
+    }
+  }
+
+  // Coldest — worst (highest) average net to par among players who've played.
+  const coldRows = leaderboard.filter(
+    (r) => r.roundsPlayed > 0 && r.averageNetToPar !== null
+  );
+  let coldest: AwardResult = null;
+  if (coldRows.length > 0) {
+    const worst = [...coldRows].sort(
+      (a, b) => (b.averageNetToPar as number) - (a.averageNetToPar as number)
+    )[0];
+    const co = coldRows.filter(
+      (r) => r.averageNetToPar === worst.averageNetToPar
+    );
+    coldest = {
+      players: co.map((r) => r.player),
+      detail: `${fmtToPar(worst.averageNetToPar as number)} avg net`,
+    };
+  }
+
+  // Clutch — most points won in close decided matches (singles within 1–2 net).
+  const clutchPoints = new Map<string, number>();
+  matches.forEach((match) => {
+    const round = getRound(rounds, match.roundId);
+    if (!round) return;
+    const result = resolveMatch(
+      match,
+      players,
+      rounds,
+      scores,
+      courses,
+      scoringSettings
+    );
+    if (result.status !== "final") return;
+    if (result.winner !== "A" && result.winner !== "B") return;
+    if (result.aNet === undefined || result.bNet === undefined) return;
+    const margin = Math.abs(result.aNet - result.bNet);
+    if (margin < 1 || margin > 2) return;
+    const winners = result.winner === "A" ? match.aPlayers : match.bPlayers;
+    winners.forEach((pid) =>
+      clutchPoints.set(pid, (clutchPoints.get(pid) ?? 0) + match.points)
+    );
+  });
+  let clutch: AwardResult = null;
+  if (clutchPoints.size > 0) {
+    const max = Math.max(...clutchPoints.values());
+    if (max > 0) {
+      const ids = [...clutchPoints.entries()]
+        .filter(([, v]) => v === max)
+        .map(([id]) => id);
+      const pls = ids
+        .map((id) => getPlayer(players, id))
+        .filter((p): p is Player => Boolean(p));
+      clutch = {
+        players: pls,
+        detail: `${fmtPoints(max)} pts in close matches`,
+      };
+    }
+  }
+
+  return { mvp, clutch, coldest };
+}
+
+// Best single net round logged so far (lowest net-to-par).
+export function getBestNetRound(
+  players: Player[],
+  rounds: Round[],
+  scores: ScoreEntry[],
+  courses: Course[],
+  scoringSettings: ScoringSettings
+): { player: Player; round: Round; netToPar: number; label: string } | null {
+  let best:
+    | { player: Player; round: Round; netToPar: number; label: string }
+    | null = null;
+  scores.forEach((score) => {
+    if (!hasFinalScore(score)) return;
+    const player = getPlayer(players, score.playerId);
+    const round = getRound(rounds, score.roundId);
+    if (!player || !round) return;
+    const netToPar = playerNetToPar(
+      player,
+      round,
+      score.grossScore,
+      courses,
+      scoringSettings
+    );
+    if (!best || netToPar < best.netToPar) {
+      best = { player, round, netToPar, label: fmtToPar(netToPar) };
+    }
+  });
+  return best;
+}
+
+// Biggest mover — largest improvement in net-to-par from a player's first
+// logged round to their latest (needs at least two finished rounds).
+export function getBiggestMover(
+  players: Player[],
+  rounds: Round[],
+  scores: ScoreEntry[],
+  courses: Course[],
+  scoringSettings: ScoringSettings
+): { player: Player; delta: number; label: string } | null {
+  const candidates = players
+    .map((player) => {
+      const finals = scores
+        .filter(
+          (s): s is ScoreEntry & { grossScore: number } =>
+            s.playerId === player.id && hasFinalScore(s)
+        )
+        .map((s) => ({ s, round: getRound(rounds, s.roundId) }))
+        .filter(
+          (x): x is { s: ScoreEntry & { grossScore: number }; round: Round } =>
+            Boolean(x.round)
+        )
+        .sort((a, b) => a.round.roundNumber - b.round.roundNumber);
+
+      if (finals.length < 2) return null;
+
+      const first = playerNetToPar(
+        player,
+        finals[0].round,
+        finals[0].s.grossScore,
+        courses,
+        scoringSettings
+      );
+      const last = playerNetToPar(
+        player,
+        finals[finals.length - 1].round,
+        finals[finals.length - 1].s.grossScore,
+        courses,
+        scoringSettings
+      );
+      const delta = last - first; // negative = improving
+
+      return {
+        player,
+        delta,
+        label: `${Math.abs(Math.round(delta * 10) / 10)} strokes better`,
+      };
+    })
+    .filter(
+      (c): c is { player: Player; delta: number; label: string } =>
+        c !== null && c.delta < 0
+    );
+
+  if (candidates.length === 0) return null;
+  return candidates.sort((a, b) => a.delta - b.delta)[0];
+}

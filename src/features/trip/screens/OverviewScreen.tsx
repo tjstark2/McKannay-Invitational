@@ -1,16 +1,43 @@
-import { ChevronRight } from "lucide-react";
 import { formatRoundFormat } from "@/lib/format";
 import {
   buildCurrentRoundStandings,
+  getBestNetRound,
+  getBiggestMover,
   getCurrentRoundRace,
-  getTournamentAwards,
+  getOverviewAwards,
+  getRoundStatus,
   getTournamentProgress,
+  type AwardResult,
 } from "@/lib/scoring";
 import { Card } from "@/components/ui/Card";
 import { NextRoundCard } from "@/features/trip/components/NextRoundCard";
 import { StandingsCard } from "@/features/trip/components/StandingsCard";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import type { Screen } from "@/types";
+
+function AwardTile({
+  emoji,
+  label,
+  award,
+}: {
+  emoji: string;
+  label: string;
+  award: AwardResult;
+}) {
+  return (
+    <Card className="p-3 text-center">
+      <p className="text-xs font-bold text-slate-500">
+        {emoji} {label}
+      </p>
+      <p className="mt-1 text-sm font-black">
+        {award ? award.players.map((p) => p.name).join(" & ") : "—"}
+      </p>
+      <p className="mt-0.5 text-xs text-slate-500">
+        {award ? award.detail : "Not enough data"}
+      </p>
+    </Card>
+  );
+}
 
 export function OverviewScreen({
   setActiveScreen,
@@ -32,6 +59,34 @@ export function OverviewScreen({
   const teamAName = teams.find((team) => team.id === "A")?.name ?? "Team A";
   const teamBName = teams.find((team) => team.id === "B")?.name ?? "Team B";
 
+  // Featured round: the admin's active round unless it's complete, in which
+  // case auto-advance to the first round that isn't finished yet.
+  const adminRound = rounds.find((round) => round.id === currentRoundId);
+  const adminComplete = adminRound
+    ? getRoundStatus(adminRound, players, scores) === "complete"
+    : false;
+  const featuredRound =
+    (adminRound && !adminComplete ? adminRound : null) ??
+    rounds.find((round) => getRoundStatus(round, players, scores) !== "complete") ??
+    rounds[rounds.length - 1] ??
+    adminRound ??
+    rounds[0];
+
+  if (!featuredRound) {
+    return (
+      <div className="space-y-6">
+        <Card className="p-5">
+          <p className="font-black">No rounds yet</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Add a round in Admin to get the tournament started.
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
+  const featuredStatus = getRoundStatus(featuredRound, players, scores);
+
   const progress = getTournamentProgress(
     trip.totalPoints,
     matches,
@@ -42,7 +97,7 @@ export function OverviewScreen({
     scoringSettings
   );
 
-  const awards = getTournamentAwards(
+  const awards = getOverviewAwards(
     players,
     rounds,
     matches,
@@ -51,16 +106,25 @@ export function OverviewScreen({
     scoringSettings
   );
 
-  const currentRound =
-    rounds.find((round) => round.id === currentRoundId) ?? rounds[0];
-
-  const currentCourse = courses.find(
-    (course) => course.id === currentRound.courseId
+  const bestNet = getBestNetRound(
+    players,
+    rounds,
+    scores,
+    courses,
+    scoringSettings
   );
 
-  const currentRoundRace = getCurrentRoundRace(
+  const biggestMover = getBiggestMover(
+    players,
+    rounds,
+    scores,
+    courses,
+    scoringSettings
+  );
+
+  const race = getCurrentRoundRace(
     trip.totalPoints,
-    currentRound,
+    featuredRound,
     matches,
     players,
     rounds,
@@ -69,327 +133,278 @@ export function OverviewScreen({
     scoringSettings
   );
 
-  const currentRoundScores = scores.filter(
-    (score) => score.roundId === currentRound.id
+  const roundScores = scores.filter(
+    (score) => score.roundId === featuredRound.id
   );
-
-  const frontNineSubmitted = currentRoundScores.filter(
+  const frontNineSubmitted = roundScores.filter(
     (score) => typeof score.frontNineScore === "number"
   ).length;
-
-  const finalSubmitted = currentRoundScores.filter(
+  const finalSubmitted = roundScores.filter(
     (score) => typeof score.grossScore === "number"
   ).length;
 
-  const currentRoundStandings = buildCurrentRoundStandings(
-    currentRound,
+  const standings = buildCurrentRoundStandings(
+    featuredRound,
     players,
     scores,
     courses,
     scoringSettings
   );
 
-  const currentRoundLeaders = currentRoundStandings
-    .filter((row) => row.displayNet !== null)
-    .slice(0, 5);
+  const leaders = standings.filter((row) => row.displayNet !== null).slice(0, 3);
 
-  const hotRightNow =
-    [...currentRoundStandings]
-      .filter((row) => row.frontNet !== null)
+  const hot =
+    [...standings]
+      .filter((row) => row.frontNet !== null && !row.isFinal)
       .sort((a, b) => (a.frontNet ?? 999) - (b.frontNet ?? 999))[0] ?? null;
 
-  const currentRoundStatus =
-    finalSubmitted === players.length
-      ? "Complete"
-      : frontNineSubmitted > 0 || finalSubmitted > 0
-      ? "In Progress"
-      : "Not Started";
+  // Team momentum — who is projected to take the live round, and by how much.
+  const projA = race.currentProjectedPoints.A;
+  const projB = race.currentProjectedPoints.B;
+  const momentumLeader =
+    projA > projB ? teamAName : projB > projA ? teamBName : null;
+  const momentumMargin = Math.abs(projA - projB);
 
   return (
     <div className="space-y-6">
-      <NextRoundCard setActiveScreen={setActiveScreen} />
+      {/* 1 — hero */}
+      <NextRoundCard
+        round={featuredRound}
+        status={featuredStatus}
+        setActiveScreen={setActiveScreen}
+      />
 
-      <Card className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-black uppercase tracking-wide text-fairway-900">
-              Tournament Race
-            </p>
-            <h2 className="mt-1 text-xl font-black">
-              Projected: {currentRoundRace.projectedTotalPoints.A} -{" "}
-              {currentRoundRace.projectedTotalPoints.B}
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Includes confirmed points plus current round projections.
-            </p>
-          </div>
-
-          <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
-            {currentRoundRace.totalProjectedRemaining} pts left
-          </div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-2 text-center">
-          <div className="rounded-xl bg-slate-50 p-3">
-            <p className="text-xs font-bold text-slate-500">{teamAName}</p>
-            <p className="mt-1 text-xl font-black">
-              {currentRoundRace.confirmedPriorPoints.A} confirmed
-            </p>
-            <p className="mt-1 text-xs font-semibold text-slate-500">
-              +{currentRoundRace.currentProjectedPoints.A} projected this round
-            </p>
-          </div>
-
-          <div className="rounded-xl bg-slate-50 p-3">
-            <p className="text-xs font-bold text-slate-500">{teamBName}</p>
-            <p className="mt-1 text-xl font-black">
-              {currentRoundRace.confirmedPriorPoints.B} confirmed
-            </p>
-            <p className="mt-1 text-xs font-semibold text-slate-500">
-              +{currentRoundRace.currentProjectedPoints.B} projected this round
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-xl bg-sand-50 p-3">
-            <p className="text-xs font-bold text-slate-500">Current Confirmed</p>
-            <p className="mt-1 text-lg font-black">
-              {currentRoundRace.currentConfirmedPoints.A}-
-              {currentRoundRace.currentConfirmedPoints.B}
-            </p>
-          </div>
-
-          <div className="rounded-xl bg-sand-50 p-3">
-            <p className="text-xs font-bold text-slate-500">Current Projected</p>
-            <p className="mt-1 text-lg font-black">
-              {currentRoundRace.currentProjectedPoints.A}-
-              {currentRoundRace.currentProjectedPoints.B}
-            </p>
-          </div>
-
-          <div className="rounded-xl bg-sand-50 p-3">
-            <p className="text-xs font-bold text-slate-500">Undecided</p>
-            <p className="mt-1 text-lg font-black">
-              {currentRoundRace.currentProjectedRemaining}
-            </p>
-          </div>
-        </div>
-      </Card>
-
-      <Card className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-black uppercase tracking-wide text-fairway-900">
-              Current Round
-            </p>
-            <h2 className="mt-1 text-xl font-black">
-              Round {currentRound.roundNumber}: {currentRound.title}
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              {currentCourse?.name ?? "Course"} ·{" "}
-              {formatRoundFormat(currentRound.format)}
-            </p>
-          </div>
-
-          <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
-            {currentRoundStatus}
-          </div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-2 text-center">
-          <div className="rounded-xl bg-slate-50 p-3">
-            <p className="text-xs font-bold text-slate-500">Front 9 In</p>
-            <p className="mt-1 text-xl font-black">
-              {frontNineSubmitted} / {players.length}
-            </p>
-          </div>
-
-          <div className="rounded-xl bg-slate-50 p-3">
-            <p className="text-xs font-bold text-slate-500">Final In</p>
-            <p className="mt-1 text-xl font-black">
-              {finalSubmitted} / {players.length}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-5">
-          <div className="flex items-center justify-between">
-            <h3 className="font-black">Live Standings</h3>
-            <p className="text-xs font-bold text-slate-500">
-              {finalSubmitted > 0 ? "Final net first" : "Through 9"}
-            </p>
-          </div>
-
-          <div className="mt-3 space-y-2">
-            {currentRoundLeaders.length === 0 ? (
-              <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-500">
-                No scores submitted for the active round yet.
-              </p>
-            ) : (
-              currentRoundLeaders.map((row, index) => (
-                <div
-                  key={row.player.id}
-                  className="flex items-center justify-between rounded-xl bg-slate-50 p-3 text-sm"
-                >
-                  <div>
-                    <p className="font-black">
-                      {index + 1}. {row.player.name}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      Team {row.player.team} ·{" "}
-                      {row.isFinal ? "Final" : "Through 9"}
-                    </p>
-                  </div>
-
-                  <div className="text-right">
-                    <p className="font-black">
-                      {row.displayNet === null
-                        ? "-"
-                        : row.isFinal
-                        ? row.displayNet
-                        : row.displayNet.toFixed(1)}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {row.isFinal
-                        ? `Gross ${row.grossScore}`
-                        : `Front ${row.frontNineScore}`}
-                    </p>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          <button
-            onClick={() => setActiveScreen("tournament")}
-            className="mt-4 flex w-full items-center justify-between rounded-xl bg-fairway-900 p-3 text-left font-black text-white"
-          >
-            View Tournament
-            <ChevronRight className="h-5 w-5 text-white/80" />
-          </button>
-        </div>
-      </Card>
-
-      <Card className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-              🔥 Hot Right Now
-            </p>
-            <h2 className="mt-1 text-xl font-black">
-              {hotRightNow?.player.name ?? "No live leader yet"}
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              {hotRightNow
-                ? `Front net ${hotRightNow.frontNet?.toFixed(1)} through 9`
-                : "Enter front 9 scores to activate live momentum."}
-            </p>
-          </div>
-        </div>
-      </Card>
-
-      <Card className="p-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-black">Official Tournament Progress</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              {progress.awardedPoints} / {trip.totalPoints} points officially awarded
-            </p>
-          </div>
-
-          <p className="text-sm font-black text-fairway-900">
-            {Math.round(progress.progressPercent)}%
-          </p>
-        </div>
-
-        <div className="mt-4 h-4 overflow-hidden rounded-full bg-slate-100">
-          <div
-            className="h-full rounded-full bg-fairway-900"
-            style={{ width: `${progress.progressPercent}%` }}
-          />
-        </div>
-
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-xl bg-slate-50 p-3">
-            <p className="text-xs font-bold text-slate-500">Team A</p>
-            <p className="mt-1 text-xl font-black">{progress.teamPoints.A}</p>
-          </div>
-
-          <div className="rounded-xl bg-sand-50 p-3">
-            <p className="text-xs font-bold text-slate-500">Remaining</p>
-            <p className="mt-1 text-xl font-black">
-              {progress.remainingPoints}
-            </p>
-          </div>
-
-          <div className="rounded-xl bg-slate-50 p-3">
-            <p className="text-xs font-bold text-slate-500">Team B</p>
-            <p className="mt-1 text-xl font-black">{progress.teamPoints.B}</p>
-          </div>
-        </div>
-      </Card>
-
+      {/* 2 — who's winning */}
       <StandingsCard />
 
-      <div className="grid grid-cols-3 gap-2">
-        <Card className="p-3 text-center">
-          <p className="text-xs font-bold text-slate-500">🏆 MVP</p>
-          <p className="mt-1 text-sm font-black">
-            {awards.mvp?.player.name ?? "-"}
-          </p>
-        </Card>
-
-        <Card className="p-3 text-center">
-          <p className="text-xs font-bold text-slate-500">🎯 Clutch</p>
-          <p className="mt-1 text-sm font-black">
-            {awards.clutch?.player.name ?? "-"}
-          </p>
-        </Card>
-
-        <Card className="p-3 text-center">
-          <p className="text-xs font-bold text-slate-500">❄️ Coldest</p>
-          <p className="mt-1 text-sm font-black">
-            {awards.coldest?.player.name ?? "-"}
-          </p>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          onClick={() => setActiveScreen("matchCenter")}
-          className="rounded-2xl bg-fairway-900 p-4 text-left text-white shadow-sm"
-        >
+      {/* 3 — this round */}
+      <section>
+        <h2 className="mb-3 text-xl font-black text-slate-900">This Round</h2>
+        <Card className="p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-2xl">⚔️</p>
-              <p className="mt-2 font-black">Match Center</p>
-              <p className="mt-1 text-xs text-white/75">
-                Pairings and results
+              <p className="text-xs font-black uppercase tracking-wide text-fairway-900">
+                Round {featuredRound.roundNumber} ·{" "}
+                {formatRoundFormat(featuredRound.format)}
+              </p>
+              <h3 className="mt-1 text-lg font-black">{featuredRound.title}</h3>
+            </div>
+            <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
+              {featuredStatus === "complete"
+                ? "Final"
+                : featuredStatus === "live"
+                ? "In Progress"
+                : "Not Started"}
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2 text-center">
+            <div className="rounded-xl bg-slate-50 p-3">
+              <p className="text-xs font-bold text-slate-500">Front 9 In</p>
+              <p className="mt-1 text-xl font-black">
+                {frontNineSubmitted} / {players.length}
               </p>
             </div>
-
-            <ChevronRight className="h-5 w-5 shrink-0 text-white/75" />
+            <div className="rounded-xl bg-slate-50 p-3">
+              <p className="text-xs font-bold text-slate-500">Final In</p>
+              <p className="mt-1 text-xl font-black">
+                {finalSubmitted} / {players.length}
+              </p>
+            </div>
           </div>
-        </button>
 
-        <button
-          onClick={() => setActiveScreen("teams")}
-          className="rounded-2xl bg-sand-100 p-4 text-left text-slate-900 shadow-sm"
-        >
+          {/* team momentum */}
+          <div className="mt-3 rounded-xl bg-sand-50 p-3 text-sm">
+            <p className="font-black">📈 Team Momentum</p>
+            <p className="mt-1 text-slate-600">
+              {momentumLeader
+                ? `${momentumLeader} projected to take this round by ${momentumMargin} ${
+                    momentumMargin === 1 ? "point" : "points"
+                  } (${projA}–${projB}).`
+                : featuredStatus === "not_started"
+                ? "No scores in yet — momentum opens once play starts."
+                : `Dead even this round (${projA}–${projB}).`}
+            </p>
+          </div>
+
+          {/* hot right now */}
+          {hot ? (
+            <div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm">
+              <p className="font-black">🔥 Hot Right Now</p>
+              <p className="mt-1 text-slate-600">
+                {hot.player.name} — front net {hot.frontNet?.toFixed(1)} through
+                9.
+              </p>
+            </div>
+          ) : null}
+
+          {/* live leaders */}
+          <div className="mt-4">
+            <p className="text-xs font-black uppercase text-slate-500">
+              Live Leaders
+            </p>
+            <div className="mt-2 space-y-2">
+              {leaders.length === 0 ? (
+                <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-500">
+                  No scores submitted for this round yet.
+                </p>
+              ) : (
+                leaders.map((row, index) => (
+                  <div
+                    key={row.player.id}
+                    className="flex items-center justify-between rounded-xl bg-slate-50 p-3 text-sm"
+                  >
+                    <div>
+                      <p className="font-black">
+                        {index + 1}. {row.player.name}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Team {row.player.team} ·{" "}
+                        {row.isFinal ? "Final" : "Through 9"}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-black">
+                        {row.displayNet === null
+                          ? "-"
+                          : row.isFinal
+                          ? row.displayNet
+                          : row.displayNet.toFixed(1)}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {row.isFinal
+                          ? `Gross ${row.grossScore}`
+                          : `Front ${row.frontNineScore}`}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </Card>
+      </section>
+
+      {/* 4 — tournament race */}
+      <section>
+        <h2 className="mb-3 text-xl font-black text-slate-900">
+          Tournament Race
+        </h2>
+        <Card className="p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-2xl">🏆</p>
-              <p className="mt-2 font-black">Teams</p>
+              <h3 className="text-xl font-black">
+                Projected: {race.projectedTotalPoints.A} –{" "}
+                {race.projectedTotalPoints.B}
+              </h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Confirmed points plus current-round projections.
+              </p>
+            </div>
+            <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
+              {race.totalProjectedRemaining} left
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2 text-center">
+            <div className="rounded-xl bg-slate-50 p-3">
+              <p className="text-xs font-bold text-slate-500">{teamAName}</p>
+              <p className="mt-1 text-xl font-black">
+                {race.confirmedPriorPoints.A}
+              </p>
               <p className="mt-1 text-xs text-slate-500">
-                Rosters and points
+                +{race.currentProjectedPoints.A} this round
               </p>
             </div>
-
-            <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" />
+            <div className="rounded-xl bg-slate-50 p-3">
+              <p className="text-xs font-bold text-slate-500">{teamBName}</p>
+              <p className="mt-1 text-xl font-black">
+                {race.confirmedPriorPoints.B}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                +{race.currentProjectedPoints.B} this round
+              </p>
+            </div>
           </div>
-        </button>
-      </div>
+        </Card>
+      </section>
+
+      {/* 5 — stat highlights */}
+      <section>
+        <h2 className="mb-3 text-xl font-black text-slate-900">Highlights</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <Card className="p-3 text-center">
+            <p className="text-xs font-bold text-slate-500">⛳ Best Net Round</p>
+            <p className="mt-1 text-sm font-black">
+              {bestNet ? bestNet.player.name : "—"}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {bestNet
+                ? `${bestNet.label} · ${bestNet.round.title}`
+                : "No finals yet"}
+            </p>
+          </Card>
+
+          <Card className="p-3 text-center">
+            <p className="text-xs font-bold text-slate-500">🚀 Biggest Mover</p>
+            <p className="mt-1 text-sm font-black">
+              {biggestMover ? biggestMover.player.name : "—"}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {biggestMover ? biggestMover.label : "Needs 2+ rounds"}
+            </p>
+          </Card>
+        </div>
+      </section>
+
+      {/* 6 — awards */}
+      <section>
+        <h2 className="mb-3 text-xl font-black text-slate-900">Awards</h2>
+        <div className="grid grid-cols-3 gap-2">
+          <AwardTile emoji="🏆" label="MVP" award={awards.mvp} />
+          <AwardTile emoji="🎯" label="Clutch" award={awards.clutch} />
+          <AwardTile emoji="❄️" label="Coldest" award={awards.coldest} />
+        </div>
+      </section>
+
+      {/* 7 — progress */}
+      <section>
+        <h2 className="mb-3 text-xl font-black text-slate-900">
+          Official Progress
+        </h2>
+        <Card className="p-5">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-slate-500">
+              {progress.awardedPoints} / {trip.totalPoints} points awarded
+            </p>
+            <p className="text-sm font-black text-fairway-900">
+              {Math.round(progress.progressPercent)}%
+            </p>
+          </div>
+          <div className="mt-3 h-4 overflow-hidden rounded-full bg-slate-100">
+            <div
+              className="h-full rounded-full bg-fairway-900"
+              style={{ width: `${progress.progressPercent}%` }}
+            />
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-xl bg-slate-50 p-3">
+              <p className="text-xs font-bold text-slate-500">{teamAName}</p>
+              <p className="mt-1 text-xl font-black">{progress.teamPoints.A}</p>
+            </div>
+            <div className="rounded-xl bg-sand-50 p-3">
+              <p className="text-xs font-bold text-slate-500">Remaining</p>
+              <p className="mt-1 text-xl font-black">
+                {progress.remainingPoints}
+              </p>
+            </div>
+            <div className="rounded-xl bg-slate-50 p-3">
+              <p className="text-xs font-bold text-slate-500">{teamBName}</p>
+              <p className="mt-1 text-xl font-black">{progress.teamPoints.B}</p>
+            </div>
+          </div>
+        </Card>
+      </section>
     </div>
   );
 }
