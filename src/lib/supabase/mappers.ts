@@ -135,6 +135,8 @@ export function mapScoringSettings(
     bestBallHandicapAllowance: Number(row?.best_ball_handicap_allowance ?? 0),
     singlesHandicapAllowance: Number(row?.singles_handicap_allowance ?? 100),
     netScoreHandicapAllowance: Number(row?.net_score_handicap_allowance ?? 100),
+    netScorePointsOverride:
+      row?.net_score_points_override ?? null,
   };
 }
 

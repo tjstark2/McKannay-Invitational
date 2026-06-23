@@ -305,10 +305,13 @@ export function resolveMatch(
   });
 
   if (waitingOn.length > 0) {
+    const waitingNames = waitingOn.map(
+      (playerId) => getPlayer(players, playerId)?.name ?? "player"
+    );
     return {
       status: "open",
       winner: null,
-      label: `Waiting on ${waitingOn.join(", ")}`,
+      label: `Waiting on ${waitingNames.join(", ")}`,
       waitingOn,
     };
   }
@@ -382,6 +385,21 @@ type NetScoreRanking = {
   netScore: number;
 };
 
+// How many of the lowest net scores earn a point. Defaults to the top half of
+// the field (rounded down); an admin override on scoring settings wins.
+export function netScorePointCount(
+  players: Player[],
+  scoringSettings: ScoringSettings
+): number {
+  if (
+    typeof scoringSettings.netScorePointsOverride === "number" &&
+    scoringSettings.netScorePointsOverride > 0
+  ) {
+    return scoringSettings.netScorePointsOverride;
+  }
+  return Math.floor(players.length / 2);
+}
+
 export function calculateNetScorePoints(
   players: Player[],
   round: Round,
@@ -413,7 +431,7 @@ export function calculateNetScorePoints(
     })
     .filter((row): row is NetScoreRanking => row !== null)
     .sort((a, b) => a.netScore - b.netScore)
-    .slice(0, 6);
+    .slice(0, netScorePointCount(players, scoringSettings));
 
   return ranked.reduce<Record<TeamId, number>>(
     (acc, row) => {
@@ -439,7 +457,7 @@ export function calculateProjectedNetScorePoints(
     scoringSettings
   )
     .filter((row) => row.displayNet !== null)
-    .slice(0, 6);
+    .slice(0, netScorePointCount(players, scoringSettings));
 
   return projectedRows.reduce<Record<TeamId, number>>(
     (acc, row) => {

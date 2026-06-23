@@ -14,6 +14,13 @@ import { initialTripState } from "@/data/initialTripState";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { APP_CONFIG } from "@/features/trip/config";
 import {
+  deletePlayerRow,
+  deleteRoundRow,
+  deleteTeeTimeRow,
+  insertCourse,
+  insertPlayer,
+  insertRound,
+  insertTeeTime,
   loadTripState,
   persistCurrentRound,
   persistManualResult,
@@ -26,6 +33,7 @@ import {
   persistTeam,
   persistTeeTime,
   persistTripUpdates,
+  setTeeTimePlayersRows,
   upsertScoreRow,
 } from "@/lib/supabase/queries";
 import type {
@@ -44,6 +52,9 @@ import type {
 type TripStateContextValue = TripState & {
   loading: boolean;
   error: string | null;
+  saving: boolean;
+  saveError: string | null;
+  saveTick: number;
   updateTrip: (updates: Partial<Trip>) => void;
   updateTeam: (teamId: TeamId, updates: Partial<Team>) => void;
   updatePlayer: (playerId: string, updates: Partial<Player>) => void;
@@ -61,10 +72,48 @@ type TripStateContextValue = TripState & {
   updateManualMatchResult: (matchId: string, result: Winner) => void;
   updateScoringSettings: (updates: Partial<ScoringSettings>) => void;
   upsertScore: (score: ScoreEntry) => void;
+  addPlayer: (player: {
+    name: string;
+    handicapIndex: number;
+    team: TeamId;
+    avatarEmoji?: string;
+  }) => void;
+  removePlayer: (playerId: string) => void;
+  addCourse: (course: {
+    name: string;
+    par: number;
+    rating: number;
+    slope: number;
+    location?: string;
+    notes?: string;
+  }) => void;
+  addRound: (
+    round: {
+      title: string;
+      dateLabel: string;
+      courseId: string;
+      format: Round["format"];
+      pointsAvailable: number;
+      arrivalTime: string;
+    },
+    teeTimes?: { time: string; players: string[] }[]
+  ) => void;
+  deleteRound: (roundId: string) => void;
+  addTeeTime: (roundId: string, time: string) => void;
+  deleteTeeTime: (roundId: string, teeTimeId: string) => void;
+  setTeeTimePlayers: (
+    roundId: string,
+    teeTimeId: string,
+    playerIds: string[]
+  ) => void;
   resetState: () => void;
 };
 
 const TripStateContext = createContext<TripStateContextValue | null>(null);
+
+function sumRoundPoints(rounds: Round[]): number {
+  return rounds.reduce((sum, round) => sum + (round.pointsAvailable || 0), 0);
+}
 
 export function TripStateProvider({
   children,
@@ -74,11 +123,15 @@ export function TripStateProvider({
   const [state, setState] = useState<TripState>(initialTripState);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveTick, setSaveTick] = useState(0);
 
   const supabaseRef = useRef<SupabaseClient | null>(null);
   const teamDbIdsRef = useRef<{ id: TeamId; dbId: string }[]>([]);
   const reloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastLocalWrite = useRef<number>(0);
+  const pendingWrites = useRef<number>(0);
 
   // Pull the latest data from Supabase and replace local state with it.
   const reload = useCallback(async () => {
@@ -158,10 +211,25 @@ export function TripStateProvider({
       const supabase = supabaseRef.current;
       if (!supabase) return;
       lastLocalWrite.current = Date.now();
-      fn(supabase).catch((e) => {
-        setError(e instanceof Error ? e.message : "Save failed");
-        void reload();
-      });
+      pendingWrites.current += 1;
+      setSaving(true);
+      setSaveError(null);
+      fn(supabase)
+        .then(() => {
+          pendingWrites.current = Math.max(0, pendingWrites.current - 1);
+          if (pendingWrites.current === 0) {
+            setSaving(false);
+            setSaveTick((tick) => tick + 1);
+          }
+        })
+        .catch((e) => {
+          pendingWrites.current = Math.max(0, pendingWrites.current - 1);
+          setSaving(false);
+          const message = e instanceof Error ? e.message : "Save failed";
+          setError(message);
+          setSaveError(message);
+          void reload();
+        });
     },
     [reload]
   );
@@ -173,6 +241,9 @@ export function TripStateProvider({
       ...state,
       loading,
       error,
+      saving,
+      saveError,
+      saveTick,
 
       updateTrip: (updates) => {
         setState((current) => ({
@@ -205,12 +276,19 @@ export function TripStateProvider({
       },
 
       updateRound: (roundId, updates) => {
-        setState((current) => ({
-          ...current,
-          rounds: current.rounds.map((round) =>
+        setState((current) => {
+          const rounds = current.rounds.map((round) =>
             round.id === roundId ? { ...round, ...updates } : round
-          ),
-        }));
+          );
+          return {
+            ...current,
+            trip:
+              updates.pointsAvailable !== undefined
+                ? { ...current.trip, totalPoints: sumRoundPoints(rounds) }
+                : current.trip,
+            rounds,
+          };
+        });
         persist((s) => persistRoundUpdates(s, roundId, updates));
       },
 
@@ -236,15 +314,21 @@ export function TripStateProvider({
         let newRoundMatches: Match[] = [];
 
         if (format === "best_ball") {
-          newRoundMatches = [0, 2, 4].map((start, index) => ({
-            id: `${roundId}-match-${index + 1}`,
-            roundId,
-            label: `${round.title} Best Ball ${index + 1}`,
-            points: 2,
-            aPlayers: teamAPlayers.slice(start, start + 2),
-            bPlayers: teamBPlayers.slice(start, start + 2),
-            manualResult: null,
-          }));
+          const pairCount = Math.floor(
+            Math.min(teamAPlayers.length, teamBPlayers.length) / 2
+          );
+          newRoundMatches = Array.from({ length: pairCount }, (_, index) => {
+            const start = index * 2;
+            return {
+              id: `${roundId}-match-${index + 1}`,
+              roundId,
+              label: `${round.title} Best Ball ${index + 1}`,
+              points: 2,
+              aPlayers: teamAPlayers.slice(start, start + 2),
+              bPlayers: teamBPlayers.slice(start, start + 2),
+              manualResult: null,
+            };
+          });
         }
 
         if (format === "match_play") {
@@ -260,27 +344,40 @@ export function TripStateProvider({
           }));
         }
 
+        const minTeam = Math.min(teamAPlayers.length, teamBPlayers.length);
+        const pairCount = Math.floor(minTeam / 2);
+
+        const netCount =
+          typeof state.scoringSettings.netScorePointsOverride === "number" &&
+          state.scoringSettings.netScorePointsOverride > 0
+            ? state.scoringSettings.netScorePointsOverride
+            : Math.floor(state.players.length / 2);
+
         const newPointsAvailable =
           format === "best_ball"
-            ? 6
+            ? pairCount * 2
             : format === "match_play"
-            ? 6
+            ? minTeam
             : format === "net_score"
-            ? 6
+            ? netCount
             : round.pointsAvailable;
 
-        setState((current) => ({
-          ...current,
-          rounds: current.rounds.map((item) =>
+        setState((current) => {
+          const rounds = current.rounds.map((item) =>
             item.id === roundId
               ? { ...item, format, pointsAvailable: newPointsAvailable }
               : item
-          ),
-          matches: [
-            ...current.matches.filter((match) => match.roundId !== roundId),
-            ...newRoundMatches,
-          ],
-        }));
+          );
+          return {
+            ...current,
+            trip: { ...current.trip, totalPoints: sumRoundPoints(rounds) },
+            rounds,
+            matches: [
+              ...current.matches.filter((match) => match.roundId !== roundId),
+              ...newRoundMatches,
+            ],
+          };
+        });
 
         // Structural change: persist round + rebuild matches, then resync so
         // local state picks up the real database-generated match IDs.
@@ -380,6 +477,141 @@ export function TripStateProvider({
         persist((s) => upsertScoreRow(s, score));
       },
 
+      addPlayer: (player) => {
+        // Structural insert: persist then reload to pick up the real player ID.
+        persist(async (s) => {
+          await insertPlayer(
+            s,
+            tripId,
+            player,
+            teamDbIdsRef.current,
+            state.players.length + 1
+          );
+          await reload();
+        });
+      },
+
+      removePlayer: (playerId) => {
+        setState((current) => ({
+          ...current,
+          players: current.players.filter((p) => p.id !== playerId),
+          scores: current.scores.filter((sc) => sc.playerId !== playerId),
+          matches: current.matches.map((m) => ({
+            ...m,
+            aPlayers: m.aPlayers.filter((id) => id !== playerId),
+            bPlayers: m.bPlayers.filter((id) => id !== playerId),
+          })),
+          rounds: current.rounds.map((r) => ({
+            ...r,
+            teeTimes: r.teeTimes.map((tt) => ({
+              ...tt,
+              players: tt.players.filter((id) => id !== playerId),
+            })),
+          })),
+        }));
+        persist(async (s) => {
+          await deletePlayerRow(s, playerId);
+          await reload();
+        });
+      },
+
+      addCourse: (course) => {
+        persist(async (s) => {
+          await insertCourse(s, tripId, course);
+          await reload();
+        });
+      },
+
+      addRound: (round, teeTimes) => {
+        const nextNumber =
+          state.rounds.reduce(
+            (max, item) => Math.max(max, item.roundNumber),
+            0
+          ) + 1;
+        persist(async (s) => {
+          const newRoundId = await insertRound(s, tripId, {
+            ...round,
+            roundNumber: nextNumber,
+          });
+          if (teeTimes && teeTimes.length > 0) {
+            for (let i = 0; i < teeTimes.length; i += 1) {
+              const tee = teeTimes[i];
+              const teeId = await insertTeeTime(s, newRoundId, tee.time, i + 1);
+              if (tee.players.length > 0) {
+                await setTeeTimePlayersRows(s, teeId, tee.players);
+              }
+            }
+          }
+          await reload();
+        });
+      },
+
+      deleteRound: (roundId) => {
+        // Optimistic removal; reload reconciles.
+        setState((current) => {
+          const rounds = current.rounds.filter((r) => r.id !== roundId);
+          return {
+            ...current,
+            trip: { ...current.trip, totalPoints: sumRoundPoints(rounds) },
+            rounds,
+            matches: current.matches.filter((m) => m.roundId !== roundId),
+            scores: current.scores.filter((sc) => sc.roundId !== roundId),
+            currentRoundId:
+              current.currentRoundId === roundId
+                ? rounds[0]?.id ?? ""
+                : current.currentRoundId,
+          };
+        });
+        persist(async (s) => {
+          await deleteRoundRow(s, roundId);
+          await reload();
+        });
+      },
+
+      addTeeTime: (roundId, time) => {
+        persist(async (s) => {
+          const round = state.rounds.find((r) => r.id === roundId);
+          const sortOrder = (round?.teeTimes.length ?? 0) + 1;
+          await insertTeeTime(s, roundId, time, sortOrder);
+          await reload();
+        });
+      },
+
+      deleteTeeTime: (roundId, teeTimeId) => {
+        setState((current) => ({
+          ...current,
+          rounds: current.rounds.map((r) =>
+            r.id === roundId
+              ? {
+                  ...r,
+                  teeTimes: r.teeTimes.filter((tt) => tt.id !== teeTimeId),
+                }
+              : r
+          ),
+        }));
+        persist(async (s) => {
+          await deleteTeeTimeRow(s, teeTimeId);
+          await reload();
+        });
+      },
+
+      setTeeTimePlayers: (roundId, teeTimeId, playerIds) => {
+        setState((current) => ({
+          ...current,
+          rounds: current.rounds.map((r) =>
+            r.id === roundId
+              ? {
+                  ...r,
+                  teeTimes: r.teeTimes.map((tt) =>
+                    tt.id === teeTimeId ? { ...tt, players: playerIds } : tt
+                  ),
+                }
+              : r
+          ),
+        }));
+        persist((s) => setTeeTimePlayersRows(s, teeTimeId, playerIds));
+      },
+
       resetState: () => {
         if (supabaseRef.current) {
           void reload();
@@ -388,7 +620,7 @@ export function TripStateProvider({
         }
       },
     };
-  }, [state, loading, error, persist, reload]);
+  }, [state, loading, error, saving, saveError, saveTick, persist, reload]);
 
   return (
     <TripStateContext.Provider value={value}>

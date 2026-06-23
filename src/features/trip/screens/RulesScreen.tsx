@@ -7,7 +7,13 @@ type RuleTab = "overview" | "formats" | "handicaps" | "local" | "admin";
 
 export function RulesScreen() {
   const [activeTab, setActiveTab] = useState<RuleTab>("overview");
-  const { scoringSettings } = useTripState();
+  const { trip, players, scoringSettings } = useTripState();
+
+  const netCount =
+    typeof scoringSettings.netScorePointsOverride === "number" &&
+    scoringSettings.netScorePointsOverride > 0
+      ? scoringSettings.netScorePointsOverride
+      : Math.floor(players.length / 2);
 
   const tabs = [
     { id: "overview", label: "Overview" },
@@ -47,17 +53,19 @@ export function RulesScreen() {
 
             <div className="mt-4 space-y-3">
               <div className="rounded-xl bg-slate-50 p-3">
-                <p className="font-black">18 Total Points Available</p>
+                <p className="font-black">
+                  {trip.totalPoints} Total Points Available
+                </p>
                 <p className="mt-1 text-sm text-slate-600">
-                  Best Ball, Singles, and Individual Net Score each contribute
-                  6 points.
+                  Points are split across all rounds in the schedule.
                 </p>
               </div>
 
               <div className="rounded-xl bg-slate-50 p-3">
-                <p className="font-black">9.5 Points Wins</p>
+                <p className="font-black">{trip.winningNumber} Points Wins</p>
                 <p className="mt-1 text-sm text-slate-600">
-                  A team needs 9.5 or more points to win outright.
+                  A team needs {trip.winningNumber} or more points to win
+                  outright.
                 </p>
               </div>
 
@@ -122,14 +130,14 @@ export function RulesScreen() {
             <h2 className="font-black">Round 3: Individual Net Score</h2>
 
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              All 12 players submit scores. The top half of the field earns
-              team points.
+              All {players.length} players submit scores. The top half of the
+              field earns team points.
             </p>
 
             <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-600">
-              <li>Lowest 6 net scores earn points.</li>
+              <li>Lowest {netCount} net scores earn points.</li>
               <li>Each qualifying player earns 1 point for their team.</li>
-              <li>Maximum 6 points available.</li>
+              <li>Maximum {netCount} points available.</li>
               <li>
                 Current Net Score handicap allowance:{" "}
                 <strong>{scoringSettings.netScoreHandicapAllowance}%</strong>

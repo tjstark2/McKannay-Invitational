@@ -5,6 +5,7 @@ import {
   frontNineNetScore,
   getScore,
   netScore,
+  netScorePointCount,
   resolveMatch,
 } from "@/lib/scoring";
 import { formatRoundFormat } from "@/lib/format";
@@ -107,7 +108,7 @@ export function MatchCenterScreen({
 
   const confirmedNetScorePoints = netScoreRows
     .filter((row) => row.finalNet !== null)
-    .slice(0, 6)
+    .slice(0, netScorePointCount(players, scoringSettings))
     .reduce<Record<TeamId, number>>(
       (acc, row) => {
         acc[row.player.team] += 1;
@@ -118,7 +119,7 @@ export function MatchCenterScreen({
 
   const projectedNetScorePoints = netScoreRows
     .filter((row) => row.displayNet !== null)
-    .slice(0, 6)
+    .slice(0, netScorePointCount(players, scoringSettings))
     .reduce<Record<TeamId, number>>(
       (acc, row) => {
         acc[row.player.team] += 1;

@@ -102,6 +102,7 @@ export type ScoringSettings = {
   bestBallHandicapAllowance: number;
   singlesHandicapAllowance: number;
   netScoreHandicapAllowance: number;
+  netScorePointsOverride?: number | null;
 };
 
 export type MatchResult = {

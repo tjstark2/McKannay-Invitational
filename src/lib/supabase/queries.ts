@@ -138,9 +138,19 @@ export async function loadTripState(
     dbId: t.id,
   }));
 
+  // Total points is derived from the rounds (sum of each round's points), so
+  // adding/removing rounds or changing a round's points updates it automatically.
+  const derivedTotalPoints = rounds.reduce(
+    (sum, round) => sum + (round.pointsAvailable || 0),
+    0
+  );
+
+  const trip = mapTrip(tripRow);
+  trip.totalPoints = derivedTotalPoints;
+
   return {
     state: {
-      trip: mapTrip(tripRow),
+      trip,
       teams,
       players,
       courses,
@@ -328,6 +338,8 @@ export async function persistScoringSettings(
     row.singles_handicap_allowance = updates.singlesHandicapAllowance;
   if (updates.netScoreHandicapAllowance !== undefined)
     row.net_score_handicap_allowance = updates.netScoreHandicapAllowance;
+  if (updates.netScorePointsOverride !== undefined)
+    row.net_score_points_override = updates.netScorePointsOverride;
 
   const { error } = await supabase
     .from("scoring_settings")
@@ -387,4 +399,154 @@ export async function persistRoundMatchesRebuild(
       match.bPlayers
     );
   }
+}
+
+// ---- ADD / DELETE ----------------------------------------------------------
+
+export async function insertPlayer(
+  supabase: SupabaseClient,
+  tripId: string,
+  player: {
+    name: string;
+    handicapIndex: number;
+    team: TeamId;
+    avatarEmoji?: string;
+  },
+  teams: { id: TeamId; dbId: string }[],
+  sortOrder: number
+) {
+  const team = teams.find((t) => t.id === player.team);
+  const { error } = await supabase.from("players").insert({
+    trip_id: tripId,
+    team_id: team?.dbId ?? null,
+    display_name: player.name,
+    handicap_index: player.handicapIndex,
+    avatar_emoji: player.avatarEmoji ?? "⛳",
+    sort_order: sortOrder,
+  });
+  throwIf(error, "add player");
+}
+
+export async function insertRound(
+  supabase: SupabaseClient,
+  tripId: string,
+  round: {
+    roundNumber: number;
+    title: string;
+    dateLabel: string;
+    courseId: string;
+    format: Round["format"];
+    pointsAvailable: number;
+    arrivalTime: string;
+  }
+): Promise<string> {
+  const result = await supabase
+    .from("rounds")
+    .insert({
+      trip_id: tripId,
+      course_id: round.courseId || null,
+      round_number: round.roundNumber,
+      title: round.title,
+      date_label: round.dateLabel,
+      format: round.format,
+      points_available: round.pointsAvailable,
+      arrival_time: round.arrivalTime,
+      sort_order: round.roundNumber,
+    })
+    .select("id")
+    .single();
+  throwIf(result.error, "add round");
+  return (result.data as { id: string }).id;
+}
+
+export async function deleteRoundRow(
+  supabase: SupabaseClient,
+  roundId: string
+) {
+  // Cascades to tee_times, matches, match_players, and score_entries.
+  const { error } = await supabase.from("rounds").delete().eq("id", roundId);
+  throwIf(error, "delete round");
+}
+
+export async function insertCourse(
+  supabase: SupabaseClient,
+  tripId: string,
+  course: {
+    name: string;
+    par: number;
+    rating: number;
+    slope: number;
+    location?: string;
+    address?: string;
+    imageUrl?: string;
+    notes?: string;
+  }
+) {
+  const { error } = await supabase.from("courses").insert({
+    trip_id: tripId,
+    name: course.name,
+    par: course.par,
+    course_rating: course.rating,
+    slope: course.slope,
+    location: course.location ?? "",
+    address: course.address ?? "",
+    image_url: course.imageUrl ?? "",
+    notes: course.notes ?? "",
+  });
+  throwIf(error, "add course");
+}
+
+export async function deletePlayerRow(
+  supabase: SupabaseClient,
+  playerId: string
+) {
+  // Cascades to tee_time_players, match_players, and score_entries.
+  const { error } = await supabase.from("players").delete().eq("id", playerId);
+  throwIf(error, "delete player");
+}
+
+export async function insertTeeTime(
+  supabase: SupabaseClient,
+  roundId: string,
+  time: string,
+  sortOrder: number
+): Promise<string> {
+  const result = await supabase
+    .from("tee_times")
+    .insert({ round_id: roundId, tee_time: time, sort_order: sortOrder })
+    .select("id")
+    .single();
+  throwIf(result.error, "add tee time");
+  return (result.data as { id: string }).id;
+}
+
+export async function deleteTeeTimeRow(
+  supabase: SupabaseClient,
+  teeTimeId: string
+) {
+  const { error } = await supabase
+    .from("tee_times")
+    .delete()
+    .eq("id", teeTimeId);
+  throwIf(error, "delete tee time");
+}
+
+export async function setTeeTimePlayersRows(
+  supabase: SupabaseClient,
+  teeTimeId: string,
+  playerIds: string[]
+) {
+  const del = await supabase
+    .from("tee_time_players")
+    .delete()
+    .eq("tee_time_id", teeTimeId);
+  throwIf(del.error, "clear tee time players");
+
+  if (playerIds.length === 0) return;
+  const rows = playerIds.map((player_id) => ({
+    tee_time_id: teeTimeId,
+    player_id,
+  }));
+  const ins = await supabase.from("tee_time_players").insert(rows);
+  throwIf(ins.error, "set tee time players");
 }
