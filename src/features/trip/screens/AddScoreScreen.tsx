@@ -8,7 +8,7 @@ import { useTripState } from "@/features/trip/state/TripStateContext";
 type LastSavedScore = {
   playerName: string;
   roundTitle: string;
-  frontNineScore: number;
+  frontNineScore?: number;
   grossScore?: number;
   savedType: "front" | "final";
 };
@@ -48,7 +48,7 @@ export function AddScoreScreen() {
 
   const hasGrossInput = grossScore !== "" && Number.isFinite(parsedGrossScore);
 
-  const canSave = hasFrontNineInput;
+  const canSave = hasFrontNineInput || hasGrossInput;
 
   const calculatedFrontNet = hasFrontNineInput
     ? frontNineNetScore(
@@ -84,18 +84,21 @@ export function AddScoreScreen() {
     if (!canSave) return;
 
     const savedGrossScore = hasGrossInput ? parsedGrossScore : undefined;
+    const savedFrontNineScore = hasFrontNineInput
+      ? parsedFrontNineScore
+      : undefined;
 
     upsertScore({
       roundId,
       playerId,
-      frontNineScore: parsedFrontNineScore,
+      frontNineScore: savedFrontNineScore,
       grossScore: savedGrossScore,
     });
 
     setLastSavedScore({
       playerName: selectedPlayer.name,
       roundTitle: selectedRound.title,
-      frontNineScore: parsedFrontNineScore,
+      frontNineScore: savedFrontNineScore,
       grossScore: savedGrossScore,
       savedType: hasGrossInput ? "final" : "front",
     });
@@ -124,7 +127,7 @@ export function AddScoreScreen() {
           </p>
 
           <p className="mt-1 text-sm text-green-800">
-            Front {lastSavedScore.frontNineScore} · Final{" "}
+            Front {lastSavedScore.frontNineScore ?? "-"} · Final{" "}
             {lastSavedScore.grossScore ?? "Not submitted"}
           </p>
         </Card>
@@ -169,7 +172,7 @@ export function AddScoreScreen() {
         ) : null}
 
         <label className="mt-4 block text-xs font-black uppercase text-slate-500">
-          Front 9 Score *
+          Front 9 Score
         </label>
         <input
           value={frontNineScore}
