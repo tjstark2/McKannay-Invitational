@@ -12,6 +12,30 @@ import type {
   TeamSummary,
 } from "@/types";
 
+export type CurrentRoundStandingRow = {
+  player: Player;
+  frontNineScore: number | null;
+  grossScore: number | null;
+  handicapAdjustment: number;
+  frontNineAdjustment: number;
+  frontNet: number | null;
+  finalNet: number | null;
+  displayNet: number | null;
+  isFinal: boolean;
+  status: "not_started" | "through_9" | "final";
+};
+
+export type CurrentRoundRace = {
+  confirmedPriorPoints: Record<TeamId, number>;
+  currentConfirmedPoints: Record<TeamId, number>;
+  currentProjectedPoints: Record<TeamId, number>;
+  confirmedTotalPoints: Record<TeamId, number>;
+  projectedTotalPoints: Record<TeamId, number>;
+  currentConfirmedRemaining: number;
+  currentProjectedRemaining: number;
+  totalProjectedRemaining: number;
+};
+
 export function getPlayer(
   players: Player[],
   playerId: string
@@ -33,6 +57,18 @@ export function getScore(
   );
 }
 
+export function hasFinalScore(
+  score: ScoreEntry | undefined
+): score is ScoreEntry & { grossScore: number } {
+  return typeof score?.grossScore === "number";
+}
+
+export function hasFrontNineScore(
+  score: ScoreEntry | undefined
+): score is ScoreEntry & { frontNineScore: number } {
+  return typeof score?.frontNineScore === "number";
+}
+
 function getCourseForRound(round: Round, courses: Course[]): Course {
   return courses.find((course) => course.id === round.courseId) ?? courses[0];
 }
@@ -41,18 +77,9 @@ function getAllowanceForRound(
   round: Round,
   scoringSettings: ScoringSettings
 ): number {
-  if (round.format === "best_ball") {
-    return scoringSettings.bestBallHandicapAllowance;
-  }
-
-  if (round.format === "match_play") {
-    return scoringSettings.singlesHandicapAllowance;
-  }
-
-  if (round.format === "net_score") {
-    return scoringSettings.netScoreHandicapAllowance;
-  }
-
+  if (round.format === "best_ball") return scoringSettings.bestBallHandicapAllowance;
+  if (round.format === "match_play") return scoringSettings.singlesHandicapAllowance;
+  if (round.format === "net_score") return scoringSettings.netScoreHandicapAllowance;
   return 0;
 }
 
@@ -75,7 +102,6 @@ export function allowedCourseHandicap(
   scoringSettings: ScoringSettings
 ): number {
   const allowance = getAllowanceForRound(round, scoringSettings);
-
   return Math.round(courseHandicap(player, round, courses) * (allowance / 100));
 }
 
@@ -86,10 +112,24 @@ export function netScore(
   courses: Course[],
   scoringSettings: ScoringSettings
 ): number {
-  return (
-    grossScore -
-    allowedCourseHandicap(player, round, courses, scoringSettings)
+  return grossScore - allowedCourseHandicap(player, round, courses, scoringSettings);
+}
+
+export function frontNineNetScore(
+  player: Player,
+  round: Round,
+  frontNineScore: number,
+  courses: Course[],
+  scoringSettings: ScoringSettings
+): number {
+  const fullRoundHandicap = allowedCourseHandicap(
+    player,
+    round,
+    courses,
+    scoringSettings
   );
+
+  return frontNineScore - fullRoundHandicap / 2;
 }
 
 export function playerNetToPar(
@@ -100,8 +140,65 @@ export function playerNetToPar(
   scoringSettings: ScoringSettings
 ): number {
   const course = getCourseForRound(round, courses);
-
   return netScore(player, round, grossScore, courses, scoringSettings) - course.par;
+}
+
+export function buildCurrentRoundStandings(
+  round: Round,
+  players: Player[],
+  scores: ScoreEntry[],
+  courses: Course[],
+  scoringSettings: ScoringSettings
+): CurrentRoundStandingRow[] {
+  return players
+    .map((player) => {
+      const score = getScore(scores, round.id, player.id);
+
+      const handicapAdjustment = allowedCourseHandicap(
+        player,
+        round,
+        courses,
+        scoringSettings
+      );
+
+      const frontNineAdjustment = handicapAdjustment / 2;
+
+      const frontNet = hasFrontNineScore(score)
+        ? frontNineNetScore(
+            player,
+            round,
+            score.frontNineScore,
+            courses,
+            scoringSettings
+          )
+        : null;
+
+      const finalNet = hasFinalScore(score)
+        ? netScore(player, round, score.grossScore, courses, scoringSettings)
+        : null;
+
+      const status: CurrentRoundStandingRow["status"] =
+        finalNet !== null ? "final" : frontNet !== null ? "through_9" : "not_started";
+
+      return {
+        player,
+        frontNineScore: score?.frontNineScore ?? null,
+        grossScore: score?.grossScore ?? null,
+        handicapAdjustment,
+        frontNineAdjustment,
+        frontNet,
+        finalNet,
+        displayNet: finalNet ?? frontNet,
+        isFinal: finalNet !== null,
+        status,
+      };
+    })
+    .sort((a, b) => {
+      if (a.displayNet === null && b.displayNet === null) return 0;
+      if (a.displayNet === null) return 1;
+      if (b.displayNet === null) return -1;
+      return a.displayNet - b.displayNet;
+    });
 }
 
 function bestNetForSide(
@@ -116,15 +213,43 @@ function bestNetForSide(
     const player = getPlayer(players, playerId);
     const score = getScore(scores, round.id, playerId);
 
-    if (!player || !score) return Number.POSITIVE_INFINITY;
+    if (!player || !hasFinalScore(score)) return Number.POSITIVE_INFINITY;
 
-    return netScore(
-      player,
-      round,
-      score.grossScore,
-      courses,
-      scoringSettings
-    );
+    return netScore(player, round, score.grossScore, courses, scoringSettings);
+  });
+
+  return Math.min(...nets);
+}
+
+function bestDisplayNetForSide(
+  playerIds: string[],
+  players: Player[],
+  round: Round,
+  scores: ScoreEntry[],
+  courses: Course[],
+  scoringSettings: ScoringSettings
+): number {
+  const nets = playerIds.map((playerId) => {
+    const player = getPlayer(players, playerId);
+    const score = getScore(scores, round.id, playerId);
+
+    if (!player) return Number.POSITIVE_INFINITY;
+
+    if (hasFinalScore(score)) {
+      return netScore(player, round, score.grossScore, courses, scoringSettings);
+    }
+
+    if (hasFrontNineScore(score)) {
+      return frontNineNetScore(
+        player,
+        round,
+        score.frontNineScore,
+        courses,
+        scoringSettings
+      );
+    }
+
+    return Number.POSITIVE_INFINITY;
   });
 
   return Math.min(...nets);
@@ -174,9 +299,10 @@ export function resolveMatch(
 
   const requiredPlayers = [...match.aPlayers, ...match.bPlayers];
 
-  const waitingOn = requiredPlayers.filter(
-    (playerId) => !getScore(scores, match.roundId, playerId)
-  );
+  const waitingOn = requiredPlayers.filter((playerId) => {
+    const score = getScore(scores, match.roundId, playerId);
+    return !hasFinalScore(score);
+  });
 
   if (waitingOn.length > 0) {
     return {
@@ -212,7 +338,8 @@ export function resolveMatch(
     winner,
     aNet,
     bNet,
-    label: winner === "T" ? `Tie: ${aNet}` : `Team ${winner} wins ${aNet}–${bNet}`,
+    label:
+      winner === "T" ? `Tie: ${aNet}` : `Team ${winner} wins ${aNet}–${bNet}`,
     waitingOn: [],
   };
 }
@@ -262,8 +389,12 @@ export function calculateNetScorePoints(
   courses: Course[],
   scoringSettings: ScoringSettings
 ): Record<TeamId, number> {
-  const ranked: NetScoreRanking[] = scores
-    .filter((score) => score.roundId === round.id)
+  const finalScores = scores.filter(
+    (score): score is ScoreEntry & { grossScore: number } =>
+      score.roundId === round.id && hasFinalScore(score)
+  );
+
+  const ranked: NetScoreRanking[] = finalScores
     .map((score): NetScoreRanking | null => {
       const player = getPlayer(players, score.playerId);
 
@@ -291,6 +422,239 @@ export function calculateNetScorePoints(
     },
     { A: 0, B: 0 }
   );
+}
+
+export function calculateProjectedNetScorePoints(
+  players: Player[],
+  round: Round,
+  scores: ScoreEntry[],
+  courses: Course[],
+  scoringSettings: ScoringSettings
+): Record<TeamId, number> {
+  const projectedRows = buildCurrentRoundStandings(
+    round,
+    players,
+    scores,
+    courses,
+    scoringSettings
+  )
+    .filter((row) => row.displayNet !== null)
+    .slice(0, 6);
+
+  return projectedRows.reduce<Record<TeamId, number>>(
+    (acc, row) => {
+      acc[row.player.team] += 1;
+      return acc;
+    },
+    { A: 0, B: 0 }
+  );
+}
+
+function calculateProjectedMatchPoints(
+  roundMatches: Match[],
+  round: Round,
+  players: Player[],
+  scores: ScoreEntry[],
+  courses: Course[],
+  scoringSettings: ScoringSettings
+): Record<TeamId, number> {
+  return roundMatches.reduce<Record<TeamId, number>>(
+    (acc, match) => {
+      if (match.manualResult === "A") {
+        acc.A += match.points;
+        return acc;
+      }
+
+      if (match.manualResult === "B") {
+        acc.B += match.points;
+        return acc;
+      }
+
+      if (match.manualResult === "T") {
+        acc.A += match.points / 2;
+        acc.B += match.points / 2;
+        return acc;
+      }
+
+      const aNet = bestDisplayNetForSide(
+        match.aPlayers,
+        players,
+        round,
+        scores,
+        courses,
+        scoringSettings
+      );
+
+      const bNet = bestDisplayNetForSide(
+        match.bPlayers,
+        players,
+        round,
+        scores,
+        courses,
+        scoringSettings
+      );
+
+      if (!Number.isFinite(aNet) || !Number.isFinite(bNet)) {
+        return acc;
+      }
+
+      if (aNet < bNet) acc.A += match.points;
+      if (bNet < aNet) acc.B += match.points;
+
+      if (aNet === bNet) {
+        acc.A += match.points / 2;
+        acc.B += match.points / 2;
+      }
+
+      return acc;
+    },
+    { A: 0, B: 0 }
+  );
+}
+
+export function calculateCurrentRoundConfirmedPoints(
+  round: Round,
+  matches: Match[],
+  players: Player[],
+  scores: ScoreEntry[],
+  courses: Course[],
+  scoringSettings: ScoringSettings
+): Record<TeamId, number> {
+  if (round.format === "net_score") {
+    return calculateNetScorePoints(players, round, scores, courses, scoringSettings);
+  }
+
+  const roundMatches = matches.filter((match) => match.roundId === round.id);
+
+  return calculateMatchPoints(
+    roundMatches,
+    players,
+    [round],
+    scores,
+    courses,
+    scoringSettings
+  );
+}
+
+export function calculateCurrentRoundProjectedPoints(
+  round: Round,
+  matches: Match[],
+  players: Player[],
+  scores: ScoreEntry[],
+  courses: Course[],
+  scoringSettings: ScoringSettings
+): Record<TeamId, number> {
+  if (round.format === "net_score") {
+    return calculateProjectedNetScorePoints(
+      players,
+      round,
+      scores,
+      courses,
+      scoringSettings
+    );
+  }
+
+  const roundMatches = matches.filter((match) => match.roundId === round.id);
+
+  return calculateProjectedMatchPoints(
+    roundMatches,
+    round,
+    players,
+    scores,
+    courses,
+    scoringSettings
+  );
+}
+
+export function calculateTeamPointsExcludingRound(
+  excludedRoundId: string,
+  matches: Match[],
+  players: Player[],
+  rounds: Round[],
+  scores: ScoreEntry[],
+  courses: Course[],
+  scoringSettings: ScoringSettings
+): Record<TeamId, number> {
+  const otherMatches = matches.filter((match) => match.roundId !== excludedRoundId);
+  const otherRounds = rounds.filter((round) => round.id !== excludedRoundId);
+
+  return calculateTeamPoints(
+    otherMatches,
+    players,
+    otherRounds,
+    scores,
+    courses,
+    scoringSettings
+  );
+}
+
+export function getCurrentRoundRace(
+  totalPoints: number,
+  round: Round,
+  matches: Match[],
+  players: Player[],
+  rounds: Round[],
+  scores: ScoreEntry[],
+  courses: Course[],
+  scoringSettings: ScoringSettings
+): CurrentRoundRace {
+  const confirmedPriorPoints = calculateTeamPointsExcludingRound(
+    round.id,
+    matches,
+    players,
+    rounds,
+    scores,
+    courses,
+    scoringSettings
+  );
+
+  const currentConfirmedPoints = calculateCurrentRoundConfirmedPoints(
+    round,
+    matches,
+    players,
+    scores,
+    courses,
+    scoringSettings
+  );
+
+  const currentProjectedPoints = calculateCurrentRoundProjectedPoints(
+    round,
+    matches,
+    players,
+    scores,
+    courses,
+    scoringSettings
+  );
+
+  const confirmedTotalPoints = {
+    A: confirmedPriorPoints.A + currentConfirmedPoints.A,
+    B: confirmedPriorPoints.B + currentConfirmedPoints.B,
+  };
+
+  const projectedTotalPoints = {
+    A: confirmedPriorPoints.A + currentProjectedPoints.A,
+    B: confirmedPriorPoints.B + currentProjectedPoints.B,
+  };
+
+  const currentConfirmedAwarded =
+    currentConfirmedPoints.A + currentConfirmedPoints.B;
+
+  const currentProjectedAwarded =
+    currentProjectedPoints.A + currentProjectedPoints.B;
+
+  return {
+    confirmedPriorPoints,
+    currentConfirmedPoints,
+    currentProjectedPoints,
+    confirmedTotalPoints,
+    projectedTotalPoints,
+    currentConfirmedRemaining: Math.max(round.pointsAvailable - currentConfirmedAwarded, 0),
+    currentProjectedRemaining: Math.max(round.pointsAvailable - currentProjectedAwarded, 0),
+    totalProjectedRemaining: Math.max(
+      totalPoints - projectedTotalPoints.A - projectedTotalPoints.B,
+      0
+    ),
+  };
 }
 
 export function calculateTeamPoints(
@@ -346,7 +710,10 @@ export function buildLeaderboard(
 ): LeaderboardRow[] {
   return players
     .map((player) => {
-      const playerScores = scores.filter((score) => score.playerId === player.id);
+      const playerScores = scores.filter(
+        (score): score is ScoreEntry & { grossScore: number } =>
+          score.playerId === player.id && hasFinalScore(score)
+      );
 
       const totalNetToPar = playerScores.reduce((sum, score) => {
         const round = getRound(rounds, score.roundId);

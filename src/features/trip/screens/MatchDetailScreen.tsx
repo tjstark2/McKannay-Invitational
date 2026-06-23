@@ -1,6 +1,9 @@
 import {
   allowedCourseHandicap,
+  frontNineNetScore,
   getScore,
+  hasFinalScore,
+  hasFrontNineScore,
   netScore,
   playerNetToPar,
   resolveMatch,
@@ -41,11 +44,21 @@ export function MatchDetailScreen({
 
       const score = getScore(scores, round.id, player.id);
 
-      const net = score
+      const frontNet = hasFrontNineScore(score)
+        ? frontNineNetScore(
+            player,
+            round,
+            score.frontNineScore,
+            courses,
+            scoringSettings
+          )
+        : null;
+
+      const net = hasFinalScore(score)
         ? netScore(player, round, score.grossScore, courses, scoringSettings)
         : null;
 
-      const plusMinus = score
+      const plusMinus = hasFinalScore(score)
         ? playerNetToPar(
             player,
             round,
@@ -70,11 +83,18 @@ export function MatchDetailScreen({
                 )}
               </p>
             </div>
-            <p className="font-black">{score?.grossScore ?? "-"}</p>
+
+            <div className="text-right">
+              <p className="font-black">{score?.grossScore ?? "-"}</p>
+              <p className="text-xs text-slate-500">
+                Front: {score?.frontNineScore ?? "-"}
+              </p>
+            </div>
           </div>
 
           <p className="mt-2 text-xs text-slate-500">
-            Net {net ?? "-"} · {formatPlusMinus(plusMinus)} to par
+            Front Net {frontNet === null ? "-" : frontNet.toFixed(1)} · Final Net{" "}
+            {net ?? "-"} · {formatPlusMinus(plusMinus)} to par
           </p>
         </div>
       );

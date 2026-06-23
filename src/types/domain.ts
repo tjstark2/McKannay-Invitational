@@ -94,7 +94,8 @@ export type Match = {
 export type ScoreEntry = {
   roundId: string;
   playerId: string;
-  grossScore: number;
+  frontNineScore?: number;
+  grossScore?: number;
 };
 
 export type ScoringSettings = {
@@ -140,4 +141,5 @@ export type TripState = {
   matches: Match[];
   scores: ScoreEntry[];
   scoringSettings: ScoringSettings;
+  currentRoundId: string;
 };

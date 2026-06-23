@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronRight } from "lucide-react";
 import {
   allowedCourseHandicap,
+  frontNineNetScore,
   getScore,
   netScore,
   resolveMatch,
@@ -20,11 +21,18 @@ export function MatchCenterScreen({
   setActiveScreen: (screen: Screen) => void;
   setSelectedMatchId: (matchId: string) => void;
 }) {
-  const { courses, matches, players, rounds, scores, scoringSettings } =
-    useTripState();
+  const {
+    courses,
+    matches,
+    players,
+    rounds,
+    scores,
+    scoringSettings,
+    currentRoundId,
+  } = useTripState();
 
   const [selectedRoundId, setSelectedRoundId] = useState<string>(
-    rounds[0]?.id ?? ""
+    currentRoundId || rounds[0]?.id || ""
   );
 
   const selectedRound =
@@ -48,18 +56,15 @@ export function MatchCenterScreen({
           .map((player) => {
             const score = getScore(scores, selectedRound.id, player.id);
 
-            const courseHandicap = allowedCourseHandicap(
+            const handicapAdjustment = allowedCourseHandicap(
               player,
               selectedRound,
               courses,
               scoringSettings
             );
 
-            return {
-              player,
-              grossScore: score?.grossScore ?? null,
-              handicapAdjustment: courseHandicap,
-              netScore: score
+            const finalNet =
+              typeof score?.grossScore === "number"
                 ? netScore(
                     player,
                     selectedRound,
@@ -67,19 +72,52 @@ export function MatchCenterScreen({
                     courses,
                     scoringSettings
                   )
-                : null,
+                : null;
+
+            const frontNet =
+              typeof score?.frontNineScore === "number"
+                ? frontNineNetScore(
+                    player,
+                    selectedRound,
+                    score.frontNineScore,
+                    courses,
+                    scoringSettings
+                  )
+                : null;
+
+            return {
+              player,
+              grossScore: score?.grossScore ?? null,
+              frontNineScore: score?.frontNineScore ?? null,
+              handicapAdjustment,
+              frontNineAdjustment: handicapAdjustment / 2,
+              frontNet,
+              finalNet,
+              displayNet: finalNet ?? frontNet,
+              isFinal: finalNet !== null,
             };
           })
           .sort((a, b) => {
-            if (a.netScore === null && b.netScore === null) return 0;
-            if (a.netScore === null) return 1;
-            if (b.netScore === null) return -1;
-            return a.netScore - b.netScore;
+            if (a.displayNet === null && b.displayNet === null) return 0;
+            if (a.displayNet === null) return 1;
+            if (b.displayNet === null) return -1;
+            return a.displayNet - b.displayNet;
           })
       : [];
 
-  const netScorePoints = netScoreRows
-    .filter((row) => row.netScore !== null)
+  const confirmedNetScorePoints = netScoreRows
+    .filter((row) => row.finalNet !== null)
+    .slice(0, 6)
+    .reduce<Record<TeamId, number>>(
+      (acc, row) => {
+        acc[row.player.team] += 1;
+        return acc;
+      },
+      { A: 0, B: 0 }
+    );
+
+  const projectedNetScorePoints = netScoreRows
+    .filter((row) => row.displayNet !== null)
     .slice(0, 6)
     .reduce<Record<TeamId, number>>(
       (acc, row) => {
@@ -124,15 +162,37 @@ export function MatchCenterScreen({
                 {selectedCourse?.name ?? "Course"} · Net Score ·{" "}
                 {scoringSettings.netScoreHandicapAllowance}% allowance
               </p>
+
+              <p className="mt-1 text-xs text-slate-500">
+                Projected uses front 9 or final scores. Confirmed points require
+                final gross score.
+              </p>
             </div>
 
             <Pill tone="green">
-              {netScorePoints.A}-{netScorePoints.B}
+              {confirmedNetScorePoints.A}-{confirmedNetScorePoints.B}
             </Pill>
           </div>
 
-          <div className="mt-4 grid grid-cols-5 border-b border-slate-200 pb-2 text-xs font-black uppercase text-slate-500">
+          <div className="mt-4 grid grid-cols-2 gap-2 text-center">
+            <div className="rounded-xl bg-slate-50 p-3">
+              <p className="text-xs font-bold text-slate-500">Projected</p>
+              <p className="mt-1 text-xl font-black">
+                {projectedNetScorePoints.A}-{projectedNetScorePoints.B}
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-slate-50 p-3">
+              <p className="text-xs font-bold text-slate-500">Confirmed</p>
+              <p className="mt-1 text-xl font-black">
+                {confirmedNetScorePoints.A}-{confirmedNetScorePoints.B}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-6 border-b border-slate-200 pb-2 text-xs font-black uppercase text-slate-500">
             <div className="col-span-2">Player</div>
+            <div className="text-center">Front</div>
             <div className="text-center">Gross</div>
             <div className="text-center">HCP</div>
             <div className="text-center">Net</div>
@@ -140,13 +200,13 @@ export function MatchCenterScreen({
 
           <div className="divide-y divide-slate-100">
             {netScoreRows.map((row, index) => {
-              const earnsPoint =
-                row.netScore !== null && index < 6;
+              const projectedPoint = row.displayNet !== null && index < 6;
+              const confirmedPoint = row.finalNet !== null && index < 6;
 
               return (
                 <div
                   key={row.player.id}
-                  className="grid grid-cols-5 items-center py-3 text-sm"
+                  className="grid grid-cols-6 items-center py-3 text-sm"
                 >
                   <div className="col-span-2">
                     <p className="font-black">
@@ -155,8 +215,21 @@ export function MatchCenterScreen({
 
                     <p className="text-xs text-slate-500">
                       Team {row.player.team}
-                      {earnsPoint ? " · +1 pt" : ""}
+                      {row.isFinal
+                        ? " · Final"
+                        : row.frontNet !== null
+                        ? " · Through 9"
+                        : ""}
+                      {confirmedPoint
+                        ? " · +1 confirmed"
+                        : projectedPoint
+                        ? " · +1 projected"
+                        : ""}
                     </p>
+                  </div>
+
+                  <div className="text-center font-bold">
+                    {row.frontNineScore ?? "-"}
                   </div>
 
                   <div className="text-center font-bold">
@@ -164,11 +237,19 @@ export function MatchCenterScreen({
                   </div>
 
                   <div className="text-center font-bold">
-                    -{row.handicapAdjustment}
+                    {row.isFinal
+                      ? `-${row.handicapAdjustment}`
+                      : row.frontNet !== null
+                      ? `-${row.frontNineAdjustment.toFixed(1)}`
+                      : `-${row.handicapAdjustment}`}
                   </div>
 
                   <div className="text-center font-black">
-                    {row.netScore ?? "-"}
+                    {row.displayNet === null
+                      ? "-"
+                      : row.isFinal
+                      ? row.displayNet
+                      : row.displayNet.toFixed(1)}
                   </div>
                 </div>
               );
@@ -188,13 +269,8 @@ export function MatchCenterScreen({
             scoringSettings
           );
 
-          const round = rounds.find(
-            (item) => item.id === match.roundId
-          );
-
-          const course = courses.find(
-            (item) => item.id === round?.courseId
-          );
+          const round = rounds.find((item) => item.id === match.roundId);
+          const course = courses.find((item) => item.id === round?.courseId);
 
           return (
             <button
@@ -209,31 +285,20 @@ export function MatchCenterScreen({
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                      {round?.title ?? "Round"} ·{" "}
-                      {course?.name ?? "Course"}
+                      {round?.title ?? "Round"} · {course?.name ?? "Course"}
                     </p>
 
-                    <h2 className="mt-1 font-black">
-                      {match.label}
-                    </h2>
+                    <h2 className="mt-1 font-black">{match.label}</h2>
 
                     <p className="mt-1 text-xs text-slate-500">
-                      {round
-                        ? formatRoundFormat(round.format)
-                        : ""}
+                      {round ? formatRoundFormat(round.format) : ""}
                       {" · "}
                       {match.points} pts
                     </p>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Pill
-                      tone={
-                        result.status === "final"
-                          ? "green"
-                          : "amber"
-                      }
-                    >
+                    <Pill tone={result.status === "final" ? "green" : "amber"}>
                       {result.status}
                     </Pill>
 
@@ -243,19 +308,13 @@ export function MatchCenterScreen({
 
                 <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
                   <p className="text-sm font-bold text-red-800">
-                    {match.aPlayers
-                      .map(getPlayerName)
-                      .join(" + ")}
+                    {match.aPlayers.map(getPlayerName).join(" + ")}
                   </p>
 
-                  <p className="text-xs font-bold text-slate-400">
-                    VS
-                  </p>
+                  <p className="text-xs font-bold text-slate-400">VS</p>
 
                   <p className="text-sm font-bold text-blue-800">
-                    {match.bPlayers
-                      .map(getPlayerName)
-                      .join(" + ")}
+                    {match.bPlayers.map(getPlayerName).join(" + ")}
                   </p>
                 </div>
 

@@ -21,6 +21,7 @@ type TripStateContextValue = TripState & {
   updatePlayer: (playerId: string, updates: Partial<Player>) => void;
   updateRound: (roundId: string, updates: Partial<Round>) => void;
   updateRoundFormat: (roundId: string, format: Round["format"]) => void;
+  updateCurrentRound: (roundId: string) => void;
   updateTeeTime: (roundId: string, teeTimeId: string, time: string) => void;
   updateMatch: (matchId: string, updates: Partial<Match>) => void;
   updateMatchPlayer: (
@@ -79,6 +80,13 @@ export function TripStateProvider({
           rounds: current.rounds.map((round) =>
             round.id === roundId ? { ...round, ...updates } : round
           ),
+        }));
+      },
+
+      updateCurrentRound: (roundId) => {
+        setState((current) => ({
+          ...current,
+          currentRoundId: roundId,
         }));
       },
 

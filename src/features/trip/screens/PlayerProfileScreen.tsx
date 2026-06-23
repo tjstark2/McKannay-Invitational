@@ -1,5 +1,12 @@
 import { formatPlusMinus } from "@/lib/format";
-import { netScore, playerNetToPar, resolveMatch } from "@/lib/scoring";
+import {
+  frontNineNetScore,
+  hasFinalScore,
+  hasFrontNineScore,
+  netScore,
+  playerNetToPar,
+  resolveMatch,
+} from "@/lib/scoring";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { useTripState } from "@/features/trip/state/TripStateContext";
@@ -25,6 +32,7 @@ export function PlayerProfileScreen({
   const player = players.find((item) => item.id === playerId) ?? players[0];
   const team = teams.find((item) => item.id === player.team);
   const playerScores = scores.filter((score) => score.playerId === player.id);
+  const finalPlayerScores = playerScores.filter(hasFinalScore);
 
   const pointsWon = matches.reduce((sum, match) => {
     const result = resolveMatch(
@@ -48,7 +56,7 @@ export function PlayerProfileScreen({
     return sum;
   }, 0);
 
-  const totalNetToPar = playerScores.reduce((sum, score) => {
+  const totalNetToPar = finalPlayerScores.reduce((sum, score) => {
     const round = rounds.find((item) => item.id === score.roundId);
     if (!round) return sum;
 
@@ -102,7 +110,9 @@ export function PlayerProfileScreen({
 
           <div className="rounded-xl bg-slate-50 p-3">
             <p className="text-xs font-bold text-slate-500">Rounds</p>
-            <p className="mt-1 text-xl font-black">{playerScores.length}</p>
+            <p className="mt-1 text-xl font-black">
+              {finalPlayerScores.length}
+            </p>
           </div>
         </div>
       </Card>
@@ -118,21 +128,35 @@ export function PlayerProfileScreen({
               const round = rounds.find((item) => item.id === score.roundId);
               if (!round) return null;
 
-              const net = netScore(
-                player,
-                round,
-                score.grossScore,
-                courses,
-                scoringSettings
-              );
+              const frontNet = hasFrontNineScore(score)
+                ? frontNineNetScore(
+                    player,
+                    round,
+                    score.frontNineScore,
+                    courses,
+                    scoringSettings
+                  )
+                : null;
 
-              const netToPar = playerNetToPar(
-                player,
-                round,
-                score.grossScore,
-                courses,
-                scoringSettings
-              );
+              const net = hasFinalScore(score)
+                ? netScore(
+                    player,
+                    round,
+                    score.grossScore,
+                    courses,
+                    scoringSettings
+                  )
+                : null;
+
+              const netToPar = hasFinalScore(score)
+                ? playerNetToPar(
+                    player,
+                    round,
+                    score.grossScore,
+                    courses,
+                    scoringSettings
+                  )
+                : null;
 
               return (
                 <div
@@ -146,11 +170,20 @@ export function PlayerProfileScreen({
                         {round.dateLabel}
                       </p>
                     </div>
-                    <p className="font-black">{score.grossScore}</p>
+
+                    <div className="text-right">
+                      <p className="font-black">
+                        {score.grossScore ?? "In Progress"}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Front: {score.frontNineScore ?? "-"}
+                      </p>
+                    </div>
                   </div>
 
                   <p className="mt-2 text-xs text-slate-500">
-                    Net {net} · {formatPlusMinus(netToPar)} to par
+                    Front Net {frontNet === null ? "-" : frontNet.toFixed(1)} ·
+                    Final Net {net ?? "-"} · {formatPlusMinus(netToPar)} to par
                   </p>
                 </div>
               );

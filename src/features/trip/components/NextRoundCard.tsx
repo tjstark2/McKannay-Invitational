@@ -9,8 +9,9 @@ export function NextRoundCard({
 }: {
   setActiveScreen: (screen: Screen) => void;
 }) {
-  const { courses, players, rounds } = useTripState();
-  const round = rounds[0];
+  const { courses, players, rounds, currentRoundId } = useTripState();
+
+  const round = rounds.find((item) => item.id === currentRoundId) ?? rounds[0];
   const course = courses.find((item) => item.id === round.courseId) ?? courses[0];
 
   const getPlayerName = (playerId: string) =>
@@ -18,14 +19,14 @@ export function NextRoundCard({
 
   return (
     <section>
-      <h2 className="mb-3 text-xl font-black text-slate-900">Next Round</h2>
+      <h2 className="mb-3 text-xl font-black text-slate-900">Active Round</h2>
 
       <Card className="overflow-hidden">
         <div className="p-4">
           <div className="grid grid-cols-[1fr_116px] gap-4">
             <div>
               <p className="text-sm text-slate-500">
-                {round.dateLabel} · {round.title}
+                {round.dateLabel} · Round {round.roundNumber}
               </p>
               <h3 className="mt-1 text-lg font-black text-slate-900">
                 {course.name}
@@ -43,9 +44,7 @@ export function NextRoundCard({
           <div className="mt-4 grid grid-cols-3 gap-3 border-b border-slate-200 pb-4">
             <div>
               <p className="text-xs font-semibold text-slate-500">Format</p>
-              <p className="mt-1 font-black">
-                {formatRoundFormat(round.format)}
-              </p>
+              <p className="mt-1 font-black">{formatRoundFormat(round.format)}</p>
             </div>
 
             <div>
@@ -76,10 +75,10 @@ export function NextRoundCard({
 
         <div className="px-4 pb-4">
           <ChevronButton
-            onClick={() => setActiveScreen("schedule")}
+            onClick={() => setActiveScreen("tournament")}
             className="bg-fairway-900 text-white"
           >
-            View Full Schedule
+            View Active Round
           </ChevronButton>
         </div>
       </Card>

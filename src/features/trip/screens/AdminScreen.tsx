@@ -15,11 +15,13 @@ export function AdminScreen() {
     rounds,
     matches,
     scoringSettings,
+    currentRoundId,
     updateTrip,
     updateTeam,
     updatePlayer,
     updateRound,
     updateRoundFormat,
+    updateCurrentRound,
     updateTeeTime,
     updateMatch,
     updateMatchPlayer,
@@ -81,6 +83,38 @@ export function AdminScreen() {
 
       {activeTab === "trip" ? (
         <>
+          <Card className="p-4">
+            <h2 className="font-black">Active Round</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Controls the default round for Log Round and live tournament views.
+            </p>
+
+            <div className="mt-4 grid gap-2">
+              {rounds.map((round) => (
+                <button
+                  key={round.id}
+                  onClick={() => updateCurrentRound(round.id)}
+                  className={`rounded-xl p-3 text-left ${
+                    currentRoundId === round.id
+                      ? "bg-fairway-900 text-white"
+                      : "bg-slate-50 text-slate-700"
+                  }`}
+                >
+                  <p className="font-black">
+                    Round {round.roundNumber}: {round.title}
+                  </p>
+                  <p
+                    className={`mt-1 text-xs ${
+                      currentRoundId === round.id ? "text-white/80" : "text-slate-500"
+                    }`}
+                  >
+                    {round.dateLabel} · {round.format.replace("_", " ")}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </Card>
+
           <Card className="p-4">
             <h2 className="font-black">Trip Setup</h2>
 
