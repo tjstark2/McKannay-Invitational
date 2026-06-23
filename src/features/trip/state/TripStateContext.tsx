@@ -20,6 +20,7 @@ type TripStateContextValue = TripState & {
   updateTeam: (teamId: TeamId, updates: Partial<Team>) => void;
   updatePlayer: (playerId: string, updates: Partial<Player>) => void;
   updateRound: (roundId: string, updates: Partial<Round>) => void;
+  updateRoundFormat: (roundId: string, format: Round["format"]) => void;
   updateTeeTime: (roundId: string, teeTimeId: string, time: string) => void;
   updateMatch: (matchId: string, updates: Partial<Match>) => void;
   updateMatchPlayer: (
@@ -79,6 +80,95 @@ export function TripStateProvider({
             round.id === roundId ? { ...round, ...updates } : round
           ),
         }));
+      },
+
+      updateRoundFormat: (roundId, format) => {
+        setState((current) => {
+          const round = current.rounds.find((item) => item.id === roundId);
+
+          if (!round) return current;
+
+          const teamAPlayers = current.players
+            .filter((player) => player.team === "A")
+            .map((player) => player.id);
+
+          const teamBPlayers = current.players
+            .filter((player) => player.team === "B")
+            .map((player) => player.id);
+
+          let rebuiltMatches = current.matches.filter(
+            (match) => match.roundId !== roundId
+          );
+
+          if (format === "best_ball") {
+            rebuiltMatches = [
+              ...rebuiltMatches,
+              {
+                id: `${roundId}-match-1`,
+                roundId,
+                label: `${round.title} Best Ball 1`,
+                points: 2,
+                aPlayers: teamAPlayers.slice(0, 2),
+                bPlayers: teamBPlayers.slice(0, 2),
+                manualResult: null,
+              },
+              {
+                id: `${roundId}-match-2`,
+                roundId,
+                label: `${round.title} Best Ball 2`,
+                points: 2,
+                aPlayers: teamAPlayers.slice(2, 4),
+                bPlayers: teamBPlayers.slice(2, 4),
+                manualResult: null,
+              },
+              {
+                id: `${roundId}-match-3`,
+                roundId,
+                label: `${round.title} Best Ball 3`,
+                points: 2,
+                aPlayers: teamAPlayers.slice(4, 6),
+                bPlayers: teamBPlayers.slice(4, 6),
+                manualResult: null,
+              },
+            ];
+          }
+
+          if (format === "match_play") {
+            rebuiltMatches = [
+              ...rebuiltMatches,
+              ...Array.from({ length: 6 }, (_, index) => ({
+                id: `${roundId}-match-${index + 1}`,
+                roundId,
+                label: `${round.title} Singles ${index + 1}`,
+                points: 1,
+                aPlayers: [teamAPlayers[index]],
+                bPlayers: [teamBPlayers[index]],
+                manualResult: null,
+              })),
+            ];
+          }
+
+          return {
+            ...current,
+            rounds: current.rounds.map((item) =>
+              item.id === roundId
+                ? {
+                    ...item,
+                    format,
+                    pointsAvailable:
+                      format === "best_ball"
+                        ? 6
+                        : format === "match_play"
+                        ? 6
+                        : format === "net_score"
+                        ? 6
+                        : item.pointsAvailable,
+                  }
+                : item
+            ),
+            matches: rebuiltMatches,
+          };
+        });
       },
 
       updateTeeTime: (roundId, teeTimeId, time) => {

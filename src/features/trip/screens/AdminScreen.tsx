@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useTripState } from "@/features/trip/state/TripStateContext";
-import type { TeamId, Winner } from "@/types";
+import type { Round, TeamId, Winner } from "@/types";
 
 type AdminTab = "trip" | "teams" | "players" | "rounds" | "scoring" | "matches";
 
@@ -19,6 +19,7 @@ export function AdminScreen() {
     updateTeam,
     updatePlayer,
     updateRound,
+    updateRoundFormat,
     updateTeeTime,
     updateMatch,
     updateMatchPlayer,
@@ -304,6 +305,31 @@ export function AdminScreen() {
             {rounds.map((round) => (
               <div key={round.id} className="rounded-xl bg-slate-50 p-3">
                 <h3 className="font-black">{round.title}</h3>
+
+                <div className="mt-3">
+                  <label className="block text-xs font-black uppercase text-slate-500">
+                    Format
+                  </label>
+
+                  <select
+                    value={round.format}
+                    onChange={(event) =>
+                      updateRoundFormat(
+                        round.id,
+                        event.target.value as Round["format"]
+                      )
+                    }
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 font-bold"
+                  >
+                    <option value="best_ball">Best Ball</option>
+                    <option value="match_play">Singles</option>
+                    <option value="net_score">Net Score</option>
+                  </select>
+
+                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                    Changing format will rebuild match pairings for this round.
+                  </p>
+                </div>
 
                 <label className="mt-3 block text-xs font-black uppercase text-slate-500">
                   Arrival Time
