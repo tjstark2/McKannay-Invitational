@@ -18,6 +18,12 @@ import { ScoreboardScreen } from "@/features/trip/screens/ScoreboardScreen";
 import { TeamDetailScreen } from "@/features/trip/screens/TeamDetailScreen";
 import { TeamsScreen } from "@/features/trip/screens/TeamsScreen";
 import { TopHero } from "@/features/trip/components/TopHero";
+import { PasswordGate } from "@/features/trip/components/PasswordGate";
+import {
+  APP_CONFIG,
+  ADMIN_UNLOCK_KEY,
+  ENTRY_UNLOCK_KEY,
+} from "@/features/trip/config";
 import {
   TripStateProvider,
   useTripState,
@@ -33,7 +39,8 @@ type TournamentTab =
   | "players";
 
 function TripAppInner() {
-  const { players, courses, matches } = useTripState();
+  const { players, courses, matches, loading, error, resetState } =
+    useTripState();
 
   const [activeScreen, setActiveScreen] = useState<Screen>("overview");
   const [selectedPlayerId, setSelectedPlayerId] = useState(players[0]?.id ?? "");
@@ -42,6 +49,35 @@ function TripAppInner() {
   const [selectedMatchId, setSelectedMatchId] = useState(matches[0]?.id ?? "");
   const [tournamentTab, setTournamentTab] =
     useState<TournamentTab>("scoreboard");
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-200 text-slate-900">
+        <div className="text-center">
+          <p className="text-3xl">⛳</p>
+          <p className="mt-3 font-black">Loading tournament…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-200 px-5 text-slate-900">
+        <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-phone">
+          <p className="text-3xl">⚠️</p>
+          <p className="mt-3 font-black">Couldn&apos;t load the tournament</p>
+          <p className="mt-1 text-sm text-slate-500">{error}</p>
+          <button
+            onClick={() => resetState()}
+            className="mt-4 w-full rounded-xl bg-fairway-900 px-4 py-3 font-black text-white"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   function goToScreen(screen: Screen) {
     if (
@@ -168,7 +204,16 @@ function TripAppInner() {
 
           {activeScreen === "rules" ? <RulesScreen /> : null}
 
-          {activeScreen === "admin" ? <AdminScreen /> : null}
+          {activeScreen === "admin" ? (
+            <PasswordGate
+              password={APP_CONFIG.adminPassword}
+              storageKey={ADMIN_UNLOCK_KEY}
+              title="Admin Access"
+              subtitle="Enter the admin password to manage the tournament."
+            >
+              <AdminScreen />
+            </PasswordGate>
+          ) : null}
 
           {activeScreen === "more" ? (
             <MoreScreen setActiveScreen={goToScreen} />
@@ -191,7 +236,14 @@ function TripAppInner() {
 export function TripApp() {
   return (
     <TripStateProvider>
-      <TripAppInner />
+      <PasswordGate
+        password={APP_CONFIG.entryPassword}
+        storageKey={ENTRY_UNLOCK_KEY}
+        title="McKannay Invitational"
+        subtitle="Enter the trip password to continue."
+      >
+        <TripAppInner />
+      </PasswordGate>
     </TripStateProvider>
   );
 }
