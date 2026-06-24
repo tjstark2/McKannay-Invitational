@@ -122,7 +122,7 @@ export function AccountHome() {
 
   return (
     <div className="min-h-screen bg-[#f7f6f1]">
-      <header className="border-b border-sand-100 bg-white/80 backdrop-blur">
+      <header className="relative z-50 border-b border-sand-100 bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3">
           <BrandHeaderMark />
           <AccountMenu />

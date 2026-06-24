@@ -3,7 +3,6 @@
 import type { Screen } from "@/types";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { BrandBox } from "@/features/trip/components/Brand";
-import { AccountMenu } from "@/features/account/AccountMenu";
 
 export function TopHero({
   activeScreen,
@@ -24,10 +23,6 @@ export function TopHero({
         <div className="absolute inset-0 bg-gradient-to-t from-fairway-900/95 via-fairway-900/45 to-fairway-900/10" />
 
         <BrandBox className="absolute left-4 top-4" />
-
-        <div className="absolute right-4 top-4">
-          <AccountMenu tone="onPhoto" />
-        </div>
 
         <div className="absolute bottom-5 left-5 right-5 text-center text-white">
           <p className="text-xs font-bold uppercase tracking-[0.22em] opacity-90">

@@ -18,6 +18,7 @@ import { ScoreboardScreen } from "@/features/trip/screens/ScoreboardScreen";
 import { TeamDetailScreen } from "@/features/trip/screens/TeamDetailScreen";
 import { TeamsScreen } from "@/features/trip/screens/TeamsScreen";
 import { TopHero } from "@/features/trip/components/TopHero";
+import { AccountMenu } from "@/features/account/AccountMenu";
 import { PasswordGate } from "@/features/trip/components/PasswordGate";
 import { EntryGate } from "@/features/trip/components/EntryGate";
 import {
@@ -100,7 +101,10 @@ function TripAppInner() {
 
   return (
     <div className="min-h-screen bg-[#f7f6f1] text-slate-900">
-      <div className="mx-auto min-h-screen max-w-md bg-[#f7f6f1] pb-28 shadow-phone">
+      <div className="relative mx-auto min-h-screen max-w-md bg-[#f7f6f1] pb-28 shadow-phone">
+        <div className="absolute right-4 top-4 z-[70]">
+          <AccountMenu tone="onPhoto" />
+        </div>
         <TopHero activeScreen={activeScreen} setActiveScreen={goToScreen} />
 
         <main className="px-5 py-6">

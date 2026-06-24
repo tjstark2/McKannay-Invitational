@@ -68,8 +68,8 @@ export function AccountMenu({ tone = "light" }: { tone?: "light" | "onPhoto" }) 
 
       {open ? (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-sand-100 bg-white text-left shadow-2xl">
+          <div className="fixed inset-0 z-[80]" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 z-[90] mt-2 w-56 overflow-hidden rounded-2xl border border-sand-100 bg-white text-left shadow-2xl">
             <div className="border-b border-sand-100 px-4 py-3">
               <p className="text-xs text-slate-400">Signed in as</p>
               <p className="truncate text-sm font-bold text-ink">{user?.email}</p>
