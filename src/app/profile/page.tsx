@@ -10,6 +10,9 @@ import { AccountMenu } from "@/features/account/AccountMenu";
 type Profile = {
   first_name: string | null;
   last_name: string | null;
+  username: string | null;
+  city: string | null;
+  state: string | null;
   email: string | null;
   phone: string | null;
   marketing_opt_in: boolean | null;
@@ -33,7 +36,9 @@ export default function ProfilePage() {
     (async () => {
       const p = await supabase
         .from("profiles")
-        .select("first_name,last_name,email,phone,marketing_opt_in,sms_opt_in")
+        .select(
+          "first_name,last_name,username,city,state,email,phone,marketing_opt_in,sms_opt_in"
+        )
         .eq("id", user.id)
         .maybeSingle();
       if (active) setProfile((p.data as Profile) ?? null);
@@ -69,7 +74,14 @@ export default function ProfilePage() {
         <p className="mt-1 text-slate-500">Your account details.</p>
 
         <div className="mt-6 divide-y divide-sand-100 overflow-hidden rounded-2xl border border-sand-100 bg-white">
+          <Row label="Username" value={profile?.username ? `@${profile.username}` : "—"} />
           <Row label="Name" value={fullName || "—"} />
+          <Row
+            label="Location"
+            value={
+              [profile?.city, profile?.state].filter(Boolean).join(", ") || "—"
+            }
+          />
           <Row label="Email" value={profile?.email || user.email || "—"} />
           <Row label="Phone" value={profile?.phone || "—"} />
           <Row

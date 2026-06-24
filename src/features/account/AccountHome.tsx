@@ -33,10 +33,15 @@ export function AccountHome() {
     (async () => {
       const prof = await supabase
         .from("profiles")
-        .select("first_name")
+        .select("first_name,username")
         .eq("id", user.id)
         .maybeSingle();
-      if (active) setFirstName((prof.data?.first_name as string) ?? "");
+      if (!active) return;
+      if (!prof.data?.username) {
+        router.replace("/complete-profile");
+        return;
+      }
+      setFirstName((prof.data?.first_name as string) ?? "");
       const my = await loadMyTrips(supabase, user.id);
       if (active) setTrips(my);
     })();

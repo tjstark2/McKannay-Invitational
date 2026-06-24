@@ -2,11 +2,19 @@
 
 import { useState } from "react";
 import { useAuth } from "@/features/auth/AuthContext";
+import {
+  StateSelect,
+  useUsernameCheck,
+  UsernameHint,
+} from "@/features/account/identity";
 
 export function SignUpForm() {
   const { signUp } = useAuth();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [username, setUsername] = useState("");
+  const [city, setCity] = useState("");
+  const [stateAbbr, setStateAbbr] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -16,9 +24,14 @@ export function SignUpForm() {
   const [error, setError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
 
+  const usernameStatus = useUsernameCheck(username);
+
   const canSubmit =
     firstName.trim() &&
     lastName.trim() &&
+    usernameStatus === "available" &&
+    city.trim() &&
+    stateAbbr.trim() &&
     email.trim() &&
     phone.trim() &&
     password.length >= 8 &&
@@ -31,6 +44,9 @@ export function SignUpForm() {
     const result = await signUp({
       firstName,
       lastName,
+      username,
+      city,
+      state: stateAbbr,
       email,
       phone,
       password,
@@ -96,6 +112,32 @@ export function SignUpForm() {
               placeholder="Carter"
               autoComplete="family-name"
             />
+          </Field>
+        </div>
+        <Field label="Username" hint="how friends find you">
+          <input
+            className={inputClass}
+            value={username}
+            onChange={(e) =>
+              setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, "").toLowerCase())
+            }
+            placeholder="tjstark2"
+            autoCapitalize="none"
+            autoComplete="off"
+          />
+          <UsernameHint status={usernameStatus} />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="City">
+            <input
+              className={inputClass}
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="San Diego"
+            />
+          </Field>
+          <Field label="State">
+            <StateSelect value={stateAbbr} onChange={setStateAbbr} />
           </Field>
         </div>
         <Field label="Email">

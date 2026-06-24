@@ -14,6 +14,9 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 export type SignUpInput = {
   firstName: string;
   lastName: string;
+  username: string;
+  city: string;
+  state: string;
   email: string;
   phone: string;
   password: string;
@@ -88,6 +91,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: {
             first_name: input.firstName.trim(),
             last_name: input.lastName.trim(),
+            username: input.username.trim().toLowerCase(),
+            city: input.city.trim(),
+            state: input.state.trim().toUpperCase(),
             phone: input.phone.trim(),
             marketing_opt_in: input.marketingOptIn,
             sms_opt_in: input.smsOptIn,
