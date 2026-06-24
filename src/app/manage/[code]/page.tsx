@@ -80,6 +80,30 @@ export default function ManagePage() {
     };
   }, [user, loading, code, router, refresh]);
 
+  // live search for the invite autocomplete (hook must run every render)
+  useEffect(() => {
+    if (!user) return;
+    const q = inviteHandle.trim();
+    if (q.length < 2) {
+      setInviteResults([]);
+      return;
+    }
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    let active = true;
+    const t = setTimeout(async () => {
+      const r = await searchUsers(supabase, q, user.id);
+      if (active) {
+        setInviteResults(r);
+        setInviteOpen(true);
+      }
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(t);
+    };
+  }, [inviteHandle, user]);
+
   if (loading || !ready) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f7f6f1]">
@@ -133,30 +157,6 @@ export default function ManagePage() {
     await removeMember(supabase, membershipId);
     await refresh(trip);
   }
-
-  // live search for the invite autocomplete
-  useEffect(() => {
-    if (!user) return;
-    const q = inviteHandle.trim();
-    if (q.length < 2) {
-      setInviteResults([]);
-      return;
-    }
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
-    let active = true;
-    const t = setTimeout(async () => {
-      const r = await searchUsers(supabase, q, user.id);
-      if (active) {
-        setInviteResults(r);
-        setInviteOpen(true);
-      }
-    }, 250);
-    return () => {
-      active = false;
-      clearTimeout(t);
-    };
-  }, [inviteHandle, user]);
 
   async function invite(handle?: string) {
     const target = (handle ?? inviteHandle).trim();
