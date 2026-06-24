@@ -26,6 +26,12 @@ export function CourseDetailScreen({
         <div className="p-5">
           <h1 className="text-2xl font-black">{course.name}</h1>
           <p className="mt-1 text-sm text-slate-500">{course.location}</p>
+          <p className="mt-2 inline-block rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">
+            {course.teeName} tees
+            {course.yardage !== null
+              ? ` · ${course.yardage.toLocaleString()} yds`
+              : ""}
+          </p>
 
           <div className="mt-4 grid grid-cols-3 gap-2 text-center">
             <div className="rounded-xl bg-slate-50 p-3">

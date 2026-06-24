@@ -5,6 +5,7 @@ import {
   frontNineNetScore,
   getScore,
   netScore,
+  netScoreConfirmed,
   netScorePointCount,
   resolveMatch,
 } from "@/lib/scoring";
@@ -94,7 +95,7 @@ export function MatchCenterScreen({
               frontNineAdjustment: handicapAdjustment / 2,
               frontNet,
               finalNet,
-              displayNet: finalNet ?? frontNet,
+              displayNet: finalNet ?? (frontNet !== null ? frontNet * 2 : null),
               isFinal: finalNet !== null,
             };
           })
@@ -106,16 +107,19 @@ export function MatchCenterScreen({
           })
       : [];
 
-  const confirmedNetScorePoints = netScoreRows
-    .filter((row) => row.finalNet !== null)
-    .slice(0, netScorePointCount(players, scoringSettings))
-    .reduce<Record<TeamId, number>>(
-      (acc, row) => {
-        acc[row.player.team] += 1;
-        return acc;
-      },
-      { A: 0, B: 0 }
-    );
+  const netConfirmed =
+    selectedRound && selectedRound.format === "net_score"
+      ? netScoreConfirmed(
+          players,
+          selectedRound,
+          scores,
+          courses,
+          scoringSettings
+        )
+      : { points: { A: 0, B: 0 } as Record<TeamId, number>, lockedIds: new Set<string>() };
+
+  const confirmedNetScorePoints = netConfirmed.points;
+  const lockedNetIds = netConfirmed.lockedIds;
 
   const projectedNetScorePoints = netScoreRows
     .filter((row) => row.displayNet !== null)
@@ -201,8 +205,10 @@ export function MatchCenterScreen({
 
           <div className="divide-y divide-slate-100">
             {netScoreRows.map((row, index) => {
-              const projectedPoint = row.displayNet !== null && index < 6;
-              const confirmedPoint = row.finalNet !== null && index < 6;
+              const projectedPoint =
+                row.displayNet !== null &&
+                index < netScorePointCount(players, scoringSettings);
+              const confirmedPoint = lockedNetIds.has(row.player.id);
 
               return (
                 <div
@@ -219,7 +225,7 @@ export function MatchCenterScreen({
                       {row.isFinal
                         ? " · Final"
                         : row.frontNet !== null
-                        ? " · Through 9"
+                        ? " · Through 9 · proj net"
                         : ""}
                       {confirmedPoint
                         ? " · +1 confirmed"

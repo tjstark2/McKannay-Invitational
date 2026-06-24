@@ -188,7 +188,9 @@ export function buildCurrentRoundStandings(
         frontNineAdjustment,
         frontNet,
         finalNet,
-        displayNet: finalNet ?? frontNet,
+        // Rank/project on a full-round scale: a through-9 net doubles to a
+        // projected 18-hole net so it compares fairly against finished rounds.
+        displayNet: finalNet ?? (frontNet !== null ? frontNet * 2 : null),
         isFinal: finalNet !== null,
         status,
       };
@@ -240,12 +242,16 @@ function bestDisplayNetForSide(
     }
 
     if (hasFrontNineScore(score)) {
-      return frontNineNetScore(
-        player,
-        round,
-        score.frontNineScore,
-        courses,
-        scoringSettings
+      // Project the front 9 to a full round so it compares fairly with finals.
+      return (
+        2 *
+        frontNineNetScore(
+          player,
+          round,
+          score.frontNineScore,
+          courses,
+          scoringSettings
+        )
       );
     }
 
@@ -400,6 +406,84 @@ export function netScorePointCount(
   return Math.floor(players.length / 2);
 }
 
+// Confirmed (mathematically locked) net-score points. A finished player's point
+// is locked only if, even in the worst case — every still-unfinished player on
+// the OTHER team finishes at the top and pushes them down — they still land in
+// the top N. Returns both team totals and the set of locked player IDs.
+export function netScoreConfirmed(
+  players: Player[],
+  round: Round,
+  scores: ScoreEntry[],
+  courses: Course[],
+  scoringSettings: ScoringSettings
+): { points: Record<TeamId, number>; lockedIds: Set<string> } {
+  const N = netScorePointCount(players, scoringSettings);
+
+  const finished = players
+    .map((player) => {
+      const score = getScore(scores, round.id, player.id);
+      if (!hasFinalScore(score)) return null;
+      return {
+        player,
+        net: netScore(player, round, score.grossScore, courses, scoringSettings),
+      };
+    })
+    .filter((row): row is { player: Player; net: number } => row !== null);
+
+  const unfinishedByTeam: Record<TeamId, number> = { A: 0, B: 0 };
+  players.forEach((player) => {
+    const score = getScore(scores, round.id, player.id);
+    if (!hasFinalScore(score)) unfinishedByTeam[player.team] += 1;
+  });
+
+  const points: Record<TeamId, number> = { A: 0, B: 0 };
+  const lockedIds = new Set<string>();
+
+  const totalUnfinished = unfinishedByTeam.A + unfinishedByTeam.B;
+
+  // Team floor: the fewest points a team can end with, over every way the
+  // unfinished players could finish. Build the worst case directly: the OTHER
+  // team's unfinished players finish at the very top, this team's unfinished
+  // finish at the very bottom, and any net ties are broken against this team.
+  // Counting this team in the top N of that ordering handles tied scores
+  // correctly (a positional guarantee a per-player check would miss).
+  const teamFloor = (team: TeamId): number => {
+    const other: TeamId = team === "A" ? "B" : "A";
+    const list: { team: TeamId; net: number }[] = [];
+    for (let i = 0; i < unfinishedByTeam[other]; i += 1) {
+      list.push({ team: other, net: -1e9 });
+    }
+    finished.forEach((row) => list.push({ team: row.player.team, net: row.net }));
+    for (let i = 0; i < unfinishedByTeam[team]; i += 1) {
+      list.push({ team, net: 1e9 });
+    }
+    list.sort(
+      (a, b) =>
+        a.net - b.net ||
+        (a.team === team ? 1 : 0) - (b.team === team ? 1 : 0)
+    );
+    return list.slice(0, N).filter((row) => row.team === team).length;
+  };
+
+  points.A = teamFloor("A");
+  points.B = teamFloor("B");
+
+  // Individual lock (for row badges): a finished player is only personally
+  // guaranteed a paying slot if no outstanding player on EITHER team — and no
+  // tie — could push them out of the top N.
+  finished.forEach((row) => {
+    const strictlyBetter = finished.filter((q) => q.net < row.net).length;
+    const tiedOthers = finished.filter(
+      (q) => q.net === row.net && q.player.id !== row.player.id
+    ).length;
+    if (strictlyBetter + tiedOthers + 1 + totalUnfinished <= N) {
+      lockedIds.add(row.player.id);
+    }
+  });
+
+  return { points, lockedIds };
+}
+
 export function calculateNetScorePoints(
   players: Player[],
   round: Round,
@@ -407,39 +491,8 @@ export function calculateNetScorePoints(
   courses: Course[],
   scoringSettings: ScoringSettings
 ): Record<TeamId, number> {
-  const finalScores = scores.filter(
-    (score): score is ScoreEntry & { grossScore: number } =>
-      score.roundId === round.id && hasFinalScore(score)
-  );
-
-  const ranked: NetScoreRanking[] = finalScores
-    .map((score): NetScoreRanking | null => {
-      const player = getPlayer(players, score.playerId);
-
-      if (!player) return null;
-
-      return {
-        player,
-        netScore: netScore(
-          player,
-          round,
-          score.grossScore,
-          courses,
-          scoringSettings
-        ),
-      };
-    })
-    .filter((row): row is NetScoreRanking => row !== null)
-    .sort((a, b) => a.netScore - b.netScore)
-    .slice(0, netScorePointCount(players, scoringSettings));
-
-  return ranked.reduce<Record<TeamId, number>>(
-    (acc, row) => {
-      acc[row.player.team] += 1;
-      return acc;
-    },
-    { A: 0, B: 0 }
-  );
+  return netScoreConfirmed(players, round, scores, courses, scoringSettings)
+    .points;
 }
 
 export function calculateProjectedNetScorePoints(

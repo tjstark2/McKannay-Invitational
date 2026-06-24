@@ -58,6 +58,12 @@ export function ScheduleScreen({
                 <Pill tone="green">{round.pointsAvailable} pts</Pill>
                 <Pill tone="blue">{formatRoundFormat(round.format)}</Pill>
                 <Pill tone="purple">{course.rating}/{course.slope}</Pill>
+                <Pill tone="purple">
+                  {course.teeName}
+                  {course.yardage !== null
+                    ? ` · ${course.yardage.toLocaleString()} yds`
+                    : ""}
+                </Pill>
               </div>
 
               <div className="mt-4 space-y-2">

@@ -57,6 +57,8 @@ export type Course = {
   par: number;
   rating: number;
   slope: number;
+  teeName: string;
+  yardage: number | null;
   imageUrl: string;
   notes: string;
 };

@@ -65,6 +65,8 @@ export type CourseRow = {
   par: number | null;
   course_rating: number | null;
   slope: number | null;
+  tee_name: string | null;
+  yardage: number | null;
   image_url: string | null;
   notes: string | null;
 };
@@ -170,6 +172,11 @@ export function mapCourse(row: CourseRow): Course {
     par: Number(row.par ?? 72),
     rating: Number(row.course_rating ?? 72),
     slope: Number(row.slope ?? 113),
+    teeName: row.tee_name ?? "Blue",
+    yardage:
+      row.yardage === null || row.yardage === undefined
+        ? null
+        : Number(row.yardage),
     imageUrl: row.image_url ?? "",
     notes: row.notes ?? "",
   };

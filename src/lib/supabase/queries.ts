@@ -476,6 +476,8 @@ export async function insertCourse(
     par: number;
     rating: number;
     slope: number;
+    teeName?: string;
+    yardage?: number | null;
     location?: string;
     address?: string;
     imageUrl?: string;
@@ -488,6 +490,8 @@ export async function insertCourse(
     par: course.par,
     course_rating: course.rating,
     slope: course.slope,
+    tee_name: course.teeName ?? "Blue",
+    yardage: course.yardage ?? null,
     location: course.location ?? "",
     address: course.address ?? "",
     image_url: course.imageUrl ?? "",

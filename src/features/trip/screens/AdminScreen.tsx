@@ -51,6 +51,8 @@ export function AdminScreen() {
   const [newCoursePar, setNewCoursePar] = useState("72");
   const [newCourseRating, setNewCourseRating] = useState("72");
   const [newCourseSlope, setNewCourseSlope] = useState("113");
+  const [newCourseTee, setNewCourseTee] = useState("Blue");
+  const [newCourseYardage, setNewCourseYardage] = useState("");
 
   const [toast, setToast] = useState<string | null>(null);
 
@@ -129,11 +131,15 @@ export function AdminScreen() {
       par: Number(newCoursePar) || 72,
       rating: Number(newCourseRating) || 72,
       slope: Number(newCourseSlope) || 113,
+      teeName: newCourseTee.trim() || "Blue",
+      yardage: newCourseYardage.trim() === "" ? null : Number(newCourseYardage),
     });
     setNewCourseName("");
     setNewCoursePar("72");
     setNewCourseRating("72");
     setNewCourseSlope("113");
+    setNewCourseTee("Blue");
+    setNewCourseYardage("");
   }
 
   function toManualResult(value: string): Winner {
@@ -281,8 +287,11 @@ export function AdminScreen() {
                 <div key={course.id} className="rounded-xl bg-slate-50 p-3 text-sm">
                   <p className="font-black">{course.name}</p>
                   <p className="text-xs text-slate-500">
-                    Par {course.par} · Rating {course.rating} · Slope{" "}
-                    {course.slope}
+                    {course.teeName} ·{" "}
+                    {course.yardage !== null
+                      ? `${course.yardage.toLocaleString()} yds · `
+                      : ""}
+                    {course.rating}/{course.slope} · Par {course.par}
                   </p>
                 </div>
               ))}
@@ -297,6 +306,27 @@ export function AdminScreen() {
                 className={inputClass}
                 placeholder="Course name"
               />
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <div>
+                  <label className={labelClass}>Tee</label>
+                  <input
+                    value={newCourseTee}
+                    onChange={(event) => setNewCourseTee(event.target.value)}
+                    className={inputClass}
+                    placeholder="Blue"
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Yardage</label>
+                  <input
+                    value={newCourseYardage}
+                    onChange={(event) => setNewCourseYardage(event.target.value)}
+                    className={inputClass}
+                    inputMode="numeric"
+                    placeholder="6,800"
+                  />
+                </div>
+              </div>
               <div className="mt-3 grid grid-cols-3 gap-2">
                 <div>
                   <label className={labelClass}>Par</label>

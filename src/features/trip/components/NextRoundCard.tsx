@@ -67,7 +67,11 @@ export function NextRoundCard({
               </p>
               {course ? (
                 <p className="mt-2 inline-block rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">
-                  Par {course.par} · {course.rating}/{course.slope}
+                  {course.teeName} ·{" "}
+                  {course.yardage !== null
+                    ? `${course.yardage.toLocaleString()} yds · `
+                    : ""}
+                  {course.rating}/{course.slope} · Par {course.par}
                 </p>
               ) : null}
             </div>

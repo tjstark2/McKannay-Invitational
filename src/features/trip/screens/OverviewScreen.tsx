@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { formatRoundFormat } from "@/lib/format";
 import {
   buildCurrentRoundStandings,
@@ -58,6 +59,8 @@ export function OverviewScreen({
 
   const teamAName = teams.find((team) => team.id === "A")?.name ?? "Team A";
   const teamBName = teams.find((team) => team.id === "B")?.name ?? "Team B";
+
+  const [showAllLeaders, setShowAllLeaders] = useState(false);
 
   // Featured round: the admin's active round unless it's complete, in which
   // case auto-advance to the first round that isn't finished yet.
@@ -249,38 +252,56 @@ export function OverviewScreen({
                   No scores submitted for this round yet.
                 </p>
               ) : (
-                leaders.map((row, index) => (
+                (showAllLeaders ? standings : leaders).map((row, index) => (
                   <div
                     key={row.player.id}
                     className="flex items-center justify-between rounded-xl bg-slate-50 p-3 text-sm"
                   >
                     <div>
                       <p className="font-black">
-                        {index + 1}. {row.player.name}
+                        {row.displayNet !== null ? `${index + 1}. ` : ""}
+                        {row.player.name}
                       </p>
                       <p className="text-xs text-slate-500">
                         Team {row.player.team} ·{" "}
-                        {row.isFinal ? "Final" : "Through 9"}
+                        {row.status === "final"
+                          ? "Final"
+                          : row.status === "through_9"
+                          ? "Through 9 · proj"
+                          : "Not started"}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="font-black">
                         {row.displayNet === null
-                          ? "-"
+                          ? "—"
                           : row.isFinal
                           ? row.displayNet
                           : row.displayNet.toFixed(1)}
                       </p>
                       <p className="text-xs text-slate-500">
-                        {row.isFinal
+                        {row.status === "final"
                           ? `Gross ${row.grossScore}`
-                          : `Front ${row.frontNineScore}`}
+                          : row.status === "through_9"
+                          ? `Front ${row.frontNineScore}`
+                          : "—"}
                       </p>
                     </div>
                   </div>
                 ))
               )}
             </div>
+
+            {standings.length > leaders.length && leaders.length > 0 ? (
+              <button
+                onClick={() => setShowAllLeaders((v) => !v)}
+                className="mt-3 w-full rounded-xl bg-slate-100 py-2 text-sm font-black text-slate-600"
+              >
+                {showAllLeaders
+                  ? "Show top 3"
+                  : `Show all ${standings.length}`}
+              </button>
+            ) : null}
           </div>
         </Card>
       </section>

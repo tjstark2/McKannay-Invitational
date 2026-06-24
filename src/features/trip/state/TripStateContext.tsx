@@ -84,6 +84,8 @@ type TripStateContextValue = TripState & {
     par: number;
     rating: number;
     slope: number;
+    teeName?: string;
+    yardage?: number | null;
     location?: string;
     notes?: string;
   }) => void;
