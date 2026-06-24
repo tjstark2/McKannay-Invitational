@@ -94,7 +94,8 @@ export async function loadMyTrips(
   const member = await supabase
     .from("trip_members")
     .select("role, trips(id,name,join_code,location,dates)")
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .eq("status", "active");
   for (const row of (member.data ?? []) as Record<string, unknown>[]) {
     const raw = row.trips;
     const t = (Array.isArray(raw) ? raw[0] : raw) as

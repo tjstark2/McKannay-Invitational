@@ -22,7 +22,14 @@ export function SignInForm() {
       setError(result.error ?? "Couldn't sign in. Check your details.");
       return;
     }
-    window.location.href = "/home";
+    let next = "/home";
+    try {
+      const p = new URLSearchParams(window.location.search).get("next");
+      if (p && p.startsWith("/")) next = p;
+    } catch {
+      // ignore
+    }
+    window.location.href = next;
   }
 
   return (
