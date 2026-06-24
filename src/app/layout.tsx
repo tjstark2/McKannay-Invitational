@@ -4,6 +4,7 @@ import "@fontsource/archivo/700.css";
 import "@fontsource/archivo/800.css";
 import "@fontsource/archivo/900.css";
 import "./globals.css";
+import { AuthProvider } from "@/features/auth/AuthContext";
 
 export const metadata: Metadata = {
   title: "Fore Friends",
@@ -13,7 +14,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }
