@@ -23,6 +23,8 @@ export default function EditProfilePage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [original, setOriginal] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
   const [city, setCity] = useState("");
   const [stateAbbr, setStateAbbr] = useState("");
@@ -50,13 +52,15 @@ export default function EditProfilePage() {
     (async () => {
       const p = await supabase
         .from("profiles")
-        .select("username,city,state,phone,marketing_opt_in,sms_opt_in")
+        .select("first_name,last_name,username,city,state,phone,marketing_opt_in,sms_opt_in")
         .eq("id", user.id)
         .maybeSingle();
       if (!active || !p.data) {
         if (active) setReady(true);
         return;
       }
+      setFirstName((p.data.first_name as string) ?? "");
+      setLastName((p.data.last_name as string) ?? "");
       setOriginal((p.data.username as string) ?? "");
       setUsername((p.data.username as string) ?? "");
       setCity((p.data.city as string) ?? "");
@@ -73,6 +77,8 @@ export default function EditProfilePage() {
 
   const canSave =
     usernameStatus === "available" &&
+    firstName.trim() &&
+    lastName.trim() &&
     city.trim() &&
     stateAbbr.trim() &&
     !busy;
@@ -86,6 +92,9 @@ export default function EditProfilePage() {
     const { error: upErr } = await supabase
       .from("profiles")
       .update({
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        full_name: `${firstName.trim()} ${lastName.trim()}`.trim(),
         username: username.trim().toLowerCase(),
         city: city.trim(),
         state: stateAbbr.trim().toUpperCase(),
@@ -130,6 +139,29 @@ export default function EditProfilePage() {
         </p>
 
         <div className="mt-6 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={lbl}>First name</label>
+              <input
+                className={inp}
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="TJ"
+                autoComplete="given-name"
+              />
+            </div>
+            <div>
+              <label className={lbl}>Last name</label>
+              <input
+                className={inp}
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Stark"
+                autoComplete="family-name"
+              />
+            </div>
+          </div>
+
           <div>
             <label className={lbl}>Username</label>
             <input
