@@ -24,6 +24,8 @@ export type TripRow = {
   location: string | null;
   dates: string | null;
   join_code: string;
+  series_id: string | null;
+  admin_code: string | null;
   lodging_name: string | null;
   lodging_address: string | null;
   total_points: number | null;
@@ -121,6 +123,8 @@ export function mapTrip(row: TripRow): Trip {
     location: row.location ?? "",
     dates: row.dates ?? "",
     joinCode: row.join_code,
+    seriesId: row.series_id ?? null,
+    adminCode: row.admin_code ?? null,
     lodgingName: row.lodging_name ?? "",
     lodgingAddress: row.lodging_address ?? "",
     totalPoints: Number(row.total_points ?? 0),

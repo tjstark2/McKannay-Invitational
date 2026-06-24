@@ -12,7 +12,7 @@ import {
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { initialTripState } from "@/data/initialTripState";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { APP_CONFIG } from "@/features/trip/config";
+import { ACTIVE_JOIN_CODE_KEY } from "@/features/trip/config";
 import {
   deletePlayerRow,
   deleteRoundRow,
@@ -22,6 +22,7 @@ import {
   insertRound,
   insertTeeTime,
   loadTripState,
+  tripExists,
   persistCurrentRound,
   persistManualResult,
   persistMatchPlayers,
@@ -55,6 +56,9 @@ type TripStateContextValue = TripState & {
   saving: boolean;
   saveError: string | null;
   saveTick: number;
+  activeJoinCode: string | null;
+  enterCode: (code: string) => Promise<boolean>;
+  exitTrip: () => void;
   updateTrip: (updates: Partial<Trip>) => void;
   updateTeam: (teamId: TeamId, updates: Partial<Team>) => void;
   updatePlayer: (playerId: string, updates: Partial<Player>) => void;
@@ -128,8 +132,10 @@ export function TripStateProvider({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveTick, setSaveTick] = useState(0);
+  const [activeJoinCode, setActiveJoinCode] = useState<string | null>(null);
 
   const supabaseRef = useRef<SupabaseClient | null>(null);
+  const activeCodeRef = useRef<string | null>(null);
   const teamDbIdsRef = useRef<{ id: TeamId; dbId: string }[]>([]);
   const reloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastLocalWrite = useRef<number>(0);
@@ -139,8 +145,10 @@ export function TripStateProvider({
   const reload = useCallback(async () => {
     const supabase = supabaseRef.current;
     if (!supabase) return;
+    const code = activeCodeRef.current;
+    if (!code) return; // no trip chosen yet — nothing to load
     try {
-      const loaded = await loadTripState(supabase, APP_CONFIG.defaultJoinCode);
+      const loaded = await loadTripState(supabase, code);
       teamDbIdsRef.current = loaded.teamDbIds;
       setState(loaded.state);
       setError(null);
@@ -168,13 +176,30 @@ export function TripStateProvider({
     const supabase = getSupabaseClient();
     supabaseRef.current = supabase;
 
+    // Restore the trip chosen earlier this session (if any).
+    let storedCode: string | null = null;
+    try {
+      storedCode = sessionStorage.getItem(ACTIVE_JOIN_CODE_KEY);
+    } catch {
+      // sessionStorage unavailable — treat as no active trip.
+    }
+    if (storedCode) {
+      activeCodeRef.current = storedCode;
+      setActiveJoinCode(storedCode);
+    }
+
     if (!supabase) {
       // No backend configured: run on the bundled seed data. Writes stay local.
       setLoading(false);
       return;
     }
 
-    void reload();
+    if (storedCode) {
+      void reload();
+    } else {
+      // Wait for an access code at the login gate before loading anything.
+      setLoading(false);
+    }
 
     const tables = [
       "trips",
@@ -236,6 +261,58 @@ export function TripStateProvider({
     [reload]
   );
 
+  // Validate an access code and, if it resolves to a trip, load that trip.
+  // Returns false for an unknown code so the gate can show an error.
+  const enterCode = useCallback(
+    async (code: string): Promise<boolean> => {
+      const trimmed = code.trim();
+      if (!trimmed) return false;
+      const supabase = supabaseRef.current;
+
+      // Seed/demo mode (no backend): accept the bundled trip's own code.
+      if (!supabase) {
+        if (trimmed.toLowerCase() === state.trip.joinCode.toLowerCase()) {
+          try {
+            sessionStorage.setItem(ACTIVE_JOIN_CODE_KEY, state.trip.joinCode);
+          } catch {
+            // ignore storage errors
+          }
+          activeCodeRef.current = state.trip.joinCode;
+          setActiveJoinCode(state.trip.joinCode);
+          return true;
+        }
+        return false;
+      }
+
+      const exists = await tripExists(supabase, trimmed);
+      if (!exists) return false;
+      try {
+        sessionStorage.setItem(ACTIVE_JOIN_CODE_KEY, trimmed);
+      } catch {
+        // ignore storage errors
+      }
+      activeCodeRef.current = trimmed;
+      setActiveJoinCode(trimmed);
+      setLoading(true);
+      await reload();
+      return true;
+    },
+    [reload, state.trip.joinCode]
+  );
+
+  // Leave the current trip (clears the access code; the login gate returns).
+  const exitTrip = useCallback(() => {
+    try {
+      sessionStorage.removeItem(ACTIVE_JOIN_CODE_KEY);
+    } catch {
+      // ignore storage errors
+    }
+    activeCodeRef.current = null;
+    setActiveJoinCode(null);
+    setState(initialTripState);
+    setError(null);
+  }, []);
+
   const value = useMemo<TripStateContextValue>(() => {
     const tripId = state.trip.id;
 
@@ -246,6 +323,9 @@ export function TripStateProvider({
       saving,
       saveError,
       saveTick,
+      activeJoinCode,
+      enterCode,
+      exitTrip,
 
       updateTrip: (updates) => {
         setState((current) => ({
@@ -622,7 +702,19 @@ export function TripStateProvider({
         }
       },
     };
-  }, [state, loading, error, saving, saveError, saveTick, persist, reload]);
+  }, [
+    state,
+    loading,
+    error,
+    saving,
+    saveError,
+    saveTick,
+    activeJoinCode,
+    enterCode,
+    exitTrip,
+    persist,
+    reload,
+  ]);
 
   return (
     <TripStateContext.Provider value={value}>

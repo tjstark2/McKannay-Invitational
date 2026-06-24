@@ -22,3 +22,8 @@ export const APP_CONFIG = {
 // re-prompted on every navigation. Session-scoped: clears when the tab closes.
 export const ENTRY_UNLOCK_KEY = "mck-entry-unlocked";
 export const ADMIN_UNLOCK_KEY = "mck-admin-unlocked";
+
+// The access code the player entered at login = the join code of the trip they
+// are viewing. Stored per-session so navigation doesn't re-prompt. This is what
+// makes the app multi-trip: the code chosen here decides which trip loads.
+export const ACTIVE_JOIN_CODE_KEY = "ff-active-join-code";

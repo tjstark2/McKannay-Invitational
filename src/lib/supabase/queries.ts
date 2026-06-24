@@ -45,6 +45,21 @@ export type LoadedTrip = {
   teamDbIds: { id: TeamId; dbId: string }[];
 };
 
+// Lightweight check used by the login gate: does an access code resolve to a
+// trip? Returns true if exactly one trip has this join_code.
+export async function tripExists(
+  supabase: SupabaseClient,
+  joinCode: string
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("trips")
+    .select("id")
+    .eq("join_code", joinCode)
+    .maybeSingle();
+  if (error) return false;
+  return Boolean(data);
+}
+
 export async function loadTripState(
   supabase: SupabaseClient,
   joinCode: string

@@ -19,10 +19,10 @@ import { TeamDetailScreen } from "@/features/trip/screens/TeamDetailScreen";
 import { TeamsScreen } from "@/features/trip/screens/TeamsScreen";
 import { TopHero } from "@/features/trip/components/TopHero";
 import { PasswordGate } from "@/features/trip/components/PasswordGate";
+import { EntryGate } from "@/features/trip/components/EntryGate";
 import {
   APP_CONFIG,
   ADMIN_UNLOCK_KEY,
-  ENTRY_UNLOCK_KEY,
 } from "@/features/trip/config";
 import {
   TripStateProvider,
@@ -39,7 +39,7 @@ type TournamentTab =
   | "players";
 
 function TripAppInner() {
-  const { players, courses, matches, loading, error, resetState } =
+  const { trip, players, courses, matches, loading, error, resetState } =
     useTripState();
 
   const [activeScreen, setActiveScreen] = useState<Screen>("overview");
@@ -206,7 +206,7 @@ function TripAppInner() {
 
           {activeScreen === "admin" ? (
             <PasswordGate
-              password={APP_CONFIG.adminPassword}
+              password={trip.adminCode ?? APP_CONFIG.adminPassword}
               storageKey={ADMIN_UNLOCK_KEY}
               label="Admin Code"
               heading="Admin Access"
@@ -237,14 +237,9 @@ function TripAppInner() {
 export function TripApp() {
   return (
     <TripStateProvider>
-      <PasswordGate
-        password={APP_CONFIG.entryPassword}
-        storageKey={ENTRY_UNLOCK_KEY}
-        label="Access Code"
-        brand
-      >
+      <EntryGate>
         <TripAppInner />
-      </PasswordGate>
+      </EntryGate>
     </TripStateProvider>
   );
 }
