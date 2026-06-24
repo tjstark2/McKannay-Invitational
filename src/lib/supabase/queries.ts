@@ -66,7 +66,7 @@ export type MyTripSummary = {
   joinCode: string;
   location: string | null;
   dates: string | null;
-  role: "owner" | "member";
+  role: "owner" | "admin" | "member";
 };
 
 // Trips the user owns OR is a member of, de-duplicated (owner wins).
@@ -108,7 +108,7 @@ export async function loadMyTrips(
       joinCode: t.join_code as string,
       location: (t.location as string) ?? null,
       dates: (t.dates as string) ?? null,
-      role: row.role === "owner" ? "owner" : "member",
+      role: row.role === "owner" ? "owner" : row.role === "admin" ? "admin" : "member",
     });
   }
 

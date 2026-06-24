@@ -9,12 +9,14 @@ import { BrandHeaderMark } from "@/features/trip/components/Brand";
 import { AccountMenu } from "@/features/account/AccountMenu";
 import {
   resolveTrip,
+  getMembership,
   listJoinRequests,
   listActiveMembers,
   listInvited,
   inviteByUsername,
   approveMember,
   removeMember,
+  setMemberRole,
   setMemberHandicap,
   loadTripTeams,
   loadTripPlayers,
@@ -49,6 +51,7 @@ export default function ManagePage() {
   const [inviteMsg, setInviteMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [ready, setReady] = useState(false);
   const [authorized, setAuthorized] = useState(true);
+  const [isOwnerViewer, setIsOwnerViewer] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [editingSize, setEditingSize] = useState(false);
   const [sizeDraft, setSizeDraft] = useState("12");
@@ -80,11 +83,14 @@ export default function ManagePage() {
         setTrip(null);
         return;
       }
-      if (t.ownerId !== user.id) {
+      const m = await getMembership(supabase, t, user.id);
+      if (!active) return;
+      if (!m.canManage) {
         setAuthorized(false);
         setReady(true);
         return;
       }
+      setIsOwnerViewer(t.ownerId === user.id);
       setTrip(t);
       await refresh(t);
       setReady(true);
@@ -176,6 +182,13 @@ export default function ManagePage() {
     await refresh(trip);
   }
 
+  async function setRole(membershipId: string, role: "admin" | "member") {
+    const supabase = getSupabaseClient();
+    if (!supabase || !trip) return;
+    await setMemberRole(supabase, membershipId, role);
+    await refresh(trip);
+  }
+
   async function addToRoster(member: MemberRow, teamDbId: string) {
     const supabase = getSupabaseClient();
     if (!supabase || !trip) return;
@@ -261,6 +274,10 @@ export default function ManagePage() {
             <span className="shrink-0 rounded-full bg-sand-50 px-3 py-1.5 text-xs font-black uppercase text-slate-500">
               Organizer
             </span>
+          ) : m.role === "admin" ? (
+            <span className="shrink-0 rounded-full bg-accent/20 px-3 py-1.5 text-xs font-black uppercase text-accent-dark">
+              Admin
+            </span>
           ) : null}
         </div>
 
@@ -310,33 +327,53 @@ export default function ManagePage() {
           </span>
 
           {!isOwner ? (
-            <span className="ml-auto">
-              {confirmId === m.membershipId ? (
-                <span className="flex items-center gap-2">
+            <span className="ml-auto flex items-center gap-2">
+              {isOwnerViewer ? (
+                m.role === "admin" ? (
                   <button
-                    onClick={() => {
-                      kick(m.membershipId, m.profile.id);
-                      setConfirmId(null);
-                    }}
-                    className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-extrabold text-white"
+                    onClick={() => setRole(m.membershipId, "member")}
+                    className="rounded-full border border-sand-200 bg-white px-3 py-1.5 text-xs font-extrabold text-slate-500"
                   >
-                    Yes, remove
+                    Remove admin
                   </button>
+                ) : (
                   <button
-                    onClick={() => setConfirmId(null)}
-                    className="rounded-full border border-sand-200 px-3 py-1.5 text-xs font-bold text-slate-500"
+                    onClick={() => setRole(m.membershipId, "admin")}
+                    className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1.5 text-xs font-extrabold text-accent-dark"
                   >
-                    Cancel
+                    Make admin
                   </button>
-                </span>
-              ) : (
-                <button
-                  onClick={() => setConfirmId(m.membershipId)}
-                  className="text-xs font-bold text-slate-400 hover:text-red-600"
-                >
-                  Remove
-                </button>
-              )}
+                )
+              ) : null}
+
+              {isOwnerViewer || m.role !== "admin" ? (
+                confirmId === m.membershipId ? (
+                  <span className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        kick(m.membershipId, m.profile.id);
+                        setConfirmId(null);
+                      }}
+                      className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-extrabold text-white"
+                    >
+                      Yes, remove
+                    </button>
+                    <button
+                      onClick={() => setConfirmId(null)}
+                      className="rounded-full border border-sand-200 px-3 py-1.5 text-xs font-bold text-slate-500"
+                    >
+                      Cancel
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => setConfirmId(m.membershipId)}
+                    className="text-xs font-bold text-slate-400 hover:text-red-600"
+                  >
+                    Remove
+                  </button>
+                )
+              ) : null}
             </span>
           ) : null}
         </div>

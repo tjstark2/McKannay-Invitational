@@ -60,7 +60,9 @@ export function AccountHome() {
       if (active) setTrips(my);
       const pend = await loadPendingTrips(supabase, user.id);
       if (active) setPending(pend);
-      const ownedIds = my.filter((t) => t.role === "owner").map((t) => t.id);
+      const ownedIds = my
+        .filter((t) => t.role === "owner" || t.role === "admin")
+        .map((t) => t.id);
       const counts = await pendingCountsForTrips(supabase, ownedIds);
       if (active) setRequestCounts(counts);
       const inv = await loadInvitations(supabase, user.id);
@@ -260,7 +262,7 @@ export function AccountHome() {
                     Open ›
                   </p>
                 </button>
-                {t.role === "owner" ? (
+                {t.role === "owner" || t.role === "admin" ? (
                   <button
                     onClick={() => router.push(`/manage/${t.joinCode}`)}
                     className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-extrabold ${

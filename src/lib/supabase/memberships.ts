@@ -12,9 +12,10 @@ export type TripRef = {
 };
 
 export type MembershipState = {
-  role: "owner" | "member" | null;
+  role: "owner" | "admin" | "member" | null;
   status: "active" | "pending" | null;
   isOwner: boolean;
+  canManage: boolean;
   handicap: number | null;
   handicapConfirmed: boolean;
 };
@@ -68,6 +69,7 @@ export async function getMembership(
       role: isOwner ? "owner" : null,
       status: isOwner ? "active" : null,
       isOwner,
+      canManage: isOwner,
       handicap: null,
       handicapConfirmed: false,
     };
@@ -78,10 +80,14 @@ export async function getMembership(
     handicap: number | null;
     handicap_confirmed: boolean;
   };
+  const role =
+    d.role === "owner" ? "owner" : d.role === "admin" ? "admin" : "member";
+  const status = d.status === "pending" ? "pending" : "active";
   return {
-    role: d.role === "owner" ? "owner" : "member",
-    status: d.status === "pending" ? "pending" : "active",
+    role,
+    status,
     isOwner,
+    canManage: isOwner || (role === "admin" && status === "active"),
     handicap: d.handicap ?? null,
     handicapConfirmed: Boolean(d.handicap_confirmed),
   };
@@ -196,6 +202,19 @@ export async function approveMember(
   const { error } = await supabase
     .from("trip_members")
     .update({ status: "active" })
+    .eq("id", membershipId);
+  return !error;
+}
+
+// Promote a member to admin, or demote an admin back to member. Owner only.
+export async function setMemberRole(
+  supabase: SupabaseClient,
+  membershipId: string,
+  role: "admin" | "member"
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("trip_members")
+    .update({ role })
     .eq("id", membershipId);
   return !error;
 }
