@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Check, X } from "lucide-react";
+import { Check, X, UserPlus } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { BrandHeaderMark } from "@/features/trip/components/Brand";
@@ -11,6 +11,8 @@ import {
   resolveTrip,
   listJoinRequests,
   listActiveMembers,
+  listInvited,
+  inviteByUsername,
   approveMember,
   removeMember,
   memberName,
@@ -28,19 +30,21 @@ export default function ManagePage() {
   const [trip, setTrip] = useState<TripRef | null>(null);
   const [requests, setRequests] = useState<MemberRow[]>([]);
   const [members, setMembers] = useState<MemberRow[]>([]);
+  const [invited, setInvited] = useState<MemberRow[]>([]);
+  const [inviteHandle, setInviteHandle] = useState("");
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [inviteMsg, setInviteMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [ready, setReady] = useState(false);
   const [authorized, setAuthorized] = useState(true);
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
-  const refresh = useCallback(
-    async (t: TripRef) => {
-      const supabase = getSupabaseClient();
-      if (!supabase) return;
-      setRequests(await listJoinRequests(supabase, t.id));
-      setMembers(await listActiveMembers(supabase, t.id));
-    },
-    []
-  );
+  const refresh = useCallback(async (t: TripRef) => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    setRequests(await listJoinRequests(supabase, t.id));
+    setMembers(await listActiveMembers(supabase, t.id));
+    setInvited(await listInvited(supabase, t.id));
+  }, []);
 
   useEffect(() => {
     if (loading) return;
@@ -127,6 +131,28 @@ export default function ManagePage() {
     await refresh(trip);
   }
 
+  async function invite() {
+    if (!trip || inviteBusy) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    setInviteBusy(true);
+    setInviteMsg(null);
+    const res = await inviteByUsername(supabase, trip.id, inviteHandle);
+    setInviteBusy(false);
+    if (!res.ok) {
+      setInviteMsg({ ok: false, text: res.error ?? "Couldn't invite." });
+      return;
+    }
+    setInviteHandle("");
+    setInviteMsg({
+      ok: true,
+      text: res.note
+        ? `${res.name} ${res.note}`
+        : `Invited ${res.name} — they'll see it on their dashboard.`,
+    });
+    await refresh(trip);
+  }
+
   return (
     <Shell>
       <p className="text-xs font-extrabold uppercase tracking-wide text-accent-dark">
@@ -137,6 +163,61 @@ export default function ManagePage() {
         Share code <b className="text-fairway-900">{trip.joinCode}</b> · approve
         who gets in.
       </p>
+
+      {/* invite by username */}
+      <section className="mt-7">
+        <h2 className="text-xl font-black text-fairway-900">Invite a player</h2>
+        <div className="mt-3 flex items-center gap-2 rounded-2xl border border-sand-100 bg-white px-3 py-2">
+          <span className="pl-1 text-slate-400">@</span>
+          <input
+            value={inviteHandle}
+            onChange={(e) => {
+              setInviteHandle(
+                e.target.value.replace(/[^a-zA-Z0-9_]/g, "").toLowerCase()
+              );
+              setInviteMsg(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") invite();
+            }}
+            placeholder="username"
+            className="min-w-0 flex-1 bg-transparent py-2 text-base outline-none"
+          />
+          <button
+            onClick={invite}
+            disabled={inviteBusy || !inviteHandle.trim()}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-fairway-900 px-4 py-2.5 font-black text-white disabled:opacity-50"
+          >
+            <UserPlus className="h-4 w-4" /> Invite
+          </button>
+        </div>
+        {inviteMsg ? (
+          <p
+            className={`mt-2 text-sm font-bold ${
+              inviteMsg.ok ? "text-green" : "text-red-600"
+            }`}
+          >
+            {inviteMsg.text}
+          </p>
+        ) : null}
+        {invited.length > 0 ? (
+          <div className="mt-3 space-y-2">
+            <p className="text-xs font-extrabold uppercase tracking-wide text-slate-400">
+              Invited · awaiting response
+            </p>
+            {invited.map((m) => (
+              <Row key={m.membershipId} r={m}>
+                <button
+                  onClick={() => kick(m.membershipId)}
+                  className="rounded-full border border-sand-200 bg-white px-3 py-2 text-sm font-bold text-slate-400 hover:text-red-600"
+                >
+                  Cancel
+                </button>
+              </Row>
+            ))}
+          </div>
+        ) : null}
+      </section>
 
       {/* requests */}
       <section className="mt-8">

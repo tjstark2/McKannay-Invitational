@@ -199,6 +199,91 @@ export async function loadPendingTrips(
   return out;
 }
 
+export type InvitationItem = { membershipId: string; trip: TripRef };
+
+// Owner invites someone by username. They get an 'invited' row to accept.
+export async function inviteByUsername(
+  supabase: SupabaseClient,
+  tripId: string,
+  username: string
+): Promise<{ ok: boolean; error?: string; name?: string; note?: string }> {
+  const handle = username.trim().toLowerCase().replace(/^@/, "");
+  if (!handle) return { ok: false, error: "Enter a username." };
+
+  const { data: prof } = await supabase
+    .from("public_profiles")
+    .select("id,username")
+    .ilike("username", handle)
+    .maybeSingle();
+  if (!prof) return { ok: false, error: `No user found with @${handle}.` };
+  const otherId = (prof as { id: string }).id;
+  const shown = `@${(prof as { username: string }).username ?? handle}`;
+
+  const { data: existing } = await supabase
+    .from("trip_members")
+    .select("status")
+    .eq("trip_id", tripId)
+    .eq("user_id", otherId)
+    .maybeSingle();
+  if (existing) {
+    const s = (existing as { status: string }).status;
+    if (s === "active") return { ok: false, error: `${shown} is already a member.` };
+    if (s === "invited") return { ok: false, error: `${shown} has already been invited.` };
+    if (s === "pending") {
+      // they'd requested — inviting is the same as approving them
+      await supabase
+        .from("trip_members")
+        .update({ status: "active" })
+        .eq("trip_id", tripId)
+        .eq("user_id", otherId);
+      return { ok: true, name: shown, note: "They had requested — now approved." };
+    }
+  }
+
+  const { error } = await supabase
+    .from("trip_members")
+    .insert({ trip_id: tripId, user_id: otherId, role: "member", status: "invited" });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, name: shown };
+}
+
+export async function listInvited(
+  supabase: SupabaseClient,
+  tripId: string
+): Promise<MemberRow[]> {
+  return membersWithProfiles(supabase, tripId, "invited");
+}
+
+// Tournaments this user has been invited to (awaiting their acceptance).
+export async function loadInvitations(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<InvitationItem[]> {
+  const { data } = await supabase
+    .from("trip_members")
+    .select("id, trips(id,name,join_code,owner_id,location,dates)")
+    .eq("user_id", userId)
+    .eq("status", "invited");
+  const out: InvitationItem[] = [];
+  for (const row of (data ?? []) as Record<string, unknown>[]) {
+    const raw = row.trips;
+    const t = (Array.isArray(raw) ? raw[0] : raw) as Record<string, unknown> | undefined;
+    if (!t) continue;
+    out.push({
+      membershipId: row.id as string,
+      trip: {
+        id: t.id as string,
+        name: t.name as string,
+        joinCode: t.join_code as string,
+        ownerId: (t.owner_id as string) ?? null,
+        location: (t.location as string) ?? null,
+        dates: (t.dates as string) ?? null,
+      },
+    });
+  }
+  return out;
+}
+
 export function memberName(p: PublicProfile): string {
   const name = [p.first_name, p.last_name].filter(Boolean).join(" ");
   if (name && p.username) return `${name} (@${p.username})`;

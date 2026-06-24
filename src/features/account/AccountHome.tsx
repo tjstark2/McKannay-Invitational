@@ -13,7 +13,11 @@ import {
   requestToJoin,
   loadPendingTrips,
   pendingCountsForTrips,
+  loadInvitations,
+  approveMember,
+  removeMember,
   type TripRef,
+  type InvitationItem,
 } from "@/lib/supabase/memberships";
 import { BrandHeaderMark } from "@/features/trip/components/Brand";
 import { AccountMenu } from "@/features/account/AccountMenu";
@@ -23,6 +27,7 @@ export function AccountHome() {
   const router = useRouter();
   const [trips, setTrips] = useState<MyTripSummary[] | null>(null);
   const [pending, setPending] = useState<TripRef[]>([]);
+  const [invitations, setInvitations] = useState<InvitationItem[]>([]);
   const [requestCounts, setRequestCounts] = useState<Record<string, number>>({});
   const [firstName, setFirstName] = useState("");
   const [joinCode, setJoinCode] = useState("");
@@ -58,6 +63,8 @@ export function AccountHome() {
       const ownedIds = my.filter((t) => t.role === "owner").map((t) => t.id);
       const counts = await pendingCountsForTrips(supabase, ownedIds);
       if (active) setRequestCounts(counts);
+      const inv = await loadInvitations(supabase, user.id);
+      if (active) setInvitations(inv);
     })();
     return () => {
       active = false;
@@ -102,6 +109,15 @@ export function AccountHome() {
     setJoinBusy(false);
     setJoinCode("");
     setJoinMsg(`Request sent to ${trip.name} — waiting for approval.`);
+  }
+
+  async function respondInvite(membershipId: string, accept: boolean) {
+    const supabase = getSupabaseClient();
+    if (!supabase || !user) return;
+    if (accept) await approveMember(supabase, membershipId);
+    else await removeMember(supabase, membershipId);
+    setTrips(await loadMyTrips(supabase, user.id));
+    setInvitations(await loadInvitations(supabase, user.id));
   }
 
   return (
@@ -156,6 +172,47 @@ export function AccountHome() {
         ) : null}
         {joinMsg ? (
           <p className="mt-2 text-sm font-bold text-green">{joinMsg}</p>
+        ) : null}
+
+        {/* invitations */}
+        {invitations.length > 0 ? (
+          <div className="mt-8 rounded-2xl border border-accent/40 bg-accent/10 p-4">
+            <h2 className="flex items-center gap-2 text-lg font-black text-ink">
+              ✉️ Invitations
+              <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-black text-ink">
+                {invitations.length}
+              </span>
+            </h2>
+            <div className="mt-3 space-y-2">
+              {invitations.map((iv) => (
+                <div
+                  key={iv.membershipId}
+                  className="flex items-center justify-between rounded-xl bg-white px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-black text-ink">{iv.trip.name}</p>
+                    <p className="truncate text-sm text-slate-500">
+                      You&apos;ve been invited to join
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 gap-2 pl-3">
+                    <button
+                      onClick={() => respondInvite(iv.membershipId, true)}
+                      className="rounded-full bg-fairway-900 px-3.5 py-2 text-sm font-extrabold text-white"
+                    >
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => respondInvite(iv.membershipId, false)}
+                      className="rounded-full border border-sand-200 bg-white px-3 py-2 text-sm font-bold text-slate-500"
+                    >
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         ) : null}
 
         {/* my tournaments */}
