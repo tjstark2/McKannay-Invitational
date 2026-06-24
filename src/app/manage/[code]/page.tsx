@@ -392,7 +392,11 @@ export default function ManagePage() {
 
   const owner = members.find((m) => m.role === "owner") ?? null;
   const admitted = members.filter((m) => m.role !== "owner");
-  const openSpots = Math.max(0, trip.rosterSize - admitted.length);
+  const ownerPlaying = owner
+    ? players.some((p) => p.accountId === owner.profile.id)
+    : false;
+  const filledSpots = admitted.length + (ownerPlaying ? 1 : 0);
+  const openSpots = Math.max(0, trip.rosterSize - filledSpots);
 
   return (
     <Shell>
@@ -534,7 +538,7 @@ export default function ManagePage() {
           <div>
             <h2 className="text-xl font-black text-fairway-900">Roster</h2>
             <p className="mt-1 text-sm text-slate-500">
-              {admitted.length} of {trip.rosterSize} spots filled · assign each
+              {filledSpots} of {trip.rosterSize} spots filled · assign each
               player to a team.
             </p>
           </div>
@@ -600,8 +604,8 @@ export default function ManagePage() {
             </p>
             <div className="mt-2">{memberCard(owner, true)}</div>
             <p className="mt-1 text-xs text-slate-400">
-              You don&apos;t take a spot. Put yourself on a team only if
-              you&apos;re playing.
+              You only take a spot if you put yourself on a team — leave
+              yourself off if you&apos;re not playing.
             </p>
           </>
         ) : null}
