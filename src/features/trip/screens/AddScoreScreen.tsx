@@ -43,6 +43,23 @@ export function AddScoreScreen() {
   );
   const [pendingConfirm, setPendingConfirm] = useState<string | null>(null);
 
+  const selectedRound =
+    rounds.find((round) => round.id === roundId) ?? rounds[0];
+  const selectedPlayer =
+    selectablePlayers.find((player) => player.id === playerId) ??
+    selectablePlayers[0];
+
+  const existingScore =
+    selectedRound && selectedPlayer
+      ? scores.find(
+          (score) =>
+            score.roundId === selectedRound.id &&
+            score.playerId === selectedPlayer.id
+        )
+      : undefined;
+  const existingFront = existingScore?.frontNineScore;
+  const existingGross = existingScore?.grossScore;
+
   // Keep the selected player valid if the list changes.
   useEffect(() => {
     if (
@@ -53,7 +70,14 @@ export function AddScoreScreen() {
     }
   }, [selectablePlayers, playerId]);
 
-  // No rounds yet.
+  // Default the inputs to whatever is already saved for this round + player,
+  // so coming back to add the final score shows the front nine already filled.
+  useEffect(() => {
+    setFrontNineScore(existingFront != null ? String(existingFront) : "");
+    setGrossScore(existingGross != null ? String(existingGross) : "");
+    setPendingConfirm(null);
+  }, [roundId, playerId, existingFront, existingGross]);
+
   if (rounds.length === 0) {
     return (
       <Card className="p-4">
@@ -66,7 +90,6 @@ export function AddScoreScreen() {
     );
   }
 
-  // A member who isn't on a team yet has no player row to log against.
   if (!canManage && selectablePlayers.length === 0) {
     return (
       <Card className="p-4">
@@ -80,18 +103,8 @@ export function AddScoreScreen() {
     );
   }
 
-  const selectedRound =
-    rounds.find((round) => round.id === roundId) ?? rounds[0];
-  const selectedPlayer =
-    selectablePlayers.find((player) => player.id === playerId) ??
-    selectablePlayers[0];
+  if (!selectedRound || !selectedPlayer) return null;
 
-  const existingScore = scores.find(
-    (score) =>
-      score.roundId === selectedRound.id && score.playerId === selectedPlayer.id
-  );
-
-  // A round is "100% complete" for a player once their final gross is in.
   const isComplete = existingScore?.grossScore != null;
   const memberLocked = !canManage && isComplete;
 
@@ -100,7 +113,13 @@ export function AddScoreScreen() {
   const hasFrontNineInput =
     frontNineScore !== "" && Number.isFinite(parsedFrontNineScore);
   const hasGrossInput = grossScore !== "" && Number.isFinite(parsedGrossScore);
-  const canSave = hasFrontNineInput || hasGrossInput;
+
+  // Effective front nine = what's typed now, or what was already saved.
+  const effectiveFront = hasFrontNineInput ? parsedFrontNineScore : existingFront;
+  // A gross score can never be submitted without a front nine.
+  const missingFrontForGross = hasGrossInput && effectiveFront == null;
+  const canSave =
+    (hasFrontNineInput || hasGrossInput) && !missingFrontForGross;
 
   const calculatedFrontNet = hasFrontNineInput
     ? frontNineNetScore(
@@ -131,8 +150,7 @@ export function AddScoreScreen() {
     : null;
 
   function commitSave() {
-    // Preserve previously saved values when a field is left blank, so logging
-    // the gross after 18 doesn't wipe the front-nine entered after 9.
+    // Preserve previously saved values when a field is left blank.
     const finalFront = hasFrontNineInput
       ? parsedFrontNineScore
       : existingScore?.frontNineScore;
@@ -155,22 +173,19 @@ export function AddScoreScreen() {
       savedType: finalGross != null ? "final" : "front",
     });
 
-    setFrontNineScore("");
-    setGrossScore("");
+    setFrontNineScore(finalFront != null ? String(finalFront) : "");
+    setGrossScore(finalGross != null ? String(finalGross) : "");
     setPendingConfirm(null);
   }
 
   function attemptSave() {
     if (!canSave) return;
 
-    // Admins can change anything with no friction.
     if (canManage) {
       commitSave();
       return;
     }
 
-    // Build a confirmation if the member is changing a saved value or
-    // finalizing their round.
     const parts: string[] = [];
     const changedFront =
       hasFrontNineInput &&
@@ -311,7 +326,7 @@ export function AddScoreScreen() {
               value={grossScore}
               onChange={(event) => setGrossScore(event.target.value)}
               className="mt-2 w-full rounded-xl border border-slate-200 p-3 text-lg font-black"
-              placeholder="Optional until round is complete"
+              placeholder="Enter front 9 first"
               inputMode="numeric"
             />
 
@@ -337,6 +352,13 @@ export function AddScoreScreen() {
                 </p>
               </div>
             </div>
+
+            {missingFrontForGross ? (
+              <p className="mt-3 text-sm font-semibold text-amber-700">
+                Enter the front 9 score before submitting the final round — both
+                are required.
+              </p>
+            ) : null}
 
             {pendingConfirm ? (
               <div className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4">
