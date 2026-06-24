@@ -1,18 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BrandLockup } from "@/features/trip/components/Brand";
 
 export function PasswordGate({
   password,
   storageKey,
-  title,
+  label = "Access Code",
+  heading,
   subtitle,
+  brand = false,
   children,
 }: {
   password: string;
   storageKey: string;
-  title: string;
-  subtitle: string;
+  label?: string;
+  heading?: string;
+  subtitle?: string;
+  brand?: boolean;
   children: React.ReactNode;
 }) {
   const [unlocked, setUnlocked] = useState(false);
@@ -20,7 +25,6 @@ export function PasswordGate({
   const [value, setValue] = useState("");
   const [wrong, setWrong] = useState(false);
 
-  // Check session unlock after mount (avoids any SSR/client mismatch).
   useEffect(() => {
     try {
       if (sessionStorage.getItem(storageKey) === "true") {
@@ -49,39 +53,60 @@ export function PasswordGate({
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-200 px-5">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-phone">
-        <p className="text-3xl">⛳</p>
-        <h1 className="mt-3 text-2xl font-black text-slate-900">{title}</h1>
-        <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-white to-sand-50 px-6">
+      <div className="w-full max-w-sm">
+        {brand ? (
+          <BrandLockup />
+        ) : (
+          <div className="text-center">
+            <span className="mx-auto mb-4 block h-16 w-16 overflow-hidden rounded-2xl shadow-lg">
+              <img
+                src="/logo-icon.png"
+                alt="Fore Friends"
+                className="h-full w-full scale-105 object-cover"
+              />
+            </span>
+            {heading ? (
+              <h1 className="text-2xl font-black text-fairway-900">{heading}</h1>
+            ) : null}
+            {subtitle ? (
+              <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+            ) : null}
+          </div>
+        )}
 
-        <input
-          type="password"
-          autoFocus
-          value={value}
-          onChange={(event) => {
-            setValue(event.target.value);
-            setWrong(false);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") submit();
-          }}
-          placeholder="Password"
-          className="mt-5 w-full rounded-xl border border-slate-200 px-4 py-3 text-base outline-none focus:border-fairway-900"
-        />
+        <div className="mt-8">
+          <label className="text-xs font-extrabold uppercase tracking-wide text-slate-500">
+            {label}
+          </label>
+          <input
+            type="password"
+            autoFocus
+            value={value}
+            onChange={(event) => {
+              setValue(event.target.value);
+              setWrong(false);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") submit();
+            }}
+            placeholder="••••"
+            className="mt-2 w-full rounded-2xl border-[1.5px] border-sand-200 bg-white px-4 py-3.5 text-base outline-none focus:border-fairway-900"
+          />
 
-        {wrong ? (
-          <p className="mt-2 text-sm font-bold text-red-600">
-            Incorrect password. Try again.
-          </p>
-        ) : null}
+          {wrong ? (
+            <p className="mt-2 text-sm font-bold text-red-600">
+              Incorrect code. Try again.
+            </p>
+          ) : null}
 
-        <button
-          onClick={submit}
-          className="mt-4 w-full rounded-xl bg-fairway-900 px-4 py-3 font-black text-white"
-        >
-          Enter
-        </button>
+          <button
+            onClick={submit}
+            className="mt-3 w-full rounded-2xl bg-fairway-900 px-4 py-4 font-black text-white"
+          >
+            Enter
+          </button>
+        </div>
       </div>
     </div>
   );

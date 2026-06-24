@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
+import "@fontsource/archivo/600.css";
+import "@fontsource/archivo/700.css";
+import "@fontsource/archivo/800.css";
+import "@fontsource/archivo/900.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "McKannay Invitational",
-  description: "Hilton Head golf trip tournament app"
+  title: "Fore Friends",
+  description: "Create. Invite. Compete. Golf tournaments made easy.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

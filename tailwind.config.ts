@@ -19,6 +19,12 @@ const config: Config = {
           800: "#10502f",
           900: "#0b3d25"
         },
+        moss: "#4a6a32",
+        clover: "#6f9a3a",
+        accent: {
+          DEFAULT: "#a8c060",
+          dark: "#6f8f3a"
+        },
         sand: {
           50: "#fbf7ef",
           100: "#f4ead8",
@@ -33,6 +39,9 @@ const config: Config = {
       },
       boxShadow: {
         phone: "0 24px 80px rgba(15, 23, 42, 0.22)"
+      },
+      fontFamily: {
+        display: ["var(--font-archivo)", "system-ui", "sans-serif"]
       }
     }
   },

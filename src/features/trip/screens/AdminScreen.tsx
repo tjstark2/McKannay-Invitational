@@ -154,8 +154,14 @@ export function AdminScreen() {
   return (
     <div className="space-y-4">
       {saving || toast ? (
-        <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-full bg-fairway-900 px-5 py-2 text-sm font-black text-white shadow-lg">
-          {saving ? "Saving…" : toast}
+        <div className="fixed bottom-24 left-1/2 z-50 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-fairway-900 px-5 py-2 text-sm font-black text-white shadow-lg">
+          {saving ? (
+            "Saving…"
+          ) : (
+            <>
+              <span className="text-accent">✓</span> Saved
+            </>
+          )}
         </div>
       ) : null}
 
@@ -172,7 +178,7 @@ export function AdminScreen() {
             className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-black ${
               activeTab === tab.id
                 ? "bg-fairway-900 text-white"
-                : "bg-slate-100 text-slate-600"
+                : "bg-sand-100 text-fairway-900"
             }`}
           >
             {tab.label}

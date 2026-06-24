@@ -182,7 +182,7 @@ export function OverviewScreen({
 
       {/* 3 — this round */}
       <section>
-        <h2 className="mb-3 text-xl font-black text-slate-900">This Round</h2>
+        <h2 className="mb-3 flex items-center gap-2 text-xl font-black text-fairway-900"><span className="h-[18px] w-2 rounded-[3px] bg-accent" />This Round</h2>
         <Card className="p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -308,7 +308,7 @@ export function OverviewScreen({
 
       {/* 4 — tournament race */}
       <section>
-        <h2 className="mb-3 text-xl font-black text-slate-900">
+        <h2 className="mb-3 flex items-center gap-2 text-xl font-black text-fairway-900"><span className="h-[18px] w-2 rounded-[3px] bg-accent" />
           Tournament Race
         </h2>
         <Card className="p-5">
@@ -352,7 +352,7 @@ export function OverviewScreen({
 
       {/* 5 — stat highlights */}
       <section>
-        <h2 className="mb-3 text-xl font-black text-slate-900">Highlights</h2>
+        <h2 className="mb-3 flex items-center gap-2 text-xl font-black text-fairway-900"><span className="h-[18px] w-2 rounded-[3px] bg-accent" />Highlights</h2>
         <div className="grid grid-cols-2 gap-3">
           <Card className="p-3 text-center">
             <p className="text-xs font-bold text-slate-500">⛳ Best Net Round</p>
@@ -380,7 +380,7 @@ export function OverviewScreen({
 
       {/* 6 — awards */}
       <section>
-        <h2 className="mb-3 text-xl font-black text-slate-900">Awards</h2>
+        <h2 className="mb-3 flex items-center gap-2 text-xl font-black text-fairway-900"><span className="h-[18px] w-2 rounded-[3px] bg-accent" />Awards</h2>
         <div className="grid grid-cols-3 gap-2">
           <AwardTile emoji="🏆" label="MVP" award={awards.mvp} />
           <AwardTile emoji="🎯" label="Clutch" award={awards.clutch} />
@@ -390,7 +390,7 @@ export function OverviewScreen({
 
       {/* 7 — progress */}
       <section>
-        <h2 className="mb-3 text-xl font-black text-slate-900">
+        <h2 className="mb-3 flex items-center gap-2 text-xl font-black text-fairway-900"><span className="h-[18px] w-2 rounded-[3px] bg-accent" />
           Official Progress
         </h2>
         <Card className="p-5">

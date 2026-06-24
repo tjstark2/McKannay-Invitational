@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource/archivo": "^5.2.8",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.48.1",
     "lucide-react": "^0.468.0",

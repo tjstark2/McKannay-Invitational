@@ -99,8 +99,8 @@ function TripAppInner() {
   const showTournamentShell = activeScreen === "tournament";
 
   return (
-    <div className="min-h-screen bg-slate-200 text-slate-900">
-      <div className="mx-auto min-h-screen max-w-md bg-white pb-28 shadow-phone">
+    <div className="min-h-screen bg-[#efe9dd] text-slate-900">
+      <div className="mx-auto min-h-screen max-w-md bg-sand-50 pb-28 shadow-phone">
         <TopHero activeScreen={activeScreen} setActiveScreen={goToScreen} />
 
         <main className="px-5 py-6">
@@ -208,8 +208,9 @@ function TripAppInner() {
             <PasswordGate
               password={APP_CONFIG.adminPassword}
               storageKey={ADMIN_UNLOCK_KEY}
-              title="Admin Access"
-              subtitle="Enter the admin password to manage the tournament."
+              label="Admin Code"
+              heading="Admin Access"
+              subtitle="Enter the admin code to manage the tournament."
             >
               <AdminScreen />
             </PasswordGate>
@@ -239,8 +240,8 @@ export function TripApp() {
       <PasswordGate
         password={APP_CONFIG.entryPassword}
         storageKey={ENTRY_UNLOCK_KEY}
-        title="McKannay Invitational"
-        subtitle="Enter the trip password to continue."
+        label="Access Code"
+        brand
       >
         <TripAppInner />
       </PasswordGate>

@@ -102,6 +102,20 @@ export function MoreScreen({
           tracking and Admin Setup for commissioner controls.
         </p>
       </Card>
+
+      <div className="flex flex-col items-center py-2 text-center">
+        <span className="h-10 w-10 overflow-hidden rounded-xl shadow-sm">
+          <img
+            src="/logo-icon.png"
+            alt="Fore Friends"
+            className="h-full w-full scale-105 object-cover"
+          />
+        </span>
+        <p className="mt-2 text-sm font-black text-fairway-900">
+          Powered by Fore <span className="text-moss">Friends</span>
+        </p>
+        <p className="text-xs text-slate-500">Tournaments made easy</p>
+      </div>
     </div>
   );
 }

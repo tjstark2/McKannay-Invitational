@@ -1,6 +1,4 @@
 import { formatRoundFormat } from "@/lib/format";
-import { Card } from "@/components/ui/Card";
-import { ChevronButton } from "@/components/ui/ChevronButton";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import type { RoundStatus } from "@/lib/scoring";
 import type { Round, Screen } from "@/types";
@@ -31,7 +29,8 @@ export function NextRoundCard({
   return (
     <section>
       <div className="mb-3 flex items-center gap-2">
-        <h2 className="text-xl font-black text-slate-900">{heading}</h2>
+        <span className="h-[18px] w-2 rounded-[3px] bg-accent" />
+        <h2 className="text-xl font-black text-fairway-900">{heading}</h2>
         {status === "live" ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-black text-red-700">
             <span className="relative flex h-2 w-2">
@@ -51,85 +50,92 @@ export function NextRoundCard({
         )}
       </div>
 
-      <Card className="overflow-hidden">
-        <div className="p-4">
-          <div className="grid grid-cols-[1fr_116px] gap-4">
-            <div>
-              <p className="text-sm text-slate-500">
-                {round.dateLabel ? `${round.dateLabel} · ` : ""}Round{" "}
-                {round.roundNumber}
-              </p>
-              <h3 className="mt-1 text-lg font-black text-slate-900">
-                {course?.name ?? "Course"}
-              </h3>
-              <p className="mt-1 text-sm text-slate-500">
-                {course?.location}
-              </p>
-              {course ? (
-                <p className="mt-2 inline-block rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">
-                  {course.teeName} ·{" "}
-                  {course.yardage !== null
-                    ? `${course.yardage.toLocaleString()} yds · `
-                    : ""}
-                  {course.rating}/{course.slope} · Par {course.par}
-                </p>
-              ) : null}
-            </div>
-
-            {course?.imageUrl ? (
-              <img
-                src={course.imageUrl}
-                alt={course.name}
-                className="h-24 w-full rounded-xl object-cover"
-              />
-            ) : null}
-          </div>
-
-          <div className="mt-4 grid grid-cols-3 gap-3 border-b border-slate-200 pb-4">
-            <div>
-              <p className="text-xs font-semibold text-slate-500">Format</p>
-              <p className="mt-1 font-black">{formatRoundFormat(round.format)}</p>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-500">Points</p>
-              <p className="mt-1 font-black">{round.pointsAvailable}</p>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-500">Arrive</p>
-              <p className="mt-1 font-black">{round.arrivalTime || "—"}</p>
-            </div>
-          </div>
-
-          {round.teeTimes.length > 0 ? (
-            <div className="grid grid-cols-3 divide-x divide-slate-200">
-              {round.teeTimes.map((tee, index) => (
-                <div key={tee.id} className="p-3">
-                  <p className="text-sm font-black text-fairway-900">
-                    Tee {index + 1}
-                  </p>
-                  <p className="mt-1 text-sm font-semibold">{tee.time || "—"}</p>
-                  <p className="mt-2 text-xs leading-5 text-slate-600">
-                    {tee.players.map(getPlayerName).join(", ")}
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="px-1 py-3 text-sm text-slate-500">
-              No tee times set for this round yet.
+      <div className="overflow-hidden rounded-[22px] border border-sand-100 bg-white shadow-sm">
+        {/* photo hero with forest overlay */}
+        <div className="relative min-h-[218px] bg-gradient-to-br from-fairway-700 to-fairway-900">
+          {course?.imageUrl ? (
+            <img
+              src={course.imageUrl}
+              alt={course.name}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : null}
+          <div className="absolute inset-0 bg-gradient-to-t from-fairway-900/95 via-fairway-900/55 to-fairway-900/15" />
+          <div className="relative p-4 text-white">
+            <span className="absolute right-4 top-3 text-2xl drop-shadow">⛳</span>
+            <p className="text-xs font-bold text-fairway-100">
+              {round.dateLabel ? `${round.dateLabel} · ` : ""}Round{" "}
+              {round.roundNumber}
             </p>
-          )}
+            <h3 className="mt-1 text-2xl font-black tracking-tight drop-shadow">
+              {course?.name ?? "Course"}
+            </h3>
+            <p className="mt-0.5 text-sm text-fairway-50/90">
+              {course?.location}
+            </p>
+            {course ? (
+              <p className="mt-3 inline-block rounded-lg border border-accent/50 bg-fairway-900/55 px-2 py-1 text-xs font-extrabold text-fairway-50">
+                {course.teeName} ·{" "}
+                {course.yardage !== null
+                  ? `${course.yardage.toLocaleString()} yds · `
+                  : ""}
+                {course.rating}/{course.slope} · Par {course.par}
+              </p>
+            ) : null}
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <div className="rounded-xl bg-fairway-900/45 p-2.5">
+                <p className="text-[10px] font-bold uppercase text-fairway-100">
+                  Format
+                </p>
+                <p className="mt-0.5 font-black">
+                  {formatRoundFormat(round.format)}
+                </p>
+              </div>
+              <div className="rounded-xl bg-fairway-900/45 p-2.5">
+                <p className="text-[10px] font-bold uppercase text-fairway-100">
+                  Points
+                </p>
+                <p className="mt-0.5 font-black">{round.pointsAvailable}</p>
+              </div>
+              <div className="rounded-xl bg-fairway-900/45 p-2.5">
+                <p className="text-[10px] font-bold uppercase text-fairway-100">
+                  Arrive
+                </p>
+                <p className="mt-0.5 font-black">{round.arrivalTime || "—"}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="px-4 pb-4">
-          <ChevronButton
+        {round.teeTimes.length > 0 ? (
+          <div className="grid grid-cols-3 divide-x divide-sand-100">
+            {round.teeTimes.map((tee, index) => (
+              <div key={tee.id} className="p-3">
+                <p className="text-sm font-black text-fairway-900">
+                  Tee {index + 1}
+                </p>
+                <p className="mt-1 text-sm font-semibold">{tee.time || "—"}</p>
+                <p className="mt-2 text-xs leading-5 text-slate-600">
+                  {tee.players.map(getPlayerName).join(", ")}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="px-4 py-3 text-sm text-slate-500">
+            No tee times set for this round yet.
+          </p>
+        )}
+
+        <div className="p-4">
+          <button
             onClick={() => setActiveScreen("matchCenter")}
-            className="bg-fairway-900 text-white"
+            className="flex w-full items-center justify-center gap-1 rounded-2xl bg-accent px-4 py-3.5 font-black text-fairway-900"
           >
-            View Round
-          </ChevronButton>
+            View Round ›
+          </button>
         </div>
-      </Card>
+      </div>
     </section>
   );
 }
