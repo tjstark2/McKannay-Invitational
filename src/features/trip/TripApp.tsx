@@ -243,3 +243,14 @@ export function TripApp() {
     </TripStateProvider>
   );
 }
+
+/** Trip app reached by a shareable URL like /t/MCK2026 — loads that code. */
+export function TripView({ code }: { code: string }) {
+  return (
+    <TripStateProvider initialJoinCode={code}>
+      <EntryGate>
+        <TripAppInner />
+      </EntryGate>
+    </TripStateProvider>
+  );
+}

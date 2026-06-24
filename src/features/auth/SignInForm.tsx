@@ -22,7 +22,7 @@ export function SignInForm() {
       setError(result.error ?? "Couldn't sign in. Check your details.");
       return;
     }
-    window.location.href = "/";
+    window.location.href = "/home";
   }
 
   return (

@@ -45,7 +45,7 @@ export function SignUpForm() {
     if (result.needsConfirmation) {
       setSentTo(email.trim());
     } else {
-      window.location.href = "/";
+      window.location.href = "/home";
     }
   }
 

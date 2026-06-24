@@ -60,6 +60,81 @@ export async function tripExists(
   return Boolean(data);
 }
 
+export type MyTripSummary = {
+  id: string;
+  name: string;
+  joinCode: string;
+  location: string | null;
+  dates: string | null;
+  role: "owner" | "member";
+};
+
+// Trips the user owns OR is a member of, de-duplicated (owner wins).
+export async function loadMyTrips(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<MyTripSummary[]> {
+  const map = new Map<string, MyTripSummary>();
+
+  const owned = await supabase
+    .from("trips")
+    .select("id,name,join_code,location,dates")
+    .eq("owner_id", userId);
+  for (const t of (owned.data ?? []) as Record<string, unknown>[]) {
+    map.set(t.id as string, {
+      id: t.id as string,
+      name: t.name as string,
+      joinCode: t.join_code as string,
+      location: (t.location as string) ?? null,
+      dates: (t.dates as string) ?? null,
+      role: "owner",
+    });
+  }
+
+  const member = await supabase
+    .from("trip_members")
+    .select("role, trips(id,name,join_code,location,dates)")
+    .eq("user_id", userId);
+  for (const row of (member.data ?? []) as Record<string, unknown>[]) {
+    const raw = row.trips;
+    const t = (Array.isArray(raw) ? raw[0] : raw) as
+      | Record<string, unknown>
+      | undefined;
+    if (!t || map.has(t.id as string)) continue;
+    map.set(t.id as string, {
+      id: t.id as string,
+      name: t.name as string,
+      joinCode: t.join_code as string,
+      location: (t.location as string) ?? null,
+      dates: (t.dates as string) ?? null,
+      role: row.role === "owner" ? "owner" : "member",
+    });
+  }
+
+  return [...map.values()];
+}
+
+// Join a trip by its code: records membership, returns false if code unknown.
+export async function joinTripByCode(
+  supabase: SupabaseClient,
+  code: string,
+  userId: string
+): Promise<boolean> {
+  const { data: trip } = await supabase
+    .from("trips")
+    .select("id")
+    .eq("join_code", code)
+    .maybeSingle();
+  if (!trip) return false;
+  await supabase
+    .from("trip_members")
+    .upsert(
+      { trip_id: (trip as { id: string }).id, user_id: userId, role: "member" },
+      { onConflict: "trip_id,user_id", ignoreDuplicates: true }
+    );
+  return true;
+}
+
 export async function loadTripState(
   supabase: SupabaseClient,
   joinCode: string

@@ -123,8 +123,10 @@ function sumRoundPoints(rounds: Round[]): number {
 
 export function TripStateProvider({
   children,
+  initialJoinCode,
 }: {
   children: React.ReactNode;
+  initialJoinCode?: string;
 }) {
   const [state, setState] = useState<TripState>(initialTripState);
   const [loading, setLoading] = useState(true);
@@ -176,12 +178,18 @@ export function TripStateProvider({
     const supabase = getSupabaseClient();
     supabaseRef.current = supabase;
 
-    // Restore the trip chosen earlier this session (if any).
+    // Restore the trip chosen earlier this session (if any). A code passed
+    // from the URL (e.g. /t/MCK2026) takes priority and is persisted.
     let storedCode: string | null = null;
     try {
-      storedCode = sessionStorage.getItem(ACTIVE_JOIN_CODE_KEY);
+      if (initialJoinCode) {
+        storedCode = initialJoinCode;
+        sessionStorage.setItem(ACTIVE_JOIN_CODE_KEY, initialJoinCode);
+      } else {
+        storedCode = sessionStorage.getItem(ACTIVE_JOIN_CODE_KEY);
+      }
     } catch {
-      // sessionStorage unavailable — treat as no active trip.
+      storedCode = initialJoinCode ?? null;
     }
     if (storedCode) {
       activeCodeRef.current = storedCode;
