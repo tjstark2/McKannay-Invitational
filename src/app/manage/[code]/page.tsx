@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Check, X, UserPlus } from "lucide-react";
+import { Check, X, UserPlus, Pencil } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { BrandHeaderMark } from "@/features/trip/components/Brand";
@@ -15,11 +15,12 @@ import {
   inviteByUsername,
   approveMember,
   removeMember,
+  setMemberHandicap,
   memberName,
   type TripRef,
   type MemberRow,
 } from "@/lib/supabase/memberships";
-import { handleAndLocation } from "@/lib/supabase/friends";
+import { handleAndLocation, searchUsers, type PublicProfile } from "@/lib/supabase/friends";
 
 export default function ManagePage() {
   const params = useParams();
@@ -32,6 +33,8 @@ export default function ManagePage() {
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [invited, setInvited] = useState<MemberRow[]>([]);
   const [inviteHandle, setInviteHandle] = useState("");
+  const [inviteResults, setInviteResults] = useState<PublicProfile[]>([]);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteBusy, setInviteBusy] = useState(false);
   const [inviteMsg, setInviteMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [ready, setReady] = useState(false);
@@ -131,19 +134,46 @@ export default function ManagePage() {
     await refresh(trip);
   }
 
-  async function invite() {
-    if (!trip || inviteBusy) return;
+  // live search for the invite autocomplete
+  useEffect(() => {
+    if (!user) return;
+    const q = inviteHandle.trim();
+    if (q.length < 2) {
+      setInviteResults([]);
+      return;
+    }
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    let active = true;
+    const t = setTimeout(async () => {
+      const r = await searchUsers(supabase, q, user.id);
+      if (active) {
+        setInviteResults(r);
+        setInviteOpen(true);
+      }
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(t);
+    };
+  }, [inviteHandle, user]);
+
+  async function invite(handle?: string) {
+    const target = (handle ?? inviteHandle).trim();
+    if (!trip || inviteBusy || !target) return;
     const supabase = getSupabaseClient();
     if (!supabase) return;
     setInviteBusy(true);
     setInviteMsg(null);
-    const res = await inviteByUsername(supabase, trip.id, inviteHandle);
+    setInviteOpen(false);
+    const res = await inviteByUsername(supabase, trip.id, target);
     setInviteBusy(false);
     if (!res.ok) {
       setInviteMsg({ ok: false, text: res.error ?? "Couldn't invite." });
       return;
     }
     setInviteHandle("");
+    setInviteResults([]);
     setInviteMsg({
       ok: true,
       text: res.note
@@ -167,29 +197,61 @@ export default function ManagePage() {
       {/* invite by username */}
       <section className="mt-7">
         <h2 className="text-xl font-black text-fairway-900">Invite a player</h2>
-        <div className="mt-3 flex items-center gap-2 rounded-2xl border border-sand-100 bg-white px-3 py-2">
-          <span className="pl-1 text-slate-400">@</span>
-          <input
-            value={inviteHandle}
-            onChange={(e) => {
-              setInviteHandle(
-                e.target.value.replace(/[^a-zA-Z0-9_]/g, "").toLowerCase()
-              );
-              setInviteMsg(null);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") invite();
-            }}
-            placeholder="username"
-            className="min-w-0 flex-1 bg-transparent py-2 text-base outline-none"
-          />
-          <button
-            onClick={invite}
-            disabled={inviteBusy || !inviteHandle.trim()}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-fairway-900 px-4 py-2.5 font-black text-white disabled:opacity-50"
-          >
-            <UserPlus className="h-4 w-4" /> Invite
-          </button>
+        <div className="relative mt-3">
+          <div className="flex items-center gap-2 rounded-2xl border border-sand-100 bg-white px-3 py-2">
+            <span className="pl-1 text-slate-400">@</span>
+            <input
+              value={inviteHandle}
+              onChange={(e) => {
+                setInviteHandle(
+                  e.target.value.replace(/[^a-zA-Z0-9_]/g, "").toLowerCase()
+                );
+                setInviteMsg(null);
+              }}
+              onFocus={() => inviteResults.length > 0 && setInviteOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") invite();
+              }}
+              placeholder="search by username or name"
+              className="min-w-0 flex-1 bg-transparent py-2 text-base outline-none"
+            />
+            <button
+              onClick={() => invite()}
+              disabled={inviteBusy || !inviteHandle.trim()}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-fairway-900 px-4 py-2.5 font-black text-white disabled:opacity-50"
+            >
+              <UserPlus className="h-4 w-4" /> Invite
+            </button>
+          </div>
+          {inviteOpen && inviteResults.length > 0 ? (
+            <>
+              <div
+                className="fixed inset-0 z-30"
+                onClick={() => setInviteOpen(false)}
+              />
+              <div className="absolute z-40 mt-1 max-h-64 w-full overflow-auto rounded-2xl border border-sand-100 bg-white shadow-xl">
+                {inviteResults.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => invite(p.username ?? "")}
+                    className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left hover:bg-sand-50"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate font-black text-ink">
+                        {memberName(p)}
+                      </span>
+                      <span className="block truncate text-sm text-slate-500">
+                        {handleAndLocation(p)}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-sm font-extrabold text-fairway-900">
+                      Invite
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : null}
         </div>
         {inviteMsg ? (
           <p
@@ -263,39 +325,43 @@ export default function ManagePage() {
         <div className="mt-3 space-y-2">
           {members.map((m) => (
             <Row key={m.membershipId} r={m}>
-              {m.role === "owner" ? (
-                <span className="rounded-full bg-sand-50 px-3 py-1.5 text-xs font-black uppercase text-slate-500">
-                  Owner
-                </span>
-              ) : confirmId === m.membershipId ? (
-                <div className="flex items-center gap-2">
-                  <span className="hidden text-xs font-bold text-slate-500 sm:block">
-                    Remove?
+              <div className="flex items-center gap-2">
+                <HandicapEditor
+                  member={m}
+                  tripId={trip.id}
+                  onSaved={() => refresh(trip)}
+                />
+                {m.role === "owner" ? (
+                  <span className="rounded-full bg-sand-50 px-3 py-1.5 text-xs font-black uppercase text-slate-500">
+                    Owner
                   </span>
+                ) : confirmId === m.membershipId ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        kick(m.membershipId);
+                        setConfirmId(null);
+                      }}
+                      className="rounded-full bg-red-600 px-3 py-2 text-sm font-extrabold text-white"
+                    >
+                      Yes, remove
+                    </button>
+                    <button
+                      onClick={() => setConfirmId(null)}
+                      className="rounded-full border border-sand-200 bg-white px-3 py-2 text-sm font-bold text-slate-500"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
                   <button
-                    onClick={() => {
-                      kick(m.membershipId);
-                      setConfirmId(null);
-                    }}
-                    className="rounded-full bg-red-600 px-3 py-2 text-sm font-extrabold text-white"
+                    onClick={() => setConfirmId(m.membershipId)}
+                    className="rounded-full border border-sand-200 bg-white px-3 py-2 text-sm font-bold text-slate-400 hover:text-red-600"
                   >
-                    Yes, remove
+                    Remove
                   </button>
-                  <button
-                    onClick={() => setConfirmId(null)}
-                    className="rounded-full border border-sand-200 bg-white px-3 py-2 text-sm font-bold text-slate-500"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setConfirmId(m.membershipId)}
-                  className="rounded-full border border-sand-200 bg-white px-3 py-2 text-sm font-bold text-slate-400 hover:text-red-600"
-                >
-                  Remove
-                </button>
-              )}
+                )}
+              </div>
             </Row>
           ))}
         </div>
@@ -352,5 +418,72 @@ function Row({ r, children }: { r: MemberRow; children: React.ReactNode }) {
       </div>
       <div className="shrink-0 pl-3">{children}</div>
     </div>
+  );
+}
+
+function HandicapEditor({
+  member,
+  tripId,
+  onSaved,
+}: {
+  member: MemberRow;
+  tripId: string;
+  onSaved: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(
+    member.handicap != null ? String(member.handicap) : ""
+  );
+  const [busy, setBusy] = useState(false);
+
+  async function save() {
+    const num = Number(value);
+    if (value.trim() === "" || Number.isNaN(num) || busy) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    setBusy(true);
+    await setMemberHandicap(supabase, tripId, member.profile.id, num, true);
+    setBusy(false);
+    setEditing(false);
+    onSaved();
+  }
+
+  if (editing) {
+    return (
+      <span className="flex items-center gap-1">
+        <input
+          inputMode="decimal"
+          value={value}
+          onChange={(e) => setValue(e.target.value.replace(/[^0-9.\-]/g, ""))}
+          className="w-16 rounded-lg border border-sand-200 px-2 py-1.5 text-sm outline-none focus:border-fairway-900"
+          placeholder="HCP"
+          autoFocus
+        />
+        <button
+          onClick={save}
+          disabled={busy}
+          className="rounded-lg bg-fairway-900 px-2.5 py-1.5 text-xs font-black text-white"
+        >
+          Save
+        </button>
+        <button
+          onClick={() => setEditing(false)}
+          className="px-1 text-xs font-bold text-slate-400"
+        >
+          ✕
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setEditing(true)}
+      title="Set handicap (admin only)"
+      className="inline-flex items-center gap-1 rounded-full bg-sand-50 px-2.5 py-1.5 text-xs font-black text-fairway-900"
+    >
+      HCP {member.handicap != null ? member.handicap : "—"}
+      <Pencil className="h-3 w-3 text-slate-400" />
+    </button>
   );
 }

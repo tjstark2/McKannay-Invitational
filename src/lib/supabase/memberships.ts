@@ -14,12 +14,16 @@ export type MembershipState = {
   role: "owner" | "member" | null;
   status: "active" | "pending" | null;
   isOwner: boolean;
+  handicap: number | null;
+  handicapConfirmed: boolean;
 };
 
 export type MemberRow = {
   membershipId: string;
   role: string;
   status: string;
+  handicap: number | null;
+  handicapConfirmed: boolean;
   profile: PublicProfile;
 };
 
@@ -53,7 +57,7 @@ export async function getMembership(
   const isOwner = trip.ownerId === userId;
   const { data } = await supabase
     .from("trip_members")
-    .select("role,status")
+    .select("role,status,handicap,handicap_confirmed")
     .eq("trip_id", trip.id)
     .eq("user_id", userId)
     .maybeSingle();
@@ -62,13 +66,22 @@ export async function getMembership(
       role: isOwner ? "owner" : null,
       status: isOwner ? "active" : null,
       isOwner,
+      handicap: null,
+      handicapConfirmed: false,
     };
   }
-  const d = data as { role: string; status: string };
+  const d = data as {
+    role: string;
+    status: string;
+    handicap: number | null;
+    handicap_confirmed: boolean;
+  };
   return {
     role: d.role === "owner" ? "owner" : "member",
     status: d.status === "pending" ? "pending" : "active",
     isOwner,
+    handicap: d.handicap ?? null,
+    handicapConfirmed: Boolean(d.handicap_confirmed),
   };
 }
 
@@ -107,7 +120,7 @@ async function membersWithProfiles(
 ): Promise<MemberRow[]> {
   const { data: rows } = await supabase
     .from("trip_members")
-    .select("id,user_id,role,status")
+    .select("id,user_id,role,status,handicap,handicap_confirmed")
     .eq("trip_id", tripId)
     .eq("status", status);
   if (!rows || rows.length === 0) return [];
@@ -122,6 +135,8 @@ async function membersWithProfiles(
     membershipId: r.id as string,
     role: r.role as string,
     status: r.status as string,
+    handicap: (r.handicap as number) ?? null,
+    handicapConfirmed: Boolean(r.handicap_confirmed),
     profile:
       pmap.get(r.user_id as string) ??
       ({
@@ -133,6 +148,23 @@ async function membersWithProfiles(
         state: null,
       } as PublicProfile),
   }));
+}
+
+// Set a member's per-tournament handicap. confirmed=true locks it for the
+// player (only the admin can change it afterward).
+export async function setMemberHandicap(
+  supabase: SupabaseClient,
+  tripId: string,
+  userId: string,
+  handicap: number,
+  confirmed: boolean
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("trip_members")
+    .update({ handicap, handicap_confirmed: confirmed })
+    .eq("trip_id", tripId)
+    .eq("user_id", userId);
+  return !error;
 }
 
 export async function listJoinRequests(
