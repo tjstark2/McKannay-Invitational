@@ -16,9 +16,17 @@ import {
   approveMember,
   removeMember,
   setMemberHandicap,
+  loadTripTeams,
+  loadTripPlayers,
+  addMemberAsPlayer,
+  removeRosterPlayer,
+  setPlayerTeam,
+  setTripRosterSize,
   memberName,
   type TripRef,
   type MemberRow,
+  type TeamLite,
+  type RosterPlayer,
 } from "@/lib/supabase/memberships";
 import { handleAndLocation, searchUsers, type PublicProfile } from "@/lib/supabase/friends";
 
@@ -32,6 +40,8 @@ export default function ManagePage() {
   const [requests, setRequests] = useState<MemberRow[]>([]);
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [invited, setInvited] = useState<MemberRow[]>([]);
+  const [teams, setTeams] = useState<TeamLite[]>([]);
+  const [players, setPlayers] = useState<RosterPlayer[]>([]);
   const [inviteHandle, setInviteHandle] = useState("");
   const [inviteResults, setInviteResults] = useState<PublicProfile[]>([]);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -40,6 +50,8 @@ export default function ManagePage() {
   const [ready, setReady] = useState(false);
   const [authorized, setAuthorized] = useState(true);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [editingSize, setEditingSize] = useState(false);
+  const [sizeDraft, setSizeDraft] = useState("12");
 
   const refresh = useCallback(async (t: TripRef) => {
     const supabase = getSupabaseClient();
@@ -47,6 +59,8 @@ export default function ManagePage() {
     setRequests(await listJoinRequests(supabase, t.id));
     setMembers(await listActiveMembers(supabase, t.id));
     setInvited(await listInvited(supabase, t.id));
+    setTeams(await loadTripTeams(supabase, t.id));
+    setPlayers(await loadTripPlayers(supabase, t.id));
   }, []);
 
   useEffect(() => {
@@ -151,10 +165,46 @@ export default function ManagePage() {
     await refresh(trip);
   }
 
-  async function kick(membershipId: string) {
+  async function kick(membershipId: string, accountId?: string) {
     const supabase = getSupabaseClient();
     if (!supabase || !trip) return;
     await removeMember(supabase, membershipId);
+    if (accountId) {
+      const p = players.find((pl) => pl.accountId === accountId);
+      if (p) await removeRosterPlayer(supabase, p.id);
+    }
+    await refresh(trip);
+  }
+
+  async function addToRoster(member: MemberRow, teamDbId: string) {
+    const supabase = getSupabaseClient();
+    if (!supabase || !trip) return;
+    await addMemberAsPlayer(supabase, trip.id, member, teamDbId, players.length);
+    await refresh(trip);
+  }
+
+  async function switchTeam(playerId: string, teamDbId: string) {
+    const supabase = getSupabaseClient();
+    if (!supabase || !trip) return;
+    await setPlayerTeam(supabase, playerId, teamDbId);
+    await refresh(trip);
+  }
+
+  async function removeFromRoster(playerId: string) {
+    const supabase = getSupabaseClient();
+    if (!supabase || !trip) return;
+    await removeRosterPlayer(supabase, playerId);
+    await refresh(trip);
+  }
+
+  async function saveSize() {
+    const supabase = getSupabaseClient();
+    if (!supabase || !trip) return;
+    const n = Number(sizeDraft);
+    if (!Number.isFinite(n) || n < 1) return;
+    await setTripRosterSize(supabase, trip.id, n);
+    setEditingSize(false);
+    setTrip({ ...trip, rosterSize: Math.round(n) });
     await refresh(trip);
   }
 
@@ -182,6 +232,121 @@ export default function ManagePage() {
     });
     await refresh(trip);
   }
+
+  function memberCard(m: MemberRow, isOwner: boolean) {
+    const player = players.find((p) => p.accountId === m.profile.id);
+    const initial = (m.profile.username || m.profile.first_name || "?")
+      .charAt(0)
+      .toUpperCase();
+    return (
+      <div
+        key={m.membershipId}
+        className="rounded-2xl border border-sand-100 bg-white p-4"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-fairway-900 font-black text-white">
+              {initial}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate font-black text-ink">
+                {memberName(m.profile)}
+              </p>
+              <p className="truncate text-sm text-slate-500">
+                {handleAndLocation(m.profile)}
+              </p>
+            </div>
+          </div>
+          {isOwner ? (
+            <span className="shrink-0 rounded-full bg-sand-50 px-3 py-1.5 text-xs font-black uppercase text-slate-500">
+              Organizer
+            </span>
+          ) : null}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-sand-100 pt-3">
+          <HandicapEditor member={m} tripId={trip!.id} onSaved={() => refresh(trip!)} />
+
+          {/* team assignment */}
+          <span className="inline-flex items-center gap-1.5">
+            <span className="text-xs font-bold text-slate-400">Team:</span>
+            {teams.map((t) => {
+              const active = !!player && player.teamId === t.dbId;
+              return (
+                <button
+                  key={t.dbId}
+                  onClick={() =>
+                    active
+                      ? undefined
+                      : player
+                        ? switchTeam(player.id, t.dbId)
+                        : addToRoster(m, t.dbId)
+                  }
+                  className={
+                    active
+                      ? `rounded-full px-3 py-1.5 text-xs font-extrabold text-white ${
+                          t.code === "A" ? "bg-fairway-900" : "bg-green"
+                        }`
+                      : "rounded-full border border-sand-200 bg-white px-3 py-1.5 text-xs font-extrabold text-slate-600"
+                  }
+                >
+                  {t.name}
+                </button>
+              );
+            })}
+            {player ? (
+              <button
+                onClick={() => removeFromRoster(player.id)}
+                title="Remove from team"
+                className="px-1 text-xs font-bold text-slate-400 hover:text-red-600"
+              >
+                ✕
+              </button>
+            ) : (
+              <span className="text-xs font-bold text-slate-400">
+                no team yet
+              </span>
+            )}
+          </span>
+
+          {!isOwner ? (
+            <span className="ml-auto">
+              {confirmId === m.membershipId ? (
+                <span className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      kick(m.membershipId, m.profile.id);
+                      setConfirmId(null);
+                    }}
+                    className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-extrabold text-white"
+                  >
+                    Yes, remove
+                  </button>
+                  <button
+                    onClick={() => setConfirmId(null)}
+                    className="rounded-full border border-sand-200 px-3 py-1.5 text-xs font-bold text-slate-500"
+                  >
+                    Cancel
+                  </button>
+                </span>
+              ) : (
+                <button
+                  onClick={() => setConfirmId(m.membershipId)}
+                  className="text-xs font-bold text-slate-400 hover:text-red-600"
+                >
+                  Remove
+                </button>
+              )}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  const owner = members.find((m) => m.role === "owner") ?? null;
+  const admitted = members.filter((m) => m.role !== "owner");
+  const openSpots = Math.max(0, trip.rosterSize - admitted.length);
 
   return (
     <Shell>
@@ -317,54 +482,83 @@ export default function ManagePage() {
         )}
       </section>
 
-      {/* members */}
+      {/* roster */}
       <section className="mt-9">
-        <h2 className="text-xl font-black text-fairway-900">
-          Members <span className="text-slate-400">({members.length})</span>
-        </h2>
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-black text-fairway-900">Roster</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {admitted.length} of {trip.rosterSize} spots filled · assign each
+              player to a team.
+            </p>
+          </div>
+          {editingSize ? (
+            <span className="flex items-center gap-1">
+              <input
+                inputMode="numeric"
+                value={sizeDraft}
+                onChange={(e) =>
+                  setSizeDraft(e.target.value.replace(/[^0-9]/g, "").slice(0, 3))
+                }
+                className="w-16 rounded-lg border border-sand-200 px-2 py-1.5 text-sm outline-none focus:border-fairway-900"
+                autoFocus
+              />
+              <button
+                onClick={saveSize}
+                className="rounded-lg bg-fairway-900 px-2.5 py-1.5 text-xs font-black text-white"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => setEditingSize(false)}
+                className="px-1 text-xs font-bold text-slate-400"
+              >
+                ✕
+              </button>
+            </span>
+          ) : (
+            <button
+              onClick={() => {
+                setSizeDraft(String(trip.rosterSize));
+                setEditingSize(true);
+              }}
+              className="shrink-0 rounded-full bg-sand-50 px-3 py-1.5 text-xs font-black text-fairway-900"
+            >
+              Spots: {trip.rosterSize}
+            </button>
+          )}
+        </div>
+
         <div className="mt-3 space-y-2">
-          {members.map((m) => (
-            <Row key={m.membershipId} r={m}>
-              <div className="flex items-center gap-2">
-                <HandicapEditor
-                  member={m}
-                  tripId={trip.id}
-                  onSaved={() => refresh(trip)}
-                />
-                {m.role === "owner" ? (
-                  <span className="rounded-full bg-sand-50 px-3 py-1.5 text-xs font-black uppercase text-slate-500">
-                    Owner
-                  </span>
-                ) : confirmId === m.membershipId ? (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        kick(m.membershipId);
-                        setConfirmId(null);
-                      }}
-                      className="rounded-full bg-red-600 px-3 py-2 text-sm font-extrabold text-white"
-                    >
-                      Yes, remove
-                    </button>
-                    <button
-                      onClick={() => setConfirmId(null)}
-                      className="rounded-full border border-sand-200 bg-white px-3 py-2 text-sm font-bold text-slate-500"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setConfirmId(m.membershipId)}
-                    className="rounded-full border border-sand-200 bg-white px-3 py-2 text-sm font-bold text-slate-400 hover:text-red-600"
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-            </Row>
+          {admitted.map((m) => memberCard(m, false))}
+
+          {Array.from({ length: openSpots }).map((_, i) => (
+            <div
+              key={`open-${i}`}
+              className="flex items-center gap-3 rounded-2xl border border-dashed border-sand-200 bg-white/50 px-4 py-4"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-full border border-dashed border-sand-200 text-slate-300">
+                +
+              </span>
+              <span className="text-sm font-bold text-slate-400">
+                Open spot
+              </span>
+            </div>
           ))}
         </div>
+
+        {owner ? (
+          <>
+            <p className="mt-6 text-xs font-extrabold uppercase tracking-wide text-slate-400">
+              Organizer
+            </p>
+            <div className="mt-2">{memberCard(owner, true)}</div>
+            <p className="mt-1 text-xs text-slate-400">
+              You don&apos;t take a spot. Put yourself on a team only if
+              you&apos;re playing.
+            </p>
+          </>
+        ) : null}
       </section>
 
       <div className="mt-10 grid gap-2">

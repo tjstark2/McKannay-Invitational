@@ -8,6 +8,7 @@ export type TripRef = {
   ownerId: string | null;
   location: string | null;
   dates: string | null;
+  rosterSize: number;
 };
 
 export type MembershipState = {
@@ -33,7 +34,7 @@ export async function resolveTrip(
 ): Promise<TripRef | null> {
   const { data } = await supabase
     .from("trips")
-    .select("id,name,join_code,owner_id,location,dates")
+    .select("id,name,join_code,owner_id,location,dates,roster_size")
     .eq("join_code", code)
     .maybeSingle();
   if (!data) return null;
@@ -45,6 +46,7 @@ export async function resolveTrip(
     ownerId: (t.owner_id as string) ?? null,
     location: (t.location as string) ?? null,
     dates: (t.dates as string) ?? null,
+    rosterSize: (t.roster_size as number) ?? 12,
   };
 }
 
@@ -164,6 +166,12 @@ export async function setMemberHandicap(
     .update({ handicap, handicap_confirmed: confirmed })
     .eq("trip_id", tripId)
     .eq("user_id", userId);
+  // Keep their roster player's handicap in sync, if they're on a team.
+  await supabase
+    .from("players")
+    .update({ handicap_index: handicap })
+    .eq("trip_id", tripId)
+    .eq("account_id", userId);
   return !error;
 }
 
@@ -211,7 +219,7 @@ export async function loadPendingTrips(
 ): Promise<TripRef[]> {
   const { data } = await supabase
     .from("trip_members")
-    .select("trips(id,name,join_code,owner_id,location,dates)")
+    .select("trips(id,name,join_code,owner_id,location,dates,roster_size)")
     .eq("user_id", userId)
     .eq("status", "pending");
   const out: TripRef[] = [];
@@ -226,6 +234,7 @@ export async function loadPendingTrips(
       ownerId: (t.owner_id as string) ?? null,
       location: (t.location as string) ?? null,
       dates: (t.dates as string) ?? null,
+      rosterSize: (t.roster_size as number) ?? 12,
     });
   }
   return out;
@@ -293,7 +302,7 @@ export async function loadInvitations(
 ): Promise<InvitationItem[]> {
   const { data } = await supabase
     .from("trip_members")
-    .select("id, trips(id,name,join_code,owner_id,location,dates)")
+    .select("id, trips(id,name,join_code,owner_id,location,dates,roster_size)")
     .eq("user_id", userId)
     .eq("status", "invited");
   const out: InvitationItem[] = [];
@@ -310,10 +319,114 @@ export async function loadInvitations(
         ownerId: (t.owner_id as string) ?? null,
         location: (t.location as string) ?? null,
         dates: (t.dates as string) ?? null,
+        rosterSize: (t.roster_size as number) ?? 12,
       },
     });
   }
   return out;
+}
+
+// ---- Rosters: turning approved members into players on a team ----------
+
+export type TeamLite = { code: "A" | "B"; dbId: string; name: string };
+export type RosterPlayer = {
+  id: string;
+  accountId: string | null;
+  name: string;
+  teamId: string | null;
+  handicap: number | null;
+};
+
+export async function loadTripTeams(
+  supabase: SupabaseClient,
+  tripId: string
+): Promise<TeamLite[]> {
+  const { data } = await supabase
+    .from("teams")
+    .select("id,code,name")
+    .eq("trip_id", tripId);
+  return ((data ?? []) as Record<string, unknown>[]).map((t) => ({
+    code: (t.code as string) === "B" ? "B" : "A",
+    dbId: t.id as string,
+    name: (t.name as string) ?? (t.code === "B" ? "Team B" : "Team A"),
+  }));
+}
+
+export async function loadTripPlayers(
+  supabase: SupabaseClient,
+  tripId: string
+): Promise<RosterPlayer[]> {
+  const { data } = await supabase
+    .from("players")
+    .select("id,account_id,display_name,team_id,handicap_index")
+    .eq("trip_id", tripId);
+  return ((data ?? []) as Record<string, unknown>[]).map((p) => ({
+    id: p.id as string,
+    accountId: (p.account_id as string) ?? null,
+    name: (p.display_name as string) ?? "",
+    teamId: (p.team_id as string) ?? null,
+    handicap: (p.handicap_index as number) ?? null,
+  }));
+}
+
+function rosterName(p: PublicProfile): string {
+  const name = [p.first_name, p.last_name].filter(Boolean).join(" ");
+  return name || (p.username ? `@${p.username}` : "Player");
+}
+
+// Create a player row for an approved member on the chosen team.
+export async function addMemberAsPlayer(
+  supabase: SupabaseClient,
+  tripId: string,
+  member: MemberRow,
+  teamDbId: string,
+  sortOrder: number
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.from("players").insert({
+    trip_id: tripId,
+    team_id: teamDbId,
+    display_name: rosterName(member.profile),
+    handicap_index: member.handicap ?? 0,
+    avatar_emoji: "⛳",
+    sort_order: sortOrder,
+    account_id: member.profile.id,
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function removeRosterPlayer(
+  supabase: SupabaseClient,
+  playerId: string
+): Promise<boolean> {
+  const { error } = await supabase.from("players").delete().eq("id", playerId);
+  return !error;
+}
+
+// Move an existing roster player to a different team.
+export async function setPlayerTeam(
+  supabase: SupabaseClient,
+  playerId: string,
+  teamDbId: string
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("players")
+    .update({ team_id: teamDbId })
+    .eq("id", playerId);
+  return !error;
+}
+
+// Change how many spots a tournament has.
+export async function setTripRosterSize(
+  supabase: SupabaseClient,
+  tripId: string,
+  size: number
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("trips")
+    .update({ roster_size: Math.max(1, Math.round(size)) })
+    .eq("id", tripId);
+  return !error;
 }
 
 export function memberName(p: PublicProfile): string {

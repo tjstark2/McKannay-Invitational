@@ -144,6 +144,7 @@ export type CreateTripInput = {
   dates?: string;
   teamAName: string;
   teamBName: string;
+  rosterSize: number;
   ownerId: string;
 };
 
@@ -169,6 +170,10 @@ export async function createTrip(
       location: input.location?.trim() || null,
       dates: input.dates?.trim() || null,
       owner_id: input.ownerId,
+      roster_size:
+        Number.isFinite(input.rosterSize) && input.rosterSize > 0
+          ? Math.round(input.rosterSize)
+          : 12,
       total_points: 0,
       winning_number: 0,
       retain_number: 0,

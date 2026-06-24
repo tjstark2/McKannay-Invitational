@@ -18,6 +18,7 @@ export default function CreatePage() {
   const [dates, setDates] = useState("");
   const [teamAName, setTeamAName] = useState("Team A");
   const [teamBName, setTeamBName] = useState("Team B");
+  const [rosterSize, setRosterSize] = useState("12");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,6 +51,7 @@ export default function CreatePage() {
       dates,
       teamAName,
       teamBName,
+      rosterSize: Number(rosterSize) || 12,
       ownerId: user.id,
     });
     setBusy(false);
@@ -145,6 +147,18 @@ export default function CreatePage() {
               />
             </Field>
           </div>
+
+          <Field label="Number of players" hint="spots on the roster">
+            <input
+              className={inp}
+              inputMode="numeric"
+              value={rosterSize}
+              onChange={(e) =>
+                setRosterSize(e.target.value.replace(/[^0-9]/g, "").slice(0, 3))
+              }
+              placeholder="12"
+            />
+          </Field>
 
           {error ? (
             <p className="text-sm font-bold text-red-600">{error}</p>
