@@ -91,17 +91,20 @@ export default function ProfilePage() {
           <Row label="SMS updates" value={profile?.sms_opt_in ? "On" : "Off"} />
         </div>
 
-        <p className="mt-4 text-sm text-slate-400">
-          Editing your profile is coming soon. Need a change now? Reach us from
-          the Contact page.
-        </p>
-
-        <button
-          onClick={() => router.push("/home")}
-          className="mt-6 w-full rounded-2xl bg-fairway-900 px-4 py-3.5 font-black text-white"
-        >
-          ← Back to My Tournaments
-        </button>
+        <div className="mt-6 grid gap-2">
+          <button
+            onClick={() => router.push("/profile/edit")}
+            className="w-full rounded-2xl bg-fairway-900 px-4 py-3.5 font-black text-white"
+          >
+            Edit profile
+          </button>
+          <button
+            onClick={() => router.push("/home")}
+            className="w-full rounded-2xl border border-sand-100 bg-white px-4 py-3.5 font-black text-fairway-900"
+          >
+            ← Back to My Tournaments
+          </button>
+        </div>
       </main>
     </div>
   );
