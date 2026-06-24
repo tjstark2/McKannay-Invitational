@@ -29,6 +29,7 @@ export default function TripCodePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [gate, setGate] = useState<Gate>({ kind: "loading" });
+  const [viewer, setViewer] = useState({ canManage: false, isOwner: false });
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -52,6 +53,7 @@ export default function TripCodePage() {
       }
       const m: MembershipState = await getMembership(supabase, trip, user.id);
       if (!active) return;
+      setViewer({ canManage: m.canManage, isOwner: m.isOwner });
       if (canViewTrip(m)) {
         if (!m.isOwner && !m.handicapConfirmed) {
           setGate({ kind: "handicap", trip });
@@ -80,7 +82,13 @@ export default function TripCodePage() {
   }
 
   if (gate.kind === "view") {
-    return <TripView code={code} />;
+    return (
+      <TripView
+        code={code}
+        canManage={viewer.canManage}
+        isOwner={viewer.isOwner}
+      />
+    );
   }
 
   if (gate.kind === "notfound") {

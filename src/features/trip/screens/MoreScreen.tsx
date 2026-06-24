@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useTripState } from "@/features/trip/state/TripStateContext";
+import { useViewer } from "@/features/trip/state/ViewerContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import type { Screen } from "@/types";
 
@@ -14,6 +15,7 @@ export function MoreScreen({
   setActiveScreen: (screen: Screen) => void;
 }) {
   const { trip } = useTripState();
+  const { canManage } = useViewer();
   const { signOut } = useAuth();
   const router = useRouter();
 
@@ -33,11 +35,15 @@ export function MoreScreen({
       screen: "courseDetail",
       description: "View course information and trip schedule",
     },
-    {
-      label: "Admin Setup",
-      screen: "admin",
-      description: "Teams, players, rounds, matches, and scoring",
-    },
+    ...(canManage
+      ? [
+          {
+            label: "Admin Setup",
+            screen: "admin" as Screen,
+            description: "Rounds, courses, and scoring",
+          },
+        ]
+      : []),
   ];
 
   return (

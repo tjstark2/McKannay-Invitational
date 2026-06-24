@@ -19,16 +19,15 @@ import { TeamDetailScreen } from "@/features/trip/screens/TeamDetailScreen";
 import { TeamsScreen } from "@/features/trip/screens/TeamsScreen";
 import { TopHero } from "@/features/trip/components/TopHero";
 import { AccountMenu } from "@/features/account/AccountMenu";
-import { PasswordGate } from "@/features/trip/components/PasswordGate";
 import { EntryGate } from "@/features/trip/components/EntryGate";
-import {
-  APP_CONFIG,
-  ADMIN_UNLOCK_KEY,
-} from "@/features/trip/config";
 import {
   TripStateProvider,
   useTripState,
 } from "@/features/trip/state/TripStateContext";
+import {
+  ViewerProvider,
+  useViewer,
+} from "@/features/trip/state/ViewerContext";
 import type { Screen, TeamId } from "@/types";
 
 type TournamentTab =
@@ -42,6 +41,7 @@ type TournamentTab =
 function TripAppInner() {
   const { trip, players, courses, matches, loading, error, resetState } =
     useTripState();
+  const { canManage } = useViewer();
 
   const [activeScreen, setActiveScreen] = useState<Screen>("overview");
   const [selectedPlayerId, setSelectedPlayerId] = useState(players[0]?.id ?? "");
@@ -209,15 +209,17 @@ function TripAppInner() {
           {activeScreen === "rules" ? <RulesScreen /> : null}
 
           {activeScreen === "admin" ? (
-            <PasswordGate
-              password={trip.adminCode ?? APP_CONFIG.adminPassword}
-              storageKey={ADMIN_UNLOCK_KEY}
-              label="Admin Code"
-              heading="Admin Access"
-              subtitle="Enter the admin code to manage the tournament."
-            >
+            canManage ? (
               <AdminScreen />
-            </PasswordGate>
+            ) : (
+              <div className="rounded-2xl border border-sand-100 bg-white p-8 text-center">
+                <p className="text-3xl">🔒</p>
+                <p className="mt-3 font-black text-ink">Admins only</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Only the organizer and admins can manage this tournament.
+                </p>
+              </div>
+            )
           ) : null}
 
           {activeScreen === "more" ? (
@@ -249,12 +251,22 @@ export function TripApp() {
 }
 
 /** Trip app reached by a shareable URL like /t/MCK2026 — loads that code. */
-export function TripView({ code }: { code: string }) {
+export function TripView({
+  code,
+  canManage = false,
+  isOwner = false,
+}: {
+  code: string;
+  canManage?: boolean;
+  isOwner?: boolean;
+}) {
   return (
-    <TripStateProvider initialJoinCode={code}>
-      <EntryGate>
-        <TripAppInner />
-      </EntryGate>
-    </TripStateProvider>
+    <ViewerProvider value={{ canManage, isOwner }}>
+      <TripStateProvider initialJoinCode={code}>
+        <EntryGate>
+          <TripAppInner />
+        </EntryGate>
+      </TripStateProvider>
+    </ViewerProvider>
   );
 }
