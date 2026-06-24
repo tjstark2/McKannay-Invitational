@@ -135,6 +135,75 @@ export async function joinTripByCode(
   return true;
 }
 
+export type CreateTripInput = {
+  name: string;
+  joinCode: string;
+  adminCode: string;
+  location?: string;
+  dates?: string;
+  teamAName: string;
+  teamBName: string;
+  ownerId: string;
+};
+
+// Creates a fully usable empty trip: trip row + two teams + default scoring +
+// owner membership. The commissioner fills in players/rounds/courses in Admin.
+export async function createTrip(
+  supabase: SupabaseClient,
+  input: CreateTripInput
+): Promise<{ ok: boolean; error?: string }> {
+  const code = input.joinCode.trim();
+
+  const taken = await tripExists(supabase, code);
+  if (taken) {
+    return { ok: false, error: "That join code is already taken — pick another." };
+  }
+
+  const tripIns = await supabase
+    .from("trips")
+    .insert({
+      name: input.name.trim(),
+      join_code: code,
+      admin_code: input.adminCode.trim(),
+      location: input.location?.trim() || null,
+      dates: input.dates?.trim() || null,
+      owner_id: input.ownerId,
+      total_points: 0,
+      winning_number: 0,
+      retain_number: 0,
+    })
+    .select("id")
+    .single();
+  if (tripIns.error || !tripIns.data) {
+    return {
+      ok: false,
+      error: tripIns.error?.message ?? "Could not create the tournament.",
+    };
+  }
+  const tripId = (tripIns.data as { id: string }).id;
+
+  const teamIns = await supabase.from("teams").insert([
+    { trip_id: tripId, code: "A", name: input.teamAName.trim() || "Team A", color: "red" },
+    { trip_id: tripId, code: "B", name: input.teamBName.trim() || "Team B", color: "blue" },
+  ]);
+  if (teamIns.error) return { ok: false, error: teamIns.error.message };
+
+  await supabase.from("scoring_settings").insert({
+    trip_id: tripId,
+    best_ball_handicap_allowance: 90,
+    singles_handicap_allowance: 100,
+    net_score_handicap_allowance: 100,
+    net_score_points_override: null,
+  });
+
+  await supabase.from("trip_members").upsert(
+    { trip_id: tripId, user_id: input.ownerId, role: "owner" },
+    { onConflict: "trip_id,user_id", ignoreDuplicates: true }
+  );
+
+  return { ok: true };
+}
+
 export async function loadTripState(
   supabase: SupabaseClient,
   joinCode: string
