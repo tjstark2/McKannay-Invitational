@@ -191,32 +191,111 @@ export function Landing() {
       </section>
 
       {/* FEATURES */}
-      <section id="features" className="mx-auto max-w-6xl px-5 pb-8">
+      <section id="features" className="mx-auto max-w-6xl px-5 pb-8 pt-4">
         <p className="text-center font-display text-sm font-extrabold uppercase tracking-[0.14em] text-accent-dark">
           Features
         </p>
         <h2 className="mt-2 text-center font-display text-4xl font-black tracking-tight text-ink">
-          Everything your trip needs
+          From first tee to final scoreboard
         </h2>
+        <p className="mx-auto mt-3 max-w-2xl text-center text-lg text-slate-600">
+          TourneyBirdie runs the whole journey — set it up, get everyone in,
+          play it out, and crown a winner.
+        </p>
 
-        <div className="mt-14 grid items-center gap-12 md:grid-cols-2">
+        {/* journey strip */}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-x-2 gap-y-2 text-sm font-extrabold">
+          {["Create", "Invite", "Teams", "Schedule", "Log scores", "Scoreboard", "Crown"].map(
+            (step, i, arr) => (
+              <span key={step} className="flex items-center gap-2">
+                <span className="rounded-full border border-sand-100 bg-white px-3 py-1.5 text-fairway-900">
+                  {step}
+                </span>
+                {i < arr.length - 1 ? (
+                  <span className="text-accent-dark">→</span>
+                ) : null}
+              </span>
+            )
+          )}
+        </div>
+
+        {/* spotlight 1 — set up */}
+        <div className="mt-16 grid items-center gap-12 md:grid-cols-2">
           <div>
+            <span className="inline-block rounded-full bg-sand-100 px-3 py-1 text-xs font-extrabold tracking-wide text-accent-dark">
+              SET UP IN MINUTES
+            </span>
+            <h3 className="mt-3 font-display text-3xl font-black tracking-tight text-ink">
+              Create your tournament, your way
+            </h3>
+            <p className="mt-3 text-lg text-slate-600">
+              Name it, set a join code, build two teams, and add your rounds,
+              courses, and tee times. Choose best ball, match play, or net score
+              for each round — TourneyBirdie handles the scoring math.
+            </p>
+          </div>
+          <div className="rounded-3xl border border-sand-100 bg-white p-6 shadow-xl">
+            <div className="space-y-3">
+              <div className="rounded-xl bg-sand-50 px-4 py-3">
+                <div className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400">
+                  Tournament name
+                </div>
+                <div className="font-display font-black text-ink">
+                  3rd Annual McKannay Invitational
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-sand-50 px-4 py-3">
+                  <div className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400">
+                    Join code
+                  </div>
+                  <div className="font-display font-black text-fairway-900">MCK2027</div>
+                </div>
+                <div className="rounded-xl bg-sand-50 px-4 py-3">
+                  <div className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400">
+                    Teams
+                  </div>
+                  <div className="font-display font-black text-ink">
+                    <span className="text-fairway-900">North</span> v{" "}
+                    <span className="text-green">South</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {["R1 · Best Ball", "R2 · Match Play", "R3 · Net"].map((r) => (
+                  <span
+                    key={r}
+                    className="rounded-full bg-fairway-900/10 px-3 py-1 text-xs font-extrabold text-fairway-900"
+                  >
+                    {r}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* spotlight 2 — log scores live */}
+        <div className="mt-16 grid items-center gap-12 md:grid-cols-2">
+          <div className="overflow-hidden rounded-3xl border border-sand-100 shadow-xl md:order-2">
+            <img src="/images/heron-point.jpg" alt="Live scoring" className="w-full" />
+          </div>
+          <div className="md:order-1">
             <span className="inline-block rounded-full bg-sand-100 px-3 py-1 text-xs font-extrabold tracking-wide text-accent-dark">
               LIVE SCORING
             </span>
             <h3 className="mt-3 font-display text-3xl font-black tracking-tight text-ink">
-              Standings that update as you play
+              Log scores as you play
             </h3>
             <p className="mt-3 text-lg text-slate-600">
-              Best ball, match play, and net score — points tally automatically,
-              with confirmed-vs-projected so you always know where the trip stands.
+              Enter scores hole by hole or round by round. Standings, matches,
+              and awards update instantly — with confirmed-vs-projected so you
+              always know where the trip really stands.
             </p>
-          </div>
-          <div className="overflow-hidden rounded-3xl border border-sand-100 shadow-xl">
-            <img src="/images/heron-point.jpg" alt="Live scoring" className="w-full" />
           </div>
         </div>
 
+        {/* spotlight 3 — teams & matches */}
         <div className="mt-16 grid items-center gap-12 md:grid-cols-2">
           <div className="rounded-3xl border border-sand-100 bg-white p-8 shadow-xl md:order-2">
             <div className="flex items-center justify-around text-center">
@@ -246,6 +325,34 @@ export function Landing() {
               Set rosters, run singles and best-ball matches, and track momentum
               hole by hole — with team colors carried through the whole app.
             </p>
+          </div>
+        </div>
+
+        {/* feature grid */}
+        <div className="mt-20">
+          <h3 className="text-center font-display text-2xl font-black tracking-tight text-ink">
+            And everything else your trip needs
+          </h3>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              ["\u26F3", "Net & handicap scoring", "Handicaps and allowances are built in, so net results stay fair and tally automatically."],
+              ["\uD83D\uDD52", "Schedule & tee times", "Lay out each round's course, date, and tee-time groups in one place."],
+              ["\uD83C\uDFC6", "Awards & highlights", "Automatic MVP, hot rounds, biggest movers, and round highlights."],
+              ["\uD83D\uDD17", "Shareable links", "Every tournament gets its own link — text it and your group is in."],
+              ["\uD83D\uDCCA", "Confirmed vs projected", "See locked-in points and what's still in play, at a glance."],
+              ["\u2699\uFE0F", "Admin controls", "Run the show: set the active round, manage rosters, and tune scoring."],
+            ].map(([icon, title, body]) => (
+              <div
+                key={title}
+                className="rounded-2xl border border-sand-100 bg-white p-6"
+              >
+                <div className="text-3xl">{icon}</div>
+                <h4 className="mt-3 font-display text-lg font-black text-fairway-900">
+                  {title}
+                </h4>
+                <p className="mt-1 text-sm leading-6 text-slate-600">{body}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -291,13 +398,13 @@ export function Landing() {
           </div>
           <div>
             <h5 className="mb-3 font-extrabold text-white">Company</h5>
-            <a href="#" className="mb-2 block text-sm">About</a>
-            <a href="#" className="mb-2 block text-sm">Contact</a>
+            <a href="/about" className="mb-2 block text-sm">About</a>
+            <a href="/contact" className="mb-2 block text-sm">Contact</a>
           </div>
           <div>
             <h5 className="mb-3 font-extrabold text-white">Legal</h5>
-            <a href="#" className="mb-2 block text-sm">Privacy Policy</a>
-            <a href="#" className="mb-2 block text-sm">Terms of Service</a>
+            <a href="/privacy" className="mb-2 block text-sm">Privacy Policy</a>
+            <a href="/terms" className="mb-2 block text-sm">Terms of Service</a>
           </div>
         </div>
         <div className="border-t border-[#16482e]">

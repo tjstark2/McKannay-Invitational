@@ -1,7 +1,11 @@
+"use client";
+
 import { ChevronRight } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useTripState } from "@/features/trip/state/TripStateContext";
+import { useAuth } from "@/features/auth/AuthContext";
 import type { Screen } from "@/types";
 
 export function MoreScreen({
@@ -10,6 +14,8 @@ export function MoreScreen({
   setActiveScreen: (screen: Screen) => void;
 }) {
   const { trip } = useTripState();
+  const { signOut } = useAuth();
+  const router = useRouter();
 
   const links: { label: string; screen: Screen; description: string }[] = [
     {
@@ -102,6 +108,25 @@ export function MoreScreen({
           tracking and Admin Setup for commissioner controls.
         </p>
       </Card>
+
+      <div className="space-y-2">
+        <button
+          onClick={() => router.push("/home")}
+          className="flex w-full items-center justify-between rounded-2xl border border-sand-100 bg-white px-4 py-3.5 text-left font-black text-fairway-900"
+        >
+          ← My Tournaments
+          <ChevronRight className="h-4 w-4 text-slate-400" />
+        </button>
+        <button
+          onClick={async () => {
+            await signOut();
+            router.replace("/");
+          }}
+          className="w-full rounded-2xl border border-sand-100 bg-white px-4 py-3.5 text-left font-black text-red-600"
+        >
+          Sign out
+        </button>
+      </div>
 
       <div className="flex flex-col items-center py-2 text-center">
         <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm">

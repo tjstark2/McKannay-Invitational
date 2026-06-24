@@ -76,7 +76,7 @@ export function AccountHome() {
           <button
             onClick={async () => {
               await signOut();
-              router.replace("/signin");
+              router.replace("/");
             }}
             className="text-sm font-bold text-slate-500 hover:text-fairway-900"
           >
