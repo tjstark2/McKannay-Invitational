@@ -24,6 +24,8 @@ import {
   removeRosterPlayer,
   setPlayerTeam,
   setTripRosterSize,
+  setTeamName,
+  deleteTrip,
   memberName,
   type TripRef,
   type MemberRow,
@@ -207,6 +209,13 @@ export default function ManagePage() {
     const supabase = getSupabaseClient();
     if (!supabase || !trip) return;
     await removeRosterPlayer(supabase, playerId);
+    await refresh(trip);
+  }
+
+  async function renameTeam(teamDbId: string, name: string) {
+    const supabase = getSupabaseClient();
+    if (!supabase || !trip) return;
+    await setTeamName(supabase, teamDbId, name);
     await refresh(trip);
   }
 
@@ -598,6 +607,16 @@ export default function ManagePage() {
         ) : null}
       </section>
 
+      {/* team names */}
+      <section className="mt-9">
+        <h2 className="text-xl font-black text-fairway-900">Team Names</h2>
+        <div className="mt-3 space-y-2">
+          {teams.map((t) => (
+            <TeamNameRow key={t.dbId} team={t} onSave={renameTeam} />
+          ))}
+        </div>
+      </section>
+
       <div className="mt-10 grid gap-2">
         <button
           onClick={() => router.push(`/t/${trip.joinCode}`)}
@@ -612,7 +631,127 @@ export default function ManagePage() {
           ← My Tournaments
         </button>
       </div>
+
+      {/* danger zone — owner only */}
+      {isOwnerViewer ? (
+        <DangerZone trip={trip} onDeleted={() => router.replace("/home")} />
+      ) : null}
     </Shell>
+  );
+}
+
+function TeamNameRow({
+  team,
+  onSave,
+}: {
+  team: TeamLite;
+  onSave: (dbId: string, name: string) => void;
+}) {
+  const [value, setValue] = useState(team.name);
+  const dirty = value.trim() !== team.name && value.trim() !== "";
+  return (
+    <div className="flex items-center gap-2 rounded-2xl border border-sand-100 bg-white px-4 py-3">
+      <span
+        className={`h-3 w-3 shrink-0 rounded-full ${
+          team.code === "A" ? "bg-fairway-900" : "bg-green"
+        }`}
+      />
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        className="min-w-0 flex-1 bg-transparent font-black text-ink outline-none"
+      />
+      <button
+        onClick={() => onSave(team.dbId, value)}
+        disabled={!dirty}
+        className="shrink-0 rounded-lg bg-fairway-900 px-3 py-1.5 text-xs font-black text-white disabled:opacity-40"
+      >
+        Save
+      </button>
+    </div>
+  );
+}
+
+function DangerZone({
+  trip,
+  onDeleted,
+}: {
+  trip: TripRef;
+  onDeleted: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const matches = confirmText.trim().toUpperCase() === trip.joinCode.toUpperCase();
+
+  async function doDelete() {
+    if (!matches || busy) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    setBusy(true);
+    setError(null);
+    const res = await deleteTrip(supabase, trip.id);
+    setBusy(false);
+    if (!res.ok) {
+      setError(res.error ?? "Couldn't delete the tournament.");
+      return;
+    }
+    onDeleted();
+  }
+
+  return (
+    <section className="mt-12 rounded-2xl border border-red-200 bg-red-50/50 p-5">
+      <h2 className="text-lg font-black text-red-700">Danger zone</h2>
+      {!open ? (
+        <button
+          onClick={() => setOpen(true)}
+          className="mt-3 rounded-2xl border border-red-300 bg-white px-4 py-2.5 font-black text-red-600"
+        >
+          Delete tournament
+        </button>
+      ) : (
+        <div className="mt-3">
+          <p className="text-sm text-slate-600">
+            This permanently deletes <b className="text-ink">{trip.name}</b> and
+            all of its rounds, scores, teams, and members. This can&apos;t be
+            undone. Type the join code{" "}
+            <b className="text-ink">{trip.joinCode}</b> to confirm.
+          </p>
+          <input
+            value={confirmText}
+            onChange={(e) => {
+              setConfirmText(e.target.value);
+              setError(null);
+            }}
+            placeholder={trip.joinCode}
+            className="mt-3 w-full rounded-2xl border-[1.5px] border-red-200 bg-white px-4 py-3 outline-none focus:border-red-500"
+          />
+          {error ? (
+            <p className="mt-2 text-sm font-bold text-red-600">{error}</p>
+          ) : null}
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={doDelete}
+              disabled={!matches || busy}
+              className="rounded-2xl bg-red-600 px-4 py-2.5 font-black text-white disabled:opacity-40"
+            >
+              {busy ? "Deleting…" : "Permanently delete"}
+            </button>
+            <button
+              onClick={() => {
+                setOpen(false);
+                setConfirmText("");
+                setError(null);
+              }}
+              className="rounded-2xl border border-sand-200 bg-white px-4 py-2.5 font-bold text-slate-500"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 

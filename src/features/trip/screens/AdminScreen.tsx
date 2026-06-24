@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import type { Round, TeamId, Winner } from "@/types";
 
-type AdminTab = "setup" | "roster" | "rounds" | "scoring";
+type AdminTab = "setup" | "rounds" | "scoring";
 
 export function AdminScreen() {
   const {
@@ -39,7 +40,9 @@ export function AdminScreen() {
     saving,
     saveError,
     saveTick,
+    activeJoinCode,
   } = useTripState();
+  const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<AdminTab>("setup");
 
@@ -76,7 +79,6 @@ export function AdminScreen() {
 
   const tabs: { id: AdminTab; label: string }[] = [
     { id: "setup", label: "Setup" },
-    { id: "roster", label: "Teams & Players" },
     { id: "rounds", label: "Rounds" },
     { id: "scoring", label: "Scoring" },
   ];
@@ -167,8 +169,26 @@ export function AdminScreen() {
 
       <SectionHeader
         title="Admin Setup"
-        subtitle="Manage the trip. Changes save automatically."
+        subtitle="Rounds, courses, and scoring. Changes save automatically."
       />
+
+      <button
+        onClick={() =>
+          activeJoinCode && router.push(`/manage/${activeJoinCode}`)
+        }
+        className="flex w-full items-center justify-between rounded-2xl border border-sand-100 bg-white px-4 py-3 text-left"
+      >
+        <span>
+          <span className="block font-black text-fairway-900">
+            Manage members &amp; teams
+          </span>
+          <span className="block text-xs text-slate-500">
+            Approve players, set handicaps, assign teams, admins
+          </span>
+        </span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+      </button>
+
 
       <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
         {tabs.map((tab) => (
@@ -374,154 +394,6 @@ export function AdminScreen() {
         </>
       ) : null}
 
-      {/* ===================== TEAMS & PLAYERS ===================== */}
-      {activeTab === "roster" ? (
-        <>
-          {teamsUneven ? (
-            <div className="rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">
-              ⚠️ Teams are uneven ({teamACount} vs {teamBCount}). Even teams are
-              expected — add or reassign a player to balance them.
-            </div>
-          ) : null}
-
-          {teams.map((team) => (
-            <Card key={team.id} className="p-4">
-              <label className={labelClass}>Team {team.id} Name</label>
-              <input
-                value={team.name}
-                onChange={(event) =>
-                  updateTeam(team.id, { name: event.target.value })
-                }
-                className={inputClass}
-              />
-
-              <p className="mt-4 text-xs font-black uppercase text-slate-500">
-                Roster ({players.filter((p) => p.team === team.id).length})
-              </p>
-
-              <div className="mt-2 space-y-3">
-                {players
-                  .filter((player) => player.team === team.id)
-                  .map((player) => (
-                    <div key={player.id} className="rounded-xl bg-slate-50 p-3">
-                      <label className="text-xs font-black uppercase text-slate-500">
-                        Player Name
-                      </label>
-                      <input
-                        value={player.name}
-                        onChange={(event) =>
-                          updatePlayer(player.id, { name: event.target.value })
-                        }
-                        className={inputClass}
-                      />
-
-                      <div className="mt-3 grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs font-black uppercase text-slate-500">
-                            Handicap
-                          </label>
-                          <input
-                            value={player.handicapIndex}
-                            onChange={(event) =>
-                              updatePlayer(player.id, {
-                                handicapIndex: Number(event.target.value) || 0,
-                              })
-                            }
-                            className={inputClass}
-                            inputMode="decimal"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-black uppercase text-slate-500">
-                            Team
-                          </label>
-                          <select
-                            value={player.team}
-                            onChange={(event) =>
-                              updatePlayer(player.id, {
-                                team: event.target.value as TeamId,
-                              })
-                            }
-                            className={inputClass}
-                          >
-                            <option value="A">{teamAName}</option>
-                            <option value="B">{teamBName}</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `Delete ${player.name}? This removes them from all tee times, matches, and scores. This cannot be undone.`
-                            )
-                          ) {
-                            removePlayer(player.id);
-                          }
-                        }}
-                        className="mt-3 w-full rounded-xl border border-red-200 bg-red-50 py-2 text-sm font-black text-red-700"
-                      >
-                        Delete Player
-                      </button>
-                    </div>
-                  ))}
-              </div>
-            </Card>
-          ))}
-
-          <Card className="p-4">
-            <h3 className="font-black">Add Player</h3>
-            <label className={`mt-3 ${labelClass}`}>Name</label>
-            <input
-              value={newPlayerName}
-              onChange={(event) => setNewPlayerName(event.target.value)}
-              className={inputClass}
-              placeholder="Player name"
-            />
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-black uppercase text-slate-500">
-                  Handicap
-                </label>
-                <input
-                  value={newPlayerHandicap}
-                  onChange={(event) => setNewPlayerHandicap(event.target.value)}
-                  className={inputClass}
-                  inputMode="decimal"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-black uppercase text-slate-500">
-                  Team
-                </label>
-                <select
-                  value={newPlayerTeam}
-                  onChange={(event) =>
-                    setNewPlayerTeam(event.target.value as TeamId)
-                  }
-                  className={inputClass}
-                >
-                  <option value="A">{teamAName}</option>
-                  <option value="B">{teamBName}</option>
-                </select>
-              </div>
-            </div>
-            <button
-              onClick={handleAddPlayer}
-              disabled={newPlayerName.trim() === ""}
-              className="mt-4 w-full rounded-xl bg-fairway-900 py-3 font-black text-white disabled:bg-slate-300"
-            >
-              Add Player
-            </button>
-            <p className="mt-2 text-xs leading-5 text-slate-500">
-              Tip: add players two at a time (one per team) to keep the teams
-              even.
-            </p>
-          </Card>
-        </>
-      ) : null}
 
       {/* ===================== ROUNDS ===================== */}
       {activeTab === "rounds" ? (

@@ -14,7 +14,7 @@ export function MoreScreen({
 }: {
   setActiveScreen: (screen: Screen) => void;
 }) {
-  const { trip } = useTripState();
+  const { trip, activeJoinCode } = useTripState();
   const { canManage } = useViewer();
   const { signOut } = useAuth();
   const router = useRouter();
@@ -52,6 +52,25 @@ export function MoreScreen({
         title="More"
         subtitle="Trip details, rules, setup, and utilities."
       />
+
+      {canManage ? (
+        <button
+          onClick={() =>
+            activeJoinCode && router.push(`/manage/${activeJoinCode}`)
+          }
+          className="flex w-full items-center justify-between rounded-2xl border border-accent/40 bg-accent/10 px-4 py-3.5 text-left"
+        >
+          <span>
+            <span className="block font-black text-ink">
+              Manage Members &amp; Teams
+            </span>
+            <span className="block text-xs text-slate-600">
+              Approve players, set handicaps, assign teams, admins
+            </span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-accent-dark" />
+        </button>
+      ) : null}
 
       <Card className="p-5">
         <h2 className="font-black">Trip Details</h2>

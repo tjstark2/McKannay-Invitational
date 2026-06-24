@@ -448,6 +448,29 @@ export async function setTripRosterSize(
   return !error;
 }
 
+// Rename a team.
+export async function setTeamName(
+  supabase: SupabaseClient,
+  teamDbId: string,
+  name: string
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("teams")
+    .update({ name: name.trim() || "Team" })
+    .eq("id", teamDbId);
+  return !error;
+}
+
+// Delete a tournament and all its data (owner only, enforced in the DB function).
+export async function deleteTrip(
+  supabase: SupabaseClient,
+  tripId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.rpc("delete_trip", { p_trip: tripId });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
 export function memberName(p: PublicProfile): string {
   const name = [p.first_name, p.last_name].filter(Boolean).join(" ");
   if (name && p.username) return `${name} (@${p.username})`;
