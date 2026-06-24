@@ -14,8 +14,7 @@ import {
   loadPendingTrips,
   pendingCountsForTrips,
   loadInvitations,
-  approveMember,
-  removeMember,
+  respondInvitation,
   type TripRef,
   type InvitationItem,
 } from "@/lib/supabase/memberships";
@@ -116,8 +115,7 @@ export function AccountHome() {
   async function respondInvite(membershipId: string, accept: boolean) {
     const supabase = getSupabaseClient();
     if (!supabase || !user) return;
-    if (accept) await approveMember(supabase, membershipId);
-    else await removeMember(supabase, membershipId);
+    await respondInvitation(supabase, membershipId, accept);
     setTrips(await loadMyTrips(supabase, user.id));
     setInvitations(await loadInvitations(supabase, user.id));
   }

@@ -11,7 +11,7 @@ import {
   getMembership,
   canViewTrip,
   requestToJoin,
-  setMemberHandicap,
+  setMyHandicap,
   type TripRef,
   type MembershipState,
 } from "@/lib/supabase/memberships";
@@ -118,7 +118,6 @@ export default function TripCodePage() {
     return (
       <HandicapSetup
         trip={gate.trip}
-        userId={user!.id}
         onDone={() => setGate({ kind: "view" })}
       />
     );
@@ -182,11 +181,9 @@ export default function TripCodePage() {
 
 function HandicapSetup({
   trip,
-  userId,
   onDone,
 }: {
   trip: TripRef;
-  userId: string;
   onDone: () => void;
 }) {
   const [value, setValue] = useState("");
@@ -204,7 +201,7 @@ function HandicapSetup({
     if (!supabase) return;
     setBusy(true);
     setError(null);
-    const ok = await setMemberHandicap(supabase, trip.id, userId, num, true);
+    const ok = await setMyHandicap(supabase, trip.id, num);
     setBusy(false);
     if (!ok) {
       setError("Couldn't save your handicap. Try again.");

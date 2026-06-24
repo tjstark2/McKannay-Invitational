@@ -99,22 +99,36 @@ export async function requestToJoin(
   tripId: string,
   userId: string
 ): Promise<{ status: "active" | "pending"; error?: string }> {
-  const { data: existing } = await supabase
-    .from("trip_members")
-    .select("status")
-    .eq("trip_id", tripId)
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (existing) {
-    return {
-      status: (existing as { status: string }).status === "active" ? "active" : "pending",
-    };
-  }
-  const { error } = await supabase
-    .from("trip_members")
-    .insert({ trip_id: tripId, user_id: userId, role: "member", status: "pending" });
+  void userId;
+  const { data, error } = await supabase.rpc("request_to_join", { p_trip: tripId });
   if (error) return { status: "pending", error: error.message };
-  return { status: "pending" };
+  return { status: data === "active" ? "active" : "pending" };
+}
+
+// A member accepting/declining their own invitation (validated in the DB).
+export async function respondInvitation(
+  supabase: SupabaseClient,
+  membershipId: string,
+  accept: boolean
+): Promise<boolean> {
+  const { error } = await supabase.rpc("respond_invitation", {
+    p_membership: membershipId,
+    p_accept: accept,
+  });
+  return !error;
+}
+
+// A member setting their own per-tournament handicap on first entry.
+export async function setMyHandicap(
+  supabase: SupabaseClient,
+  tripId: string,
+  handicap: number
+): Promise<boolean> {
+  const { error } = await supabase.rpc("set_my_handicap", {
+    p_trip: tripId,
+    p_hcp: handicap,
+  });
+  return !error;
 }
 
 async function membersWithProfiles(
