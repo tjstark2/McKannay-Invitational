@@ -10,9 +10,10 @@ import {
   type MyTripSummary,
 } from "@/lib/supabase/queries";
 import { BrandHeaderMark } from "@/features/trip/components/Brand";
+import { AccountMenu } from "@/features/account/AccountMenu";
 
 export function AccountHome() {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const [trips, setTrips] = useState<MyTripSummary[] | null>(null);
   const [firstName, setFirstName] = useState("");
@@ -23,7 +24,7 @@ export function AccountHome() {
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      router.replace("/signin");
+      router.replace("/");
       return;
     }
     const supabase = getSupabaseClient();
@@ -73,15 +74,7 @@ export function AccountHome() {
       <header className="border-b border-sand-100 bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3">
           <BrandHeaderMark />
-          <button
-            onClick={async () => {
-              await signOut();
-              router.replace("/");
-            }}
-            className="text-sm font-bold text-slate-500 hover:text-fairway-900"
-          >
-            Sign out
-          </button>
+          <AccountMenu />
         </div>
       </header>
 

@@ -22,7 +22,7 @@ export default function CreatePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && !user) router.replace("/signin");
+    if (!loading && !user) router.replace("/");
   }, [user, loading, router]);
 
   const canSubmit =
