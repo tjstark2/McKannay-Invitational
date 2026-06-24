@@ -1,4 +1,5 @@
-/* Fore Friends brand lockups — keep the logo + wordmark consistent everywhere. */
+/* TourneyBirdie brand lockups — keep the logo + wordmark consistent everywhere.
+   The icon is a transparent PNG, so it sits inside a white tile on light UIs. */
 
 export function BrandWordmark({
   className = "",
@@ -7,12 +8,28 @@ export function BrandWordmark({
   className?: string;
   size?: "sm" | "md";
 }) {
-  const text = size === "sm" ? "text-base" : "text-lg";
+  const text = size === "sm" ? "text-sm" : "text-base";
   return (
     <span
-      className={`font-display font-black tracking-tight text-fairway-900 ${text} ${className}`}
+      className={`font-display font-extrabold tracking-tight ${text} ${className}`}
     >
-      Fore <span className="text-moss">Friends</span>
+      <span className="text-ink">TOURNEY</span>
+      <span className="text-green">BIRDIE</span>
+    </span>
+  );
+}
+
+/* White tile holding the transparent mark. */
+function IconTile({ className = "" }: { className?: string }) {
+  return (
+    <span
+      className={`flex items-center justify-center overflow-hidden bg-white ${className}`}
+    >
+      <img
+        src="/logo-icon.png"
+        alt="TourneyBirdie"
+        className="h-[82%] w-[82%] object-contain"
+      />
     </span>
   );
 }
@@ -23,29 +40,17 @@ export function BrandBox({ className = "" }: { className?: string }) {
     <div
       className={`inline-flex items-center gap-2 rounded-2xl bg-white py-1.5 pl-1.5 pr-3 shadow-lg ${className}`}
     >
-      <span className="h-9 w-9 overflow-hidden rounded-xl">
-        <img
-          src="/logo-icon.png"
-          alt="Fore Friends"
-          className="h-full w-full scale-105 object-cover"
-        />
-      </span>
+      <IconTile className="h-9 w-9 rounded-xl" />
       <BrandWordmark size="sm" />
     </div>
   );
 }
 
-/* Header chip (icon + wordmark) on the warm background, no white box. */
+/* Header chip (icon + wordmark) on the page background. */
 export function BrandHeaderMark({ subtitle }: { subtitle?: string }) {
   return (
     <div className="flex items-center gap-2.5">
-      <span className="h-10 w-10 overflow-hidden rounded-xl shadow-sm">
-        <img
-          src="/logo-icon.png"
-          alt="Fore Friends"
-          className="h-full w-full scale-105 object-cover"
-        />
-      </span>
+      <IconTile className="h-10 w-10 rounded-xl shadow-sm" />
       <div>
         <BrandWordmark />
         {subtitle ? (
@@ -58,32 +63,22 @@ export function BrandHeaderMark({ subtitle }: { subtitle?: string }) {
   );
 }
 
-/* Full vertical lockup for the login screen: icon + FORE FRIENDS + taglines. */
+/* Full vertical lockup for the login screen. */
 export function BrandLockup() {
   return (
     <div className="flex flex-col items-center text-center">
-      <span className="mb-5 h-32 w-32 overflow-hidden rounded-[28px] shadow-2xl">
-        <img
-          src="/logo-icon.png"
-          alt="Fore Friends"
-          className="h-full w-full scale-105 object-cover"
-        />
+      <IconTile className="mb-5 h-32 w-32 rounded-[28px] shadow-2xl" />
+      <span className="font-display text-3xl font-extrabold tracking-tight">
+        <span className="text-ink">TOURNEY</span>
+        <span className="text-green">BIRDIE</span>
       </span>
-      <span className="font-display text-5xl font-black leading-none tracking-tight text-fairway-900">
-        FORE
-      </span>
-      <span className="mt-1 flex items-center gap-2.5 font-display text-2xl font-extrabold tracking-[0.18em] text-moss">
-        <span className="h-[3px] w-5 rounded bg-moss" />
-        FRIENDS
-        <span className="h-[3px] w-5 rounded bg-moss" />
-      </span>
-      <p className="mt-4 font-display text-sm font-black tracking-wide text-fairway-900">
-        CREATE<span className="text-accent">.</span> INVITE
-        <span className="text-accent">.</span> COMPETE
-        <span className="text-accent">.</span>
+      <p className="mt-3 font-display text-sm font-extrabold tracking-wide text-ink">
+        CREATE<span className="text-accent-dark">.</span> INVITE
+        <span className="text-accent-dark">.</span> CROWN
+        <span className="text-accent-dark">.</span>
       </p>
-      <p className="mt-2 font-display text-[10px] font-bold tracking-[0.16em] text-moss">
-        — TOURNAMENTS MADE EASY —
+      <p className="mt-2 font-display text-[10px] font-bold tracking-[0.16em] text-green">
+        TOURNAMENTS MADE EASY
       </p>
     </div>
   );

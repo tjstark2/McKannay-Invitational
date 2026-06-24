@@ -59,11 +59,11 @@ export function PasswordGate({
           <BrandLockup />
         ) : (
           <div className="text-center">
-            <span className="mx-auto mb-4 block h-16 w-16 overflow-hidden rounded-2xl shadow-lg">
+            <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-lg">
               <img
                 src="/logo-icon.png"
-                alt="Fore Friends"
-                className="h-full w-full scale-105 object-cover"
+                alt="TourneyBirdie"
+                className="h-[82%] w-[82%] object-contain"
               />
             </span>
             {heading ? (

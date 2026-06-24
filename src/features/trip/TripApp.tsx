@@ -99,8 +99,8 @@ function TripAppInner() {
   const showTournamentShell = activeScreen === "tournament";
 
   return (
-    <div className="min-h-screen bg-[#efe9dd] text-slate-900">
-      <div className="mx-auto min-h-screen max-w-md bg-sand-50 pb-28 shadow-phone">
+    <div className="min-h-screen bg-[#f7f6f1] text-slate-900">
+      <div className="mx-auto min-h-screen max-w-md bg-[#f7f6f1] pb-28 shadow-phone">
         <TopHero activeScreen={activeScreen} setActiveScreen={goToScreen} />
 
         <main className="px-5 py-6">

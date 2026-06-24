@@ -74,7 +74,7 @@ export function SignUpForm() {
     <div>
       <h1 className="text-2xl font-black text-fairway-900">Create your account</h1>
       <p className="mt-1 text-sm text-slate-500">
-        Join Fore Friends to run and play in tournaments.
+        Join TourneyBirdie to run and play in tournaments.
       </p>
 
       <div className="mt-6 space-y-4">

@@ -4,7 +4,7 @@
 
 :root {
   color-scheme: light;
-  --font-archivo: 'Archivo', system-ui, sans-serif;
+  --font-display: 'Montserrat', system-ui, sans-serif;
 }
 
 * {
@@ -15,7 +15,7 @@ html,
 body {
   min-height: 100%;
   margin: 0;
-  background: #efe9dd;
+  background: #f7f6f1;
 }
 
 body {
@@ -26,5 +26,5 @@ h1,
 h2,
 h3,
 h4 {
-  font-family: var(--font-archivo), system-ui, sans-serif;
+  font-family: var(--font-display), system-ui, sans-serif;
 }

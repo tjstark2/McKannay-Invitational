@@ -104,15 +104,19 @@ export function MoreScreen({
       </Card>
 
       <div className="flex flex-col items-center py-2 text-center">
-        <span className="h-10 w-10 overflow-hidden rounded-xl shadow-sm">
+        <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm">
           <img
             src="/logo-icon.png"
-            alt="Fore Friends"
-            className="h-full w-full scale-105 object-cover"
+            alt="TourneyBirdie"
+            className="h-[82%] w-[82%] object-contain"
           />
         </span>
-        <p className="mt-2 text-sm font-black text-fairway-900">
-          Powered by Fore <span className="text-moss">Friends</span>
+        <p className="mt-2 text-sm font-black">
+          Powered by{" "}
+          <span className="font-display font-extrabold">
+            <span className="text-ink">TOURNEY</span>
+            <span className="text-green">BIRDIE</span>
+          </span>
         </p>
         <p className="text-xs text-slate-500">Tournaments made easy</p>
       </div>

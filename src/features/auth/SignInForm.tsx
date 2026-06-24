@@ -74,7 +74,7 @@ export function SignInForm() {
         </button>
 
         <p className="text-center text-sm text-slate-500">
-          New to Fore Friends?{" "}
+          New to TourneyBirdie?{" "}
           <a href="/signup" className="font-black text-fairway-900">
             Create an account
           </a>
