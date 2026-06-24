@@ -5,7 +5,8 @@ import { useAuth } from "@/features/auth/AuthContext";
 
 export function SignUpForm() {
   const { signUp } = useAuth();
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -16,7 +17,8 @@ export function SignUpForm() {
   const [sentTo, setSentTo] = useState<string | null>(null);
 
   const canSubmit =
-    fullName.trim() &&
+    firstName.trim() &&
+    lastName.trim() &&
     email.trim() &&
     phone.trim() &&
     password.length >= 8 &&
@@ -27,7 +29,8 @@ export function SignUpForm() {
     setBusy(true);
     setError(null);
     const result = await signUp({
-      fullName,
+      firstName,
+      lastName,
       email,
       phone,
       password,
@@ -75,15 +78,26 @@ export function SignUpForm() {
       </p>
 
       <div className="mt-6 space-y-4">
-        <Field label="Full name">
-          <input
-            className={inputClass}
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            placeholder="Alex Carter"
-            autoComplete="name"
-          />
-        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="First name">
+            <input
+              className={inputClass}
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="Alex"
+              autoComplete="given-name"
+            />
+          </Field>
+          <Field label="Last name">
+            <input
+              className={inputClass}
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              placeholder="Carter"
+              autoComplete="family-name"
+            />
+          </Field>
+        </div>
         <Field label="Email">
           <input
             className={inputClass}
