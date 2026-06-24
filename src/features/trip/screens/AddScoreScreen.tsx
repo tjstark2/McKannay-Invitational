@@ -36,29 +36,16 @@ export function AddScoreScreen() {
 
   const [roundId, setRoundId] = useState(currentRoundId || rounds[0]?.id || "");
   const [playerId, setPlayerId] = useState(selectablePlayers[0]?.id || "");
-  const [frontNineScore, setFrontNineScore] = useState("");
-  const [grossScore, setGrossScore] = useState("");
+  // Inputs are "dirty" only once the user types. Until then we show whatever
+  // is already saved, so the front nine appears automatically when you return.
+  const [frontInput, setFrontInput] = useState("");
+  const [grossInput, setGrossInput] = useState("");
+  const [frontDirty, setFrontDirty] = useState(false);
+  const [grossDirty, setGrossDirty] = useState(false);
   const [lastSavedScore, setLastSavedScore] = useState<LastSavedScore | null>(
     null
   );
   const [pendingConfirm, setPendingConfirm] = useState<string | null>(null);
-
-  const selectedRound =
-    rounds.find((round) => round.id === roundId) ?? rounds[0];
-  const selectedPlayer =
-    selectablePlayers.find((player) => player.id === playerId) ??
-    selectablePlayers[0];
-
-  const existingScore =
-    selectedRound && selectedPlayer
-      ? scores.find(
-          (score) =>
-            score.roundId === selectedRound.id &&
-            score.playerId === selectedPlayer.id
-        )
-      : undefined;
-  const existingFront = existingScore?.frontNineScore;
-  const existingGross = existingScore?.grossScore;
 
   // Keep the selected player valid if the list changes.
   useEffect(() => {
@@ -70,13 +57,15 @@ export function AddScoreScreen() {
     }
   }, [selectablePlayers, playerId]);
 
-  // Default the inputs to whatever is already saved for this round + player,
-  // so coming back to add the final score shows the front nine already filled.
+  // When the round or player changes, drop any typed-over state so the fields
+  // fall back to showing the saved values for the new selection.
   useEffect(() => {
-    setFrontNineScore(existingFront != null ? String(existingFront) : "");
-    setGrossScore(existingGross != null ? String(existingGross) : "");
+    setFrontInput("");
+    setGrossInput("");
+    setFrontDirty(false);
+    setGrossDirty(false);
     setPendingConfirm(null);
-  }, [roundId, playerId, existingFront, existingGross]);
+  }, [roundId, playerId]);
 
   if (rounds.length === 0) {
     return (
@@ -103,60 +92,77 @@ export function AddScoreScreen() {
     );
   }
 
+  const selectedRound =
+    rounds.find((round) => round.id === roundId) ?? rounds[0];
+  const selectedPlayer =
+    selectablePlayers.find((player) => player.id === playerId) ??
+    selectablePlayers[0];
   if (!selectedRound || !selectedPlayer) return null;
 
-  const isComplete = existingScore?.grossScore != null;
+  const existingScore = scores.find(
+    (score) =>
+      score.roundId === selectedRound.id && score.playerId === selectedPlayer.id
+  );
+  const existingFront = existingScore?.frontNineScore;
+  const existingGross = existingScore?.grossScore;
+
+  // Displayed value = what the user typed, otherwise the saved value.
+  const frontValue = frontDirty
+    ? frontInput
+    : existingFront != null
+    ? String(existingFront)
+    : "";
+  const grossValue = grossDirty
+    ? grossInput
+    : existingGross != null
+    ? String(existingGross)
+    : "";
+
+  const isComplete = existingGross != null;
   const memberLocked = !canManage && isComplete;
 
-  const parsedFrontNineScore = Number(frontNineScore);
-  const parsedGrossScore = Number(grossScore);
-  const hasFrontNineInput =
-    frontNineScore !== "" && Number.isFinite(parsedFrontNineScore);
-  const hasGrossInput = grossScore !== "" && Number.isFinite(parsedGrossScore);
+  const parsedFront = Number(frontValue);
+  const parsedGross = Number(grossValue);
+  const hasFront = frontValue !== "" && Number.isFinite(parsedFront);
+  const hasGross = grossValue !== "" && Number.isFinite(parsedGross);
 
-  // Effective front nine = what's typed now, or what was already saved.
-  const effectiveFront = hasFrontNineInput ? parsedFrontNineScore : existingFront;
   // A gross score can never be submitted without a front nine.
-  const missingFrontForGross = hasGrossInput && effectiveFront == null;
-  const canSave =
-    (hasFrontNineInput || hasGrossInput) && !missingFrontForGross;
+  const missingFrontForGross = hasGross && !hasFront;
+  // Allow saving only if there's something new to save.
+  const frontChanged = hasFront && parsedFront !== (existingFront ?? null);
+  const grossChanged = hasGross && parsedGross !== (existingGross ?? null);
+  const hasSomethingToSave =
+    frontChanged ||
+    grossChanged ||
+    (hasFront && existingFront == null) ||
+    (hasGross && existingGross == null);
+  const canSave = hasSomethingToSave && !missingFrontForGross;
 
-  const calculatedFrontNet = hasFrontNineInput
+  const calculatedFrontNet = hasFront
     ? frontNineNetScore(
         selectedPlayer,
         selectedRound,
-        parsedFrontNineScore,
+        parsedFront,
         courses,
         scoringSettings
       )
     : null;
-  const calculatedNet = hasGrossInput
-    ? netScore(
-        selectedPlayer,
-        selectedRound,
-        parsedGrossScore,
-        courses,
-        scoringSettings
-      )
+  const calculatedNet = hasGross
+    ? netScore(selectedPlayer, selectedRound, parsedGross, courses, scoringSettings)
     : null;
-  const calculatedPlusMinus = hasGrossInput
+  const calculatedPlusMinus = hasGross
     ? playerNetToPar(
         selectedPlayer,
         selectedRound,
-        parsedGrossScore,
+        parsedGross,
         courses,
         scoringSettings
       )
     : null;
 
   function commitSave() {
-    // Preserve previously saved values when a field is left blank.
-    const finalFront = hasFrontNineInput
-      ? parsedFrontNineScore
-      : existingScore?.frontNineScore;
-    const finalGross = hasGrossInput
-      ? parsedGrossScore
-      : existingScore?.grossScore;
+    const finalFront = hasFront ? parsedFront : existingFront;
+    const finalGross = hasGross ? parsedGross : existingGross;
 
     upsertScore({
       roundId: selectedRound.id,
@@ -173,8 +179,11 @@ export function AddScoreScreen() {
       savedType: finalGross != null ? "final" : "front",
     });
 
-    setFrontNineScore(finalFront != null ? String(finalFront) : "");
-    setGrossScore(finalGross != null ? String(finalGross) : "");
+    // Fall back to showing the freshly saved values.
+    setFrontInput("");
+    setGrossInput("");
+    setFrontDirty(false);
+    setGrossDirty(false);
     setPendingConfirm(null);
   }
 
@@ -187,32 +196,16 @@ export function AddScoreScreen() {
     }
 
     const parts: string[] = [];
-    const changedFront =
-      hasFrontNineInput &&
-      existingScore?.frontNineScore != null &&
-      parsedFrontNineScore !== existingScore.frontNineScore;
-    const changedGross =
-      hasGrossInput &&
-      existingScore?.grossScore != null &&
-      parsedGrossScore !== existingScore.grossScore;
-
-    if (changedFront) {
-      parts.push(
-        `change your front nine from ${existingScore?.frontNineScore} to ${parsedFrontNineScore}`
-      );
+    if (frontChanged && existingFront != null) {
+      parts.push(`change your front nine from ${existingFront} to ${parsedFront}`);
     }
-    if (changedGross) {
-      parts.push(
-        `change your final score from ${existingScore?.grossScore} to ${parsedGrossScore}`
-      );
+    if (grossChanged && existingGross != null) {
+      parts.push(`change your final score from ${existingGross} to ${parsedGross}`);
     }
-
-    const finalizing = hasGrossInput && existingScore?.grossScore == null;
+    const finalizing = hasGross && existingGross == null;
 
     let message = "";
-    if (parts.length > 0) {
-      message = `You're about to ${parts.join(" and ")}. `;
-    }
+    if (parts.length > 0) message = `You're about to ${parts.join(" and ")}. `;
     if (finalizing) {
       message +=
         "Submitting your 18-hole score finalizes this round — after this, only an organizer can change it. ";
@@ -312,8 +305,11 @@ export function AddScoreScreen() {
               Front 9 Score
             </label>
             <input
-              value={frontNineScore}
-              onChange={(event) => setFrontNineScore(event.target.value)}
+              value={frontValue}
+              onChange={(event) => {
+                setFrontInput(event.target.value);
+                setFrontDirty(true);
+              }}
               className="mt-2 w-full rounded-xl border border-slate-200 p-3 text-lg font-black"
               placeholder="Example: 42"
               inputMode="numeric"
@@ -323,8 +319,11 @@ export function AddScoreScreen() {
               Final Gross Score
             </label>
             <input
-              value={grossScore}
-              onChange={(event) => setGrossScore(event.target.value)}
+              value={grossValue}
+              onChange={(event) => {
+                setGrossInput(event.target.value);
+                setGrossDirty(true);
+              }}
               className="mt-2 w-full rounded-xl border border-slate-200 p-3 text-lg font-black"
               placeholder="Enter front 9 first"
               inputMode="numeric"
@@ -341,9 +340,7 @@ export function AddScoreScreen() {
               </div>
               <div className="rounded-xl bg-slate-50 p-3 text-center">
                 <p className="text-xs font-bold text-slate-500">Final Net</p>
-                <p className="mt-1 text-lg font-black">
-                  {calculatedNet ?? "-"}
-                </p>
+                <p className="mt-1 text-lg font-black">{calculatedNet ?? "-"}</p>
               </div>
               <div className="rounded-xl bg-slate-50 p-3 text-center">
                 <p className="text-xs font-bold text-slate-500">Net +/-</p>
@@ -386,7 +383,7 @@ export function AddScoreScreen() {
                 className="mt-5 w-full rounded-xl bg-fairway-900 py-3 font-black text-white disabled:bg-slate-300"
                 disabled={!canSave}
               >
-                {hasGrossInput ? "Submit Final Round" : "Save Front 9 Progress"}
+                {hasGross ? "Submit Final Round" : "Save Front 9 Progress"}
               </button>
             )}
           </>
