@@ -150,7 +150,7 @@ export type CreateTripInput = {
 export async function createTrip(
   supabase: SupabaseClient,
   input: CreateTripInput
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; tripId?: string }> {
   const code = input.joinCode.trim();
 
   const taken = await tripExists(supabase, code);
@@ -205,7 +205,7 @@ export async function createTrip(
     { onConflict: "trip_id,user_id", ignoreDuplicates: true }
   );
 
-  return { ok: true };
+  return { ok: true, tripId };
 }
 
 export async function loadTripState(
@@ -646,21 +646,26 @@ export async function insertCourse(
     imageUrl?: string;
     notes?: string;
   }
-) {
-  const { error } = await supabase.from("courses").insert({
-    trip_id: tripId,
-    name: course.name,
-    par: course.par,
-    course_rating: course.rating,
-    slope: course.slope,
-    tee_name: course.teeName ?? "Blue",
-    yardage: course.yardage ?? null,
-    location: course.location ?? "",
-    address: course.address ?? "",
-    image_url: course.imageUrl ?? "",
-    notes: course.notes ?? "",
-  });
-  throwIf(error, "add course");
+): Promise<string> {
+  const result = await supabase
+    .from("courses")
+    .insert({
+      trip_id: tripId,
+      name: course.name,
+      par: course.par,
+      course_rating: course.rating,
+      slope: course.slope,
+      tee_name: course.teeName ?? "Blue",
+      yardage: course.yardage ?? null,
+      location: course.location ?? "",
+      address: course.address ?? "",
+      image_url: course.imageUrl ?? "",
+      notes: course.notes ?? "",
+    })
+    .select("id")
+    .single();
+  throwIf(result.error, "add course");
+  return (result.data as { id: string }).id;
 }
 
 export async function deletePlayerRow(
