@@ -93,7 +93,7 @@ export default function CompleteProfilePage() {
   return (
     <AuthShell>
       <div>
-        <h1 className="text-2xl font-black text-ink">Finish your profile</h1>
+        <h1 className="text-2xl font-black text-ink">Finish Your Profile</h1>
         <p className="mt-1 text-sm text-slate-500">
           Pick a username and add your location so friends can find you and
           you&apos;re easy to identify in tournaments.

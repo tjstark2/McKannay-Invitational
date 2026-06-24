@@ -96,7 +96,7 @@ export default function ProfilePage() {
             onClick={() => router.push("/profile/edit")}
             className="w-full rounded-2xl bg-fairway-900 px-4 py-3.5 font-black text-white"
           >
-            Edit profile
+            Edit Profile
           </button>
           <button
             onClick={() => router.push("/home")}

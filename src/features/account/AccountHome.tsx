@@ -143,7 +143,7 @@ export function AccountHome() {
             onClick={() => router.push("/create")}
             className="flex items-center justify-center gap-2 rounded-2xl bg-accent px-5 py-4 text-base font-black text-ink shadow-sm"
           >
-            + Create a tournament
+            + Create a Tournament
           </button>
           <div className="flex items-center gap-2 rounded-2xl border border-sand-100 bg-white px-3 py-2">
             <input
@@ -290,7 +290,7 @@ export function AccountHome() {
             <div className="mt-9 flex items-center gap-2">
               <span className="h-[18px] w-2 rounded-[3px] bg-slate-300" />
               <h2 className="text-xl font-black text-slate-500">
-                Awaiting approval
+                Awaiting Approval
               </h2>
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">

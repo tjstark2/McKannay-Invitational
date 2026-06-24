@@ -73,7 +73,7 @@ export default function CreatePage() {
   return (
     <AuthShell>
       <div>
-        <h1 className="text-2xl font-black text-ink">Create a tournament</h1>
+        <h1 className="text-2xl font-black text-ink">Create a Tournament</h1>
         <p className="mt-1 text-sm text-slate-500">
           The essentials to get started — you can add players, rounds, and
           courses afterward in Admin.
@@ -169,7 +169,7 @@ export default function CreatePage() {
             disabled={!canSubmit}
             className="w-full rounded-2xl bg-accent px-4 py-4 font-black text-ink disabled:opacity-50"
           >
-            {busy ? "Creating…" : "Create tournament"}
+            {busy ? "Creating…" : "Create Tournament"}
           </button>
           <button
             onClick={() => router.push("/home")}

@@ -138,7 +138,7 @@ export function MoreScreen({
           }}
           className="w-full rounded-2xl border border-sand-100 bg-white px-4 py-3.5 text-left font-black text-red-600"
         >
-          Sign out
+          Sign Out
         </button>
       </div>
 

@@ -79,7 +79,7 @@ export function OverviewScreen({
     return (
       <div className="space-y-6">
         <Card className="p-5">
-          <p className="font-black">No rounds yet</p>
+          <p className="font-black">No Rounds Yet</p>
           <p className="mt-1 text-sm text-slate-500">
             Add a round in Admin to get the tournament started.
           </p>

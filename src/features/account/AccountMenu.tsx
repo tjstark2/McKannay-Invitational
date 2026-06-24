@@ -112,7 +112,7 @@ export function AccountMenu({ tone = "light" }: { tone?: "light" | "onPhoto" }) 
               onClick={handleSignOut}
               className="flex w-full items-center gap-2.5 border-t border-sand-100 px-4 py-3 text-sm font-bold text-red-600 hover:bg-sand-50"
             >
-              <LogOut className="h-4 w-4" /> Sign out
+              <LogOut className="h-4 w-4" /> Sign Out
             </button>
           </div>
         </>

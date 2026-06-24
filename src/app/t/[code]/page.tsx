@@ -89,7 +89,7 @@ export default function TripCodePage() {
         <div className="text-center">
           <p className="text-4xl">🔍</p>
           <h1 className="mt-3 text-2xl font-black text-ink">
-            Tournament not found
+            Tournament Not Found
           </h1>
           <p className="mt-2 text-sm text-slate-500">
             We couldn&apos;t find a tournament for the code{" "}
@@ -139,7 +139,7 @@ export default function TripCodePage() {
 
         {gate.status === "pending" ? (
           <div className="mt-6 rounded-2xl border border-sand-100 bg-white p-5">
-            <p className="font-black text-fairway-900">Request sent ✓</p>
+            <p className="font-black text-fairway-900">Request Sent ✓</p>
             <p className="mt-1 text-sm text-slate-500">
               The organizer needs to approve you. You&apos;ll see this
               tournament on your dashboard once you&apos;re in.
@@ -209,7 +209,7 @@ function HandicapSetup({
     <AuthShell>
       <div>
         <p className="text-4xl">⛳</p>
-        <h1 className="mt-3 text-2xl font-black text-ink">Set your handicap</h1>
+        <h1 className="mt-3 text-2xl font-black text-ink">Set Your Handicap</h1>
         <p className="mt-1 text-sm text-slate-500">
           For <b className="text-ink">{trip.name}</b>. This is the handicap
           used for you in this tournament only.

@@ -129,10 +129,10 @@ export function Landing() {
       <section className="bg-fairway-900 text-[#cfe6d8]">
         <div className="mx-auto flex max-w-6xl flex-wrap justify-around gap-6 px-5 py-8 text-center">
           {[
-            ["5+", "Scoring formats"],
-            ["Live", "Standings & momentum"],
-            ["Net", "Handicap scoring built in"],
-            ["Year / year", "History & champions"],
+            ["5+", "Scoring Formats"],
+            ["Live", "Standings & Momentum"],
+            ["Net", "Handicap Scoring Built In"],
+            ["Year / year", "History & Champions"],
           ].map(([v, k]) => (
             <div key={k}>
               <div className="font-display text-3xl font-black text-accent">{v}</div>
@@ -182,7 +182,7 @@ export function Landing() {
 
         {/* journey strip */}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-x-2 gap-y-2 text-sm font-extrabold">
-          {["Create", "Invite", "Teams", "Schedule", "Log scores", "Scoreboard", "Crown"].map(
+          {["Create", "Invite", "Teams", "Schedule", "Log Scores", "Scoreboard", "Crown"].map(
             (step, i, arr) => (
               <span key={step} className="flex items-center gap-2">
                 <span className="rounded-full border border-sand-100 bg-white px-3 py-1.5 text-fairway-900">
@@ -312,12 +312,12 @@ export function Landing() {
           </h3>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
-              ["\u26F3", "Net & handicap scoring", "Handicaps and allowances are built in, so net results stay fair and tally automatically."],
-              ["\uD83D\uDD52", "Schedule & tee times", "Lay out each round's course, date, and tee-time groups in one place."],
-              ["\uD83C\uDFC6", "Awards & highlights", "Automatic MVP, hot rounds, biggest movers, and round highlights."],
-              ["\uD83D\uDD17", "Shareable links", "Every tournament gets its own link — text it and your group is in."],
-              ["\uD83D\uDCCA", "Confirmed vs projected", "See locked-in points and what's still in play, at a glance."],
-              ["\u2699\uFE0F", "Admin controls", "Run the show: set the active round, manage rosters, and tune scoring."],
+              ["\u26F3", "Net & Handicap Scoring", "Handicaps and allowances are built in, so net results stay fair and tally automatically."],
+              ["\uD83D\uDD52", "Schedule & Tee Times", "Lay out each round's course, date, and tee-time groups in one place."],
+              ["\uD83C\uDFC6", "Awards & Highlights", "Automatic MVP, hot rounds, biggest movers, and round highlights."],
+              ["\uD83D\uDD17", "Shareable Links", "Every tournament gets its own link — text it and your group is in."],
+              ["\uD83D\uDCCA", "Confirmed vs Projected", "See locked-in points and what's still in play, at a glance."],
+              ["\u2699\uFE0F", "Admin Controls", "Run the show: set the active round, manage rosters, and tune scoring."],
             ].map(([icon, title, body]) => (
               <div
                 key={title}

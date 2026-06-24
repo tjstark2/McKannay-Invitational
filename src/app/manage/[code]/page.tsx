@@ -129,7 +129,7 @@ export default function ManagePage() {
   if (!authorized) {
     return (
       <Shell>
-        <h1 className="text-2xl font-black text-ink">Not your tournament</h1>
+        <h1 className="text-2xl font-black text-ink">Not Your Tournament</h1>
         <p className="mt-2 text-slate-500">
           Only the organizer can manage members for this tournament.
         </p>
@@ -146,7 +146,7 @@ export default function ManagePage() {
   if (!trip) {
     return (
       <Shell>
-        <h1 className="text-2xl font-black text-ink">Tournament not found</h1>
+        <h1 className="text-2xl font-black text-ink">Tournament Not Found</h1>
         <button
           onClick={() => router.push("/home")}
           className="mt-6 rounded-2xl bg-fairway-900 px-5 py-3 font-black text-white"
@@ -361,7 +361,7 @@ export default function ManagePage() {
 
       {/* invite by username */}
       <section className="mt-7">
-        <h2 className="text-xl font-black text-fairway-900">Invite a player</h2>
+        <h2 className="text-xl font-black text-fairway-900">Invite a Player</h2>
         <div className="relative mt-3">
           <div className="flex items-center gap-2 rounded-2xl border border-sand-100 bg-white px-3 py-2">
             <span className="pl-1 text-slate-400">@</span>
@@ -430,7 +430,7 @@ export default function ManagePage() {
         {invited.length > 0 ? (
           <div className="mt-3 space-y-2">
             <p className="text-xs font-extrabold uppercase tracking-wide text-slate-400">
-              Invited · awaiting response
+              Invited · Awaiting Response
             </p>
             {invited.map((m) => (
               <Row key={m.membershipId} r={m}>
@@ -449,7 +449,7 @@ export default function ManagePage() {
       {/* requests */}
       <section className="mt-8">
         <h2 className="flex items-center gap-2 text-xl font-black text-fairway-900">
-          Join requests
+          Join Requests
           {requests.length > 0 ? (
             <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-black text-ink">
               {requests.length}
@@ -541,7 +541,7 @@ export default function ManagePage() {
                 +
               </span>
               <span className="text-sm font-bold text-slate-400">
-                Open spot
+                Open Spot
               </span>
             </div>
           ))}
@@ -566,7 +566,7 @@ export default function ManagePage() {
           onClick={() => router.push(`/t/${trip.joinCode}`)}
           className="w-full rounded-2xl bg-fairway-900 px-4 py-3.5 font-black text-white"
         >
-          Open tournament
+          Open Tournament
         </button>
         <button
           onClick={() => router.push("/home")}

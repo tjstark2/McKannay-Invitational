@@ -208,7 +208,7 @@ export default function FriendsPage() {
           {data.friends.length === 0 ? (
             <div className="mt-3 rounded-2xl border border-dashed border-sand-200 bg-white p-8 text-center">
               <p className="text-4xl">🫂</p>
-              <p className="mt-3 font-black text-fairway-900">No friends yet</p>
+              <p className="mt-3 font-black text-fairway-900">No Friends Yet</p>
               <p className="mt-1 text-sm text-slate-500">
                 Search above to find people and send a request.
               </p>
