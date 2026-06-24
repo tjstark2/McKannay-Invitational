@@ -30,6 +30,7 @@ export default function ManagePage() {
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [ready, setReady] = useState(false);
   const [authorized, setAuthorized] = useState(true);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
   const refresh = useCallback(
     async (t: TripRef) => {
@@ -185,9 +186,30 @@ export default function ManagePage() {
                 <span className="rounded-full bg-sand-50 px-3 py-1.5 text-xs font-black uppercase text-slate-500">
                   Owner
                 </span>
+              ) : confirmId === m.membershipId ? (
+                <div className="flex items-center gap-2">
+                  <span className="hidden text-xs font-bold text-slate-500 sm:block">
+                    Remove?
+                  </span>
+                  <button
+                    onClick={() => {
+                      kick(m.membershipId);
+                      setConfirmId(null);
+                    }}
+                    className="rounded-full bg-red-600 px-3 py-2 text-sm font-extrabold text-white"
+                  >
+                    Yes, remove
+                  </button>
+                  <button
+                    onClick={() => setConfirmId(null)}
+                    className="rounded-full border border-sand-200 bg-white px-3 py-2 text-sm font-bold text-slate-500"
+                  >
+                    Cancel
+                  </button>
+                </div>
               ) : (
                 <button
-                  onClick={() => kick(m.membershipId)}
+                  onClick={() => setConfirmId(m.membershipId)}
                   className="rounded-full border border-sand-200 bg-white px-3 py-2 text-sm font-bold text-slate-400 hover:text-red-600"
                 >
                   Remove

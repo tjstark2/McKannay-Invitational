@@ -12,6 +12,7 @@ import {
   resolveTrip,
   requestToJoin,
   loadPendingTrips,
+  pendingCountsForTrips,
   type TripRef,
 } from "@/lib/supabase/memberships";
 import { BrandHeaderMark } from "@/features/trip/components/Brand";
@@ -22,6 +23,7 @@ export function AccountHome() {
   const router = useRouter();
   const [trips, setTrips] = useState<MyTripSummary[] | null>(null);
   const [pending, setPending] = useState<TripRef[]>([]);
+  const [requestCounts, setRequestCounts] = useState<Record<string, number>>({});
   const [firstName, setFirstName] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [joinBusy, setJoinBusy] = useState(false);
@@ -53,6 +55,9 @@ export function AccountHome() {
       if (active) setTrips(my);
       const pend = await loadPendingTrips(supabase, user.id);
       if (active) setPending(pend);
+      const ownedIds = my.filter((t) => t.role === "owner").map((t) => t.id);
+      const counts = await pendingCountsForTrips(supabase, ownedIds);
+      if (active) setRequestCounts(counts);
     })();
     return () => {
       active = false;
@@ -201,9 +206,20 @@ export function AccountHome() {
                 {t.role === "owner" ? (
                   <button
                     onClick={() => router.push(`/manage/${t.joinCode}`)}
-                    className="mt-3 w-full rounded-xl border border-sand-100 bg-sand-50 px-3 py-2 text-sm font-extrabold text-fairway-900"
+                    className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-extrabold ${
+                      requestCounts[t.id]
+                        ? "border-red-200 bg-red-50 text-red-700"
+                        : "border-sand-100 bg-sand-50 text-fairway-900"
+                    }`}
                   >
-                    Manage members ›
+                    Manage members
+                    {requestCounts[t.id] ? (
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-black text-white">
+                        {requestCounts[t.id]}
+                      </span>
+                    ) : (
+                      <span>›</span>
+                    )}
                   </button>
                 ) : null}
               </div>

@@ -205,3 +205,22 @@ export function memberName(p: PublicProfile): string {
   if (p.username) return `@${p.username}`;
   return name || "Unknown";
 }
+
+// How many pending requests each of these trips has (for owner badges).
+export async function pendingCountsForTrips(
+  supabase: SupabaseClient,
+  tripIds: string[]
+): Promise<Record<string, number>> {
+  const result: Record<string, number> = {};
+  if (tripIds.length === 0) return result;
+  const { data } = await supabase
+    .from("trip_members")
+    .select("trip_id")
+    .eq("status", "pending")
+    .in("trip_id", tripIds);
+  for (const r of (data ?? []) as Record<string, unknown>[]) {
+    const id = r.trip_id as string;
+    result[id] = (result[id] ?? 0) + 1;
+  }
+  return result;
+}
