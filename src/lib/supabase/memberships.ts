@@ -33,13 +33,9 @@ export async function resolveTrip(
   supabase: SupabaseClient,
   code: string
 ): Promise<TripRef | null> {
-  const { data } = await supabase
-    .from("trips")
-    .select("id,name,join_code,owner_id,location,dates,roster_size")
-    .eq("join_code", code)
-    .maybeSingle();
-  if (!data) return null;
-  const t = data as Record<string, unknown>;
+  const { data, error } = await supabase.rpc("trip_card", { p_code: code });
+  if (error || !data || (data as unknown[]).length === 0) return null;
+  const t = (data as Record<string, unknown>[])[0];
   return {
     id: t.id as string,
     name: t.name as string,
@@ -236,27 +232,17 @@ export async function loadPendingTrips(
   supabase: SupabaseClient,
   userId: string
 ): Promise<TripRef[]> {
-  const { data } = await supabase
-    .from("trip_members")
-    .select("trips(id,name,join_code,owner_id,location,dates,roster_size)")
-    .eq("user_id", userId)
-    .eq("status", "pending");
-  const out: TripRef[] = [];
-  for (const row of (data ?? []) as Record<string, unknown>[]) {
-    const raw = row.trips;
-    const t = (Array.isArray(raw) ? raw[0] : raw) as Record<string, unknown> | undefined;
-    if (!t) continue;
-    out.push({
-      id: t.id as string,
-      name: t.name as string,
-      joinCode: t.join_code as string,
-      ownerId: (t.owner_id as string) ?? null,
-      location: (t.location as string) ?? null,
-      dates: (t.dates as string) ?? null,
-      rosterSize: (t.roster_size as number) ?? 12,
-    });
-  }
-  return out;
+  void userId;
+  const { data } = await supabase.rpc("my_member_trips", { p_status: "pending" });
+  return ((data ?? []) as Record<string, unknown>[]).map((t) => ({
+    id: t.id as string,
+    name: t.name as string,
+    joinCode: t.join_code as string,
+    ownerId: (t.owner_id as string) ?? null,
+    location: (t.location as string) ?? null,
+    dates: (t.dates as string) ?? null,
+    rosterSize: (t.roster_size as number) ?? 12,
+  }));
 }
 
 export type InvitationItem = { membershipId: string; trip: TripRef };
@@ -319,30 +305,20 @@ export async function loadInvitations(
   supabase: SupabaseClient,
   userId: string
 ): Promise<InvitationItem[]> {
-  const { data } = await supabase
-    .from("trip_members")
-    .select("id, trips(id,name,join_code,owner_id,location,dates,roster_size)")
-    .eq("user_id", userId)
-    .eq("status", "invited");
-  const out: InvitationItem[] = [];
-  for (const row of (data ?? []) as Record<string, unknown>[]) {
-    const raw = row.trips;
-    const t = (Array.isArray(raw) ? raw[0] : raw) as Record<string, unknown> | undefined;
-    if (!t) continue;
-    out.push({
-      membershipId: row.id as string,
-      trip: {
-        id: t.id as string,
-        name: t.name as string,
-        joinCode: t.join_code as string,
-        ownerId: (t.owner_id as string) ?? null,
-        location: (t.location as string) ?? null,
-        dates: (t.dates as string) ?? null,
-        rosterSize: (t.roster_size as number) ?? 12,
-      },
-    });
-  }
-  return out;
+  void userId;
+  const { data } = await supabase.rpc("my_member_trips", { p_status: "invited" });
+  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+    membershipId: row.membership_id as string,
+    trip: {
+      id: row.id as string,
+      name: row.name as string,
+      joinCode: row.join_code as string,
+      ownerId: (row.owner_id as string) ?? null,
+      location: (row.location as string) ?? null,
+      dates: (row.dates as string) ?? null,
+      rosterSize: (row.roster_size as number) ?? 12,
+    },
+  }));
 }
 
 // ---- Rosters: turning approved members into players on a team ----------

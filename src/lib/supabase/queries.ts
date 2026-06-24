@@ -51,13 +51,9 @@ export async function tripExists(
   supabase: SupabaseClient,
   joinCode: string
 ): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("trips")
-    .select("id")
-    .eq("join_code", joinCode)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("trip_card", { p_code: joinCode });
   if (error) return false;
-  return Boolean(data);
+  return Boolean(data && (data as unknown[]).length > 0);
 }
 
 export type MyTripSummary = {
