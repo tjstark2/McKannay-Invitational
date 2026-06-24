@@ -24,6 +24,7 @@ export const initialTrip: Trip = {
   winningNumber: 9.5,
   retainNumber: 9,
   defendingTeam: null,
+  defaultFormat: null,
 };
 
 export const initialTeams: Team[] = [

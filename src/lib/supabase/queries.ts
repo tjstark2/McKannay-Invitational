@@ -135,12 +135,13 @@ export async function joinTripByCode(
 export type CreateTripInput = {
   name: string;
   joinCode: string;
-  adminCode: string;
+  adminCode?: string;
   location?: string;
   dates?: string;
   teamAName: string;
   teamBName: string;
   rosterSize: number;
+  defaultFormat?: string;
   ownerId: string;
 };
 
@@ -162,10 +163,11 @@ export async function createTrip(
     .insert({
       name: input.name.trim(),
       join_code: code,
-      admin_code: input.adminCode.trim(),
+      admin_code: input.adminCode?.trim() || "",
       location: input.location?.trim() || null,
       dates: input.dates?.trim() || null,
       owner_id: input.ownerId,
+      default_format: input.defaultFormat?.trim() || null,
       roster_size:
         Number.isFinite(input.rosterSize) && input.rosterSize > 0
           ? Math.round(input.rosterSize)

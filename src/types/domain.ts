@@ -35,6 +35,7 @@ export type Trip = {
   winningNumber: number;
   retainNumber: number;
   defendingTeam: TeamId | null;
+  defaultFormat: string | null;
 };
 
 export type Team = {
