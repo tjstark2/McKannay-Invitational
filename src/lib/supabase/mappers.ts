@@ -57,6 +57,7 @@ export type PlayerRow = {
   handicap_index: number | null;
   avatar_emoji: string | null;
   sort_order: number | null;
+  account_id: string | null;
 };
 
 export type CourseRow = {
@@ -164,6 +165,7 @@ export function mapPlayer(
     team: (row.team_id ? teamCodeById.get(row.team_id) : undefined) ?? "A",
     handicapIndex: Number(row.handicap_index ?? 0),
     avatarEmoji: row.avatar_emoji ?? undefined,
+    accountId: row.account_id ?? undefined,
   };
 }
 

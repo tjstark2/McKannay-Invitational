@@ -49,6 +49,7 @@ export type Player = {
   team: TeamId;
   handicapIndex: number;
   avatarEmoji?: string;
+  accountId?: string;
 };
 
 export type Course = {
