@@ -20,6 +20,7 @@ import {
   mapPlayer,
   mapRound,
   mapScore,
+  mapGroupScore,
   mapScoringSettings,
   mapTeam,
   mapTrip,
@@ -27,6 +28,7 @@ import {
   type PlayerRow,
   type RoundRow,
   type ScoreRow,
+  type GroupScoreRow,
   type ScoringSettingsRow,
   type TeamRow,
   type TripRow,
@@ -248,6 +250,18 @@ export async function loadTripState(
   );
 
   const scores = scoreRows.map(mapScore);
+
+  // Combined scores for grouped formats (scramble / best ball 2v2 & 4v4).
+  let groupScores: ReturnType<typeof mapGroupScore>[] = [];
+  if (roundIds.length > 0) {
+    const gsResult = await supabase
+      .from("group_scores")
+      .select("*")
+      .in("round_id", roundIds);
+    if (!gsResult.error) {
+      groupScores = ((gsResult.data ?? []) as GroupScoreRow[]).map(mapGroupScore);
+    }
+  }
   const scoringSettings = mapScoringSettings(
     (scoringResult.data as ScoringSettingsRow | null) ?? null
   );
@@ -279,6 +293,7 @@ export async function loadTripState(
       rounds,
       matches,
       scores,
+      groupScores,
       scoringSettings,
       currentRoundId,
     },
@@ -682,4 +697,27 @@ export async function setTeeTimePlayersRows(
   }));
   const ins = await supabase.from("tee_time_players").insert(rows);
   throwIf(ins.error, "set tee time players");
+}
+export async function upsertGroupScoreRow(
+  supabase: SupabaseClient,
+  input: {
+    matchId: string;
+    side: "A" | "B";
+    roundId: string;
+    frontNineScore?: number;
+    grossScore?: number;
+  }
+) {
+  const { error } = await supabase.from("group_scores").upsert(
+    {
+      match_id: input.matchId,
+      side: input.side,
+      round_id: input.roundId,
+      front_nine_score: input.frontNineScore ?? null,
+      gross_score: input.grossScore ?? null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "match_id,side" }
+  );
+  throwIf(error, "save group score");
 }

@@ -234,6 +234,7 @@ export const initialTripState: TripState = {
   rounds: initialRounds,
   matches: initialMatches,
   scores: initialScores,
+  groupScores: [],
   scoringSettings: initialScoringSettings,
   currentRoundId: "round-1",
 };

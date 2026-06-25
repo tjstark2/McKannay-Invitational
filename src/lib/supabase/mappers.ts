@@ -5,6 +5,7 @@
 import type {
   Course,
   Match,
+  GroupScore,
   Player,
   Round,
   ScoreEntry,
@@ -247,6 +248,22 @@ export function mapScore(row: ScoreRow): ScoreEntry {
   return {
     roundId: row.round_id,
     playerId: row.player_id,
+    frontNineScore: row.front_nine_score ?? undefined,
+    grossScore: row.gross_score ?? undefined,
+  };
+}
+
+export type GroupScoreRow = {
+  match_id: string;
+  side: string;
+  front_nine_score: number | null;
+  gross_score: number | null;
+};
+
+export function mapGroupScore(row: GroupScoreRow): GroupScore {
+  return {
+    matchId: row.match_id,
+    side: row.side === "B" ? "B" : "A",
     frontNineScore: row.front_nine_score ?? undefined,
     grossScore: row.gross_score ?? undefined,
   };

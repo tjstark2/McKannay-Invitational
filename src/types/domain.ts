@@ -103,6 +103,13 @@ export type Match = {
   manualResult?: ManualMatchResult;
 };
 
+export type GroupScore = {
+  matchId: string;
+  side: "A" | "B";
+  frontNineScore?: number;
+  grossScore?: number;
+};
+
 export type ScoreEntry = {
   roundId: string;
   playerId: string;
@@ -153,6 +160,7 @@ export type TripState = {
   rounds: Round[];
   matches: Match[];
   scores: ScoreEntry[];
+  groupScores: GroupScore[];
   scoringSettings: ScoringSettings;
   currentRoundId: string;
 };

@@ -1,5 +1,6 @@
 export type {
   Course,
+  GroupScore,
   LeaderboardRow,
   Match,
   MatchResult,

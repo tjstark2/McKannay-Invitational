@@ -6,6 +6,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useViewer } from "@/features/trip/state/ViewerContext";
 import { useAuth } from "@/features/auth/AuthContext";
+import { GroupedRoundEntry } from "@/features/trip/screens/GroupedRoundEntry";
 
 type LastSavedScore = {
   playerName: string;
@@ -79,6 +80,40 @@ export function AddScoreScreen() {
     );
   }
 
+  const selectedRound =
+    rounds.find((round) => round.id === roundId) ?? rounds[0];
+  if (!selectedRound) return null;
+
+  // Grouped formats (scramble / best ball 2v2 & 4v4): one combined score per
+  // side, entered against the round's matchups.
+  if (selectedRound.groupSize != null) {
+    return (
+      <div className="space-y-4">
+        <SectionHeader
+          title="Log Round"
+          subtitle="Group round — one combined score per side, gross only."
+        />
+        <Card className="p-4">
+          <label className="text-xs font-black uppercase text-slate-500">
+            Round
+          </label>
+          <select
+            value={selectedRound.id}
+            onChange={(event) => setRoundId(event.target.value)}
+            className="mt-2 w-full rounded-xl border border-slate-200 p-3 font-bold"
+          >
+            {rounds.map((round) => (
+              <option key={round.id} value={round.id}>
+                {round.title}
+              </option>
+            ))}
+          </select>
+        </Card>
+        <GroupedRoundEntry round={selectedRound} />
+      </div>
+    );
+  }
+
   if (!canManage && selectablePlayers.length === 0) {
     return (
       <Card className="p-4">
@@ -92,12 +127,10 @@ export function AddScoreScreen() {
     );
   }
 
-  const selectedRound =
-    rounds.find((round) => round.id === roundId) ?? rounds[0];
   const selectedPlayer =
     selectablePlayers.find((player) => player.id === playerId) ??
     selectablePlayers[0];
-  if (!selectedRound || !selectedPlayer) return null;
+  if (!selectedPlayer) return null;
 
   const existingScore = scores.find(
     (score) =>

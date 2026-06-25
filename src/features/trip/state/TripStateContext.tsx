@@ -36,6 +36,7 @@ import {
   persistTripUpdates,
   setTeeTimePlayersRows,
   upsertScoreRow,
+  upsertGroupScoreRow,
 } from "@/lib/supabase/queries";
 import type {
   Match,
@@ -47,8 +48,7 @@ import type {
   TeamId,
   Trip,
   TripState,
-  Winner,
-} from "@/types";
+  Winner, GroupScore} from "@/types";
 
 type TripStateContextValue = TripState & {
   loading: boolean;
@@ -76,6 +76,13 @@ type TripStateContextValue = TripState & {
   updateManualMatchResult: (matchId: string, result: Winner) => void;
   updateScoringSettings: (updates: Partial<ScoringSettings>) => void;
   upsertScore: (score: ScoreEntry) => void;
+  upsertGroupScore: (input: {
+    matchId: string;
+    side: "A" | "B";
+    roundId: string;
+    frontNineScore?: number;
+    grossScore?: number;
+  }) => void;
   addPlayer: (player: {
     name: string;
     handicapIndex: number;
@@ -565,6 +572,31 @@ export function TripStateProvider({
           };
         });
         persist((s) => upsertScoreRow(s, score));
+      },
+
+      upsertGroupScore: (input) => {
+        const next: GroupScore = {
+          matchId: input.matchId,
+          side: input.side,
+          frontNineScore: input.frontNineScore,
+          grossScore: input.grossScore,
+        };
+        setState((current) => {
+          const exists = current.groupScores.some(
+            (item) => item.matchId === input.matchId && item.side === input.side
+          );
+          return {
+            ...current,
+            groupScores: exists
+              ? current.groupScores.map((item) =>
+                  item.matchId === input.matchId && item.side === input.side
+                    ? next
+                    : item
+                )
+              : [...current.groupScores, next],
+          };
+        });
+        persist((s) => upsertGroupScoreRow(s, input));
       },
 
       addPlayer: (player) => {
