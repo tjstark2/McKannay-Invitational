@@ -28,3 +28,13 @@ h3,
 h4 {
   font-family: var(--font-display), system-ui, sans-serif;
 }
+
+/* Avatar intro: floating birds (referenced from inline styles in AvatarFlow) */
+@keyframes tb-bob {
+  0%, 100% { transform: translateY(0) rotate(-5deg); }
+  50% { transform: translateY(-13px) rotate(5deg); }
+}
+@keyframes tb-drift {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(16px); }
+}
