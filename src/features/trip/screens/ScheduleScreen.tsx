@@ -4,6 +4,7 @@ import { formatRoundFormat } from "@/lib/format";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import type { Screen } from "@/types";
 
@@ -22,6 +23,14 @@ export function ScheduleScreen({
   return (
     <div className="space-y-4">
       <SectionHeader title="Schedule" subtitle="Rounds, tee times, arrivals, and course setup." />
+
+      {rounds.length === 0 ? (
+        <EmptyState
+          img="/brand/no-tee-times.png"
+          title="No Tee Times Yet"
+          message="Once an organizer adds rounds and tee times, your schedule shows up here."
+        />
+      ) : null}
 
       {rounds.map((round) => {
         const course = courses.find((item) => item.id === round.courseId) ?? courses[0];
@@ -69,7 +78,7 @@ export function ScheduleScreen({
 
               <div className="mt-4 space-y-2">
                 {round.teeTimes.map((tee, index) => (
-                  <div key={tee.id} className="rounded-xl bg-slate-50 p-3 text-sm">
+                  <div key={tee.id} className="rounded-xl bg-[#f3efe6] p-3 text-sm">
                     <div className="flex items-center justify-between">
                       <p className="font-black">Tee Time {index + 1}</p>
                       <p className="font-bold text-fairway-900">{tee.time}</p>

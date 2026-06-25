@@ -313,7 +313,7 @@ export function AddScoreScreen() {
             ))}
           </select>
         ) : (
-          <div className="mt-2 flex w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 p-3 font-bold">
+          <div className="mt-2 flex w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-[#f3efe6] p-3 font-bold">
             <PlayerAvatar
               avatarId={selectedPlayer.avatarId}
               emoji={selectedPlayer.avatarEmoji}
@@ -325,7 +325,7 @@ export function AddScoreScreen() {
         )}
 
         {existingScore ? (
-          <div className="mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
+          <div className="mt-4 rounded-xl bg-[#f3efe6] p-3 text-sm text-slate-600">
             Existing entry: Front {existingScore.frontNineScore ?? "-"} · Final{" "}
             {existingScore.grossScore ?? "Not submitted"}
           </div>
@@ -370,7 +370,7 @@ export function AddScoreScreen() {
             />
 
             <div className="mt-4 grid grid-cols-3 gap-2">
-              <div className="rounded-xl bg-slate-50 p-3 text-center">
+              <div className="rounded-xl bg-[#f3efe6] p-3 text-center">
                 <p className="text-xs font-bold text-slate-500">Front Net</p>
                 <p className="mt-1 text-lg font-black">
                   {calculatedFrontNet === null
@@ -378,11 +378,11 @@ export function AddScoreScreen() {
                     : calculatedFrontNet.toFixed(1)}
                 </p>
               </div>
-              <div className="rounded-xl bg-slate-50 p-3 text-center">
+              <div className="rounded-xl bg-[#f3efe6] p-3 text-center">
                 <p className="text-xs font-bold text-slate-500">Final Net</p>
                 <p className="mt-1 text-lg font-black">{calculatedNet ?? "-"}</p>
               </div>
-              <div className="rounded-xl bg-slate-50 p-3 text-center">
+              <div className="rounded-xl bg-[#f3efe6] p-3 text-center">
                 <p className="text-xs font-bold text-slate-500">Net +/-</p>
                 <p className="mt-1 text-lg font-black">
                   {formatPlusMinus(calculatedPlusMinus)}
@@ -439,7 +439,7 @@ export function AddScoreScreen() {
             return (
               <div
                 key={`${score.roundId}-${score.playerId}`}
-                className="flex items-center justify-between rounded-xl bg-slate-50 p-3 text-sm"
+                className="flex items-center justify-between rounded-xl bg-[#f3efe6] p-3 text-sm"
               >
                 <div className="flex items-center gap-2.5">
                   <PlayerAvatar

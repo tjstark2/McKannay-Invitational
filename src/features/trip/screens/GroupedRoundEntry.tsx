@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useViewer } from "@/features/trip/state/ViewerContext";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -50,15 +51,11 @@ export function GroupedRoundEntry({ round }: { round: Round }) {
 
   if (roundMatches.length === 0) {
     return (
-      <Card className="p-4">
-        <p className="font-black">No matchups yet</p>
-        <p className="mt-2 text-sm text-slate-600">
-          This is a {round.groupSize === 4 ? "4 v 4" : "2 v 2"} group round. An
-          organizer needs to set up the matchups first in Admin → this round →
-          Matches, assigning players to each side. Then groups can log their
-          combined scores here.
-        </p>
-      </Card>
+      <EmptyState
+        img="/brand/no-matches.png"
+        title="No Matchups Yet"
+        message={`This is a ${round.groupSize === 4 ? "4 v 4" : "2 v 2"} group round. An organizer sets up the sides in Admin, then groups log their combined scores here.`}
+      />
     );
   }
 
@@ -213,7 +210,7 @@ function SideRow({
       ) : null}
 
       {!canEdit ? (
-        <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-500">
+        <div className="mt-2 rounded-lg border border-slate-200 bg-[#f3efe6] p-2.5 text-sm text-slate-500">
           {existingGross != null
             ? "Submitted."
             : "Only this team's players (or an organizer) can enter this score."}

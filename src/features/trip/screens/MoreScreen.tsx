@@ -107,7 +107,7 @@ export function MoreScreen({
             <button
               key={link.label}
               onClick={() => setActiveScreen(link.screen)}
-              className="block w-full rounded-xl bg-slate-50 p-4 text-left transition hover:bg-slate-100"
+              className="block w-full rounded-xl bg-[#f3efe6] p-4 text-left transition hover:bg-slate-100"
             >
               <div className="flex items-center justify-between gap-3">
                 <div>

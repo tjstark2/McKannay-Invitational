@@ -381,7 +381,7 @@ export function AdminScreen() {
 
             <div className="mt-3 space-y-2">
               {courses.map((course) => (
-                <div key={course.id} className="rounded-xl bg-slate-50 p-3 text-sm">
+                <div key={course.id} className="rounded-xl bg-[#f3efe6] p-3 text-sm">
                   <p className="font-black">{course.name}</p>
                   <p className="text-xs text-slate-500">
                     {course.teeName} ·{" "}
@@ -494,7 +494,7 @@ export function AdminScreen() {
                     className={`rounded-xl p-3 text-left ${
                       isActive
                         ? "bg-fairway-900 text-white ring-2 ring-fairway-900 ring-offset-2"
-                        : "bg-slate-50 text-slate-700"
+                        : "bg-[#f3efe6] text-slate-700"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -684,7 +684,7 @@ export function AdminScreen() {
                       </div>
 
                       {/* tee times sub-section */}
-                      <div className="rounded-xl bg-slate-50 p-3">
+                      <div className="rounded-xl bg-[#f3efe6] p-3">
                         <button
                           onClick={() => toggleSub(teesKey)}
                           className="flex w-full items-center justify-between text-left"
@@ -732,7 +732,7 @@ export function AdminScreen() {
                                     return (
                                       <label
                                         key={player.id}
-                                        className="flex items-center gap-2 rounded-lg bg-slate-50 px-2 py-2 text-sm font-bold"
+                                        className="flex items-center gap-2 rounded-lg bg-[#f3efe6] px-2 py-2 text-sm font-bold"
                                       >
                                         <input
                                           type="checkbox"
@@ -778,7 +778,7 @@ export function AdminScreen() {
                       </div>
 
                       {/* matches sub-section */}
-                      <div className="rounded-xl bg-slate-50 p-3">
+                      <div className="rounded-xl bg-[#f3efe6] p-3">
                         <button
                           onClick={() => toggleSub(matchesKey)}
                           className="flex w-full items-center justify-between text-left"

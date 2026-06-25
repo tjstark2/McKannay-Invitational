@@ -106,19 +106,19 @@ export function PlayerProfileScreen({
         </div>
 
         <div className="mt-5 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-xl bg-slate-50 p-3">
+          <div className="rounded-xl bg-[#f3efe6] p-3">
             <p className="text-xs font-bold text-slate-500">Points</p>
             <p className="mt-1 text-xl font-black">{pointsWon}</p>
           </div>
 
-          <div className="rounded-xl bg-slate-50 p-3">
+          <div className="rounded-xl bg-[#f3efe6] p-3">
             <p className="text-xs font-bold text-slate-500">Net +/-</p>
             <p className="mt-1 text-xl font-black">
               {formatPlusMinus(totalNetToPar)}
             </p>
           </div>
 
-          <div className="rounded-xl bg-slate-50 p-3">
+          <div className="rounded-xl bg-[#f3efe6] p-3">
             <p className="text-xs font-bold text-slate-500">Rounds</p>
             <p className="mt-1 text-xl font-black">
               {finalPlayerScores.length}
@@ -171,7 +171,7 @@ export function PlayerProfileScreen({
               return (
                 <div
                   key={`${score.roundId}-${score.playerId}`}
-                  className="rounded-xl bg-slate-50 p-3 text-sm"
+                  className="rounded-xl bg-[#f3efe6] p-3 text-sm"
                 >
                   <div className="flex items-center justify-between">
                     <div>

@@ -34,15 +34,15 @@ export function CourseDetailScreen({
           </p>
 
           <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-xl bg-slate-50 p-3">
+            <div className="rounded-xl bg-[#f3efe6] p-3">
               <p className="text-xs font-bold text-slate-500">Par</p>
               <p className="mt-1 text-xl font-black">{course.par}</p>
             </div>
-            <div className="rounded-xl bg-slate-50 p-3">
+            <div className="rounded-xl bg-[#f3efe6] p-3">
               <p className="text-xs font-bold text-slate-500">Rating</p>
               <p className="mt-1 text-xl font-black">{course.rating}</p>
             </div>
-            <div className="rounded-xl bg-slate-50 p-3">
+            <div className="rounded-xl bg-[#f3efe6] p-3">
               <p className="text-xs font-bold text-slate-500">Slope</p>
               <p className="mt-1 text-xl font-black">{course.slope}</p>
             </div>
@@ -56,7 +56,7 @@ export function CourseDetailScreen({
         <h2 className="font-black">Scheduled Rounds</h2>
         <div className="mt-3 space-y-2">
           {courseRounds.map((round) => (
-            <div key={round.id} className="rounded-xl bg-slate-50 p-3 text-sm">
+            <div key={round.id} className="rounded-xl bg-[#f3efe6] p-3 text-sm">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-bold">{round.title}</p>

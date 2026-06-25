@@ -20,6 +20,7 @@ import {
 } from "@/lib/supabase/memberships";
 import { BrandHeaderMark } from "@/features/trip/components/Brand";
 import { AccountMenu } from "@/features/account/AccountMenu";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export function AccountHome() {
   const { user, loading } = useAuth();
@@ -218,20 +219,18 @@ export function AccountHome() {
         {/* my tournaments */}
         <div className="mt-9 flex items-center gap-2">
           <span className="h-[18px] w-2 rounded-[3px] bg-accent" />
-          <h2 className="text-xl font-black text-fairway-900">My Tournaments</h2>
+          <h2 className="font-anton text-2xl tracking-tight text-ink">My Tournaments</h2>
         </div>
 
         {trips === null ? (
           <p className="mt-4 text-slate-400">Loading…</p>
         ) : trips.length === 0 ? (
-          <div className="mt-4 rounded-2xl border border-dashed border-sand-200 bg-white p-8 text-center">
-            <p className="text-4xl">🏆</p>
-            <p className="mt-3 font-black text-fairway-900">
-              No tournaments yet
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              Create your first tournament or join one with a code.
-            </p>
+          <div className="mt-4">
+            <EmptyState
+              img="/brand/no-tournaments.png"
+              title="No Tournaments Yet"
+              message="Create your first tournament or join one with a code."
+            />
           </div>
         ) : (
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -289,7 +288,7 @@ export function AccountHome() {
           <>
             <div className="mt-9 flex items-center gap-2">
               <span className="h-[18px] w-2 rounded-[3px] bg-slate-300" />
-              <h2 className="text-xl font-black text-slate-500">
+              <h2 className="font-anton text-2xl tracking-tight text-slate-400">
                 Awaiting Approval
               </h2>
             </div>

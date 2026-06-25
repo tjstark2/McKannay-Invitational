@@ -52,7 +52,7 @@ export function RulesScreen() {
             <h2 className="font-black">Tournament Overview</h2>
 
             <div className="mt-4 space-y-3">
-              <div className="rounded-xl bg-slate-50 p-3">
+              <div className="rounded-xl bg-[#f3efe6] p-3">
                 <p className="font-black">
                   {trip.totalPoints} Total Points Available
                 </p>
@@ -61,7 +61,7 @@ export function RulesScreen() {
                 </p>
               </div>
 
-              <div className="rounded-xl bg-slate-50 p-3">
+              <div className="rounded-xl bg-[#f3efe6] p-3">
                 <p className="font-black">{trip.winningNumber} Points Wins</p>
                 <p className="mt-1 text-sm text-slate-600">
                   A team needs {trip.winningNumber} or more points to win
@@ -69,7 +69,7 @@ export function RulesScreen() {
                 </p>
               </div>
 
-              <div className="rounded-xl bg-slate-50 p-3">
+              <div className="rounded-xl bg-[#f3efe6] p-3">
                 <p className="font-black">9–9 Tie</p>
                 <p className="mt-1 text-sm text-slate-600">
                   If the tournament ends tied 9–9, the defending champion
@@ -156,7 +156,7 @@ export function RulesScreen() {
               The app calculates course handicap using:
             </p>
 
-            <div className="mt-3 rounded-xl bg-slate-50 p-3 text-center text-sm font-black">
+            <div className="mt-3 rounded-xl bg-[#f3efe6] p-3 text-center text-sm font-black">
               Handicap Index × (Slope ÷ 113) + (Rating − Par)
             </div>
 
@@ -173,7 +173,7 @@ export function RulesScreen() {
               Example: Alex has a 6.0 handicap index at Harbour Town.
             </p>
 
-            <div className="mt-3 space-y-2 rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
+            <div className="mt-3 space-y-2 rounded-xl bg-[#f3efe6] p-3 text-sm text-slate-700">
               <p>Harbour Town: Par 71, Rating 71.4, Slope 136</p>
               <p>6 × (136 ÷ 113) + (71.4 − 71) = 7.62</p>
               <p>Rounded Course Handicap = 8</p>

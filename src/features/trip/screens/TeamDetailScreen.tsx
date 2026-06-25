@@ -69,14 +69,14 @@ export function TeamDetailScreen({
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-2 text-center">
-          <div className="rounded-xl bg-slate-50 p-3">
+          <div className="rounded-xl bg-[#f3efe6] p-3">
             <p className="text-xs font-bold text-slate-500">Avg HCP</p>
             <p className="mt-1 text-xl font-black">
               {summary?.averageHandicap.toFixed(1)}
             </p>
           </div>
 
-          <div className="rounded-xl bg-slate-50 p-3">
+          <div className="rounded-xl bg-[#f3efe6] p-3">
             <p className="text-xs font-bold text-slate-500">Match Wins</p>
             <p className="mt-1 text-xl font-black">
               {summary?.completedMatches}
@@ -96,7 +96,7 @@ export function TeamDetailScreen({
                 setSelectedPlayerId(player.id);
                 setActiveScreen("playerProfile");
               }}
-              className="block w-full rounded-xl bg-slate-50 p-3 text-left text-sm"
+              className="block w-full rounded-xl bg-[#f3efe6] p-3 text-left text-sm"
             >
               <div className="flex items-center justify-between gap-3">
                 <span className="flex min-w-0 items-center gap-2.5 font-bold">
@@ -138,7 +138,7 @@ export function TeamDetailScreen({
             return (
               <div
                 key={match.id}
-                className="rounded-xl bg-slate-50 p-3 text-sm"
+                className="rounded-xl bg-[#f3efe6] p-3 text-sm"
               >
                 <div className="flex items-center justify-between">
                   <p className="font-bold">{match.label}</p>

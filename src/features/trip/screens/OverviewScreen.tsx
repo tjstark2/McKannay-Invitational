@@ -217,8 +217,8 @@ export function OverviewScreen({
   return (
     <div className="space-y-6">
       {/* 0 — The Nest */}
-      <div className="relative flex items-center gap-3 rounded-[20px] border border-line bg-white px-4 py-3 pr-28 shadow-[0_14px_30px_-22px_rgba(14,76,48,0.4)]">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-white">
+      <div className="relative flex items-center gap-3 pr-28">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-white shadow-[0_8px_18px_-12px_rgba(14,76,48,0.5)]">
           <img
             src="/brand/the-nest.png"
             alt="The Nest"
@@ -226,10 +226,10 @@ export function OverviewScreen({
           />
         </span>
         <div className="min-w-0">
-          <h2 className="font-anton text-2xl leading-none tracking-tight text-ink">
+          <h2 className="font-anton text-3xl leading-none tracking-tight text-ink">
             The Nest
           </h2>
-          <p className="mt-1 text-xs font-semibold text-slate-500">
+          <p className="mt-1.5 text-xs font-semibold text-slate-500">
             Your tournament home base.
           </p>
         </div>
@@ -247,6 +247,44 @@ export function OverviewScreen({
         status={dispStatus}
         setActiveScreen={setActiveScreen}
       />
+
+      {/* 1.5 — team momentum */}
+      <section>
+        <h2 className="mb-3 flex items-center gap-2 font-anton text-2xl tracking-tight text-ink">
+          <span className="h-5 w-2 rounded-[3px] bg-mint" />
+          Team Momentum
+        </h2>
+        <Card className="p-5">
+          <div className="flex items-center justify-between text-xs font-extrabold">
+            <span className="text-team-north">{teamAName}</span>
+            <span className="text-team-south">{teamBName}</span>
+          </div>
+          <div className="relative mt-2 h-4">
+            <div className="absolute inset-0 overflow-hidden rounded-full border border-line bg-[#ece7db]">
+              <div
+                className="absolute inset-y-0 left-0 bg-team-north"
+                style={{ width: `${aPct}%` }}
+              />
+              <div
+                className="absolute inset-y-0 right-0 bg-team-south"
+                style={{ left: `${aPct}%` }}
+              />
+            </div>
+            <span
+              className="absolute top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-300 bg-white shadow-[0_3px_6px_-2px_rgba(0,0,0,0.5)]"
+              style={{
+                left: `${ballPct}%`,
+                backgroundImage:
+                  "radial-gradient(#cdd3cd 1px, transparent 1.4px)",
+                backgroundSize: "5px 5px",
+              }}
+            />
+          </div>
+          <p className="mt-3 text-center text-sm font-semibold text-slate-600">
+            {momentumNote}
+          </p>
+        </Card>
+      </section>
 
       {/* 2 — who's winning */}
       <StandingsCard />
@@ -490,37 +528,6 @@ export function OverviewScreen({
             </div>
           </div>
 
-          {/* fairway momentum bar */}
-          <div className="mt-4">
-            <div className="flex items-center justify-between text-xs font-extrabold">
-              <span className="text-team-north">{teamAName}</span>
-              <span className="text-team-south">{teamBName}</span>
-            </div>
-            <div className="relative mt-2 h-4">
-              <div className="absolute inset-0 overflow-hidden rounded-full border border-line bg-[#ece7db]">
-                <div
-                  className="absolute inset-y-0 left-0 bg-team-north"
-                  style={{ width: `${aPct}%` }}
-                />
-                <div
-                  className="absolute inset-y-0 right-0 bg-team-south"
-                  style={{ left: `${aPct}%` }}
-                />
-              </div>
-              <span
-                className="absolute top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-300 bg-white shadow-[0_3px_6px_-2px_rgba(0,0,0,0.5)]"
-                style={{
-                  left: `${ballPct}%`,
-                  backgroundImage:
-                    "radial-gradient(#cdd3cd 1px, transparent 1.4px)",
-                  backgroundSize: "5px 5px",
-                }}
-              />
-            </div>
-            <p className="mt-2 text-center text-xs font-semibold text-slate-500">
-              {momentumNote}
-            </p>
-          </div>
         </Card>
       </section>
 
@@ -529,8 +536,8 @@ export function OverviewScreen({
         <h2 className="mb-3 flex items-center gap-2 font-anton text-2xl tracking-tight text-ink"><span className="h-5 w-2 rounded-[3px] bg-mint" />Highlights</h2>
         <div className="grid grid-cols-2 gap-3">
           <div className="flex items-center gap-2.5 rounded-[18px] border border-line bg-white p-3 shadow-[0_10px_24px_-20px_rgba(14,76,48,0.5)]">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e7f7ef] text-lg">
-              ⛳
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden">
+              <img src="/brand/best-net.png" alt="Best Net Round" className="h-full w-full object-contain" />
             </span>
             <div className="min-w-0">
               <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400">
@@ -556,8 +563,8 @@ export function OverviewScreen({
           </div>
 
           <div className="flex items-center gap-2.5 rounded-[18px] border border-line bg-white p-3 shadow-[0_10px_24px_-20px_rgba(14,76,48,0.5)]">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#eef0ff] text-lg">
-              🚀
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden">
+              <img src="/brand/biggest-mover.png" alt="Biggest Mover" className="h-full w-full object-contain" />
             </span>
             <div className="min-w-0">
               <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400">

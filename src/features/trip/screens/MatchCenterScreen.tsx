@@ -14,6 +14,7 @@ import { formatRoundFormat } from "@/lib/format";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import type { Screen, TeamId } from "@/types";
 
@@ -212,14 +213,14 @@ export function MatchCenterScreen({
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-2 text-center">
-            <div className="rounded-xl bg-slate-50 p-3">
+            <div className="rounded-xl bg-[#f3efe6] p-3">
               <p className="text-xs font-bold text-slate-500">Projected</p>
               <p className="mt-1 text-xl font-black">
                 {projectedNetScorePoints.A}-{projectedNetScorePoints.B}
               </p>
             </div>
 
-            <div className="rounded-xl bg-slate-50 p-3">
+            <div className="rounded-xl bg-[#f3efe6] p-3">
               <p className="text-xs font-bold text-slate-500">Confirmed</p>
               <p className="mt-1 text-xl font-black">
                 {confirmedNetScorePoints.A}-{confirmedNetScorePoints.B}
@@ -413,6 +414,14 @@ export function MatchCenterScreen({
             </button>
           );
         })}
+
+      {selectedRound?.format !== "net_score" && visibleMatches.length === 0 ? (
+        <EmptyState
+          img="/brand/no-matches.png"
+          title="No Matchups Yet"
+          message="An organizer can set up sides in Admin to start match play for this round."
+        />
+      ) : null}
     </div>
   );
 }

@@ -68,19 +68,19 @@ export function TeamsScreen({
             </div>
 
             <div className="mt-5 grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-xl bg-slate-50 p-3">
+              <div className="rounded-xl bg-[#f3efe6] p-3">
                 <p className="text-xs font-bold text-slate-500">Avg HCP</p>
                 <p className="mt-1 font-black">
                   {summary.averageHandicap.toFixed(1)}
                 </p>
               </div>
 
-              <div className="rounded-xl bg-slate-50 p-3">
+              <div className="rounded-xl bg-[#f3efe6] p-3">
                 <p className="text-xs font-bold text-slate-500">Total HCP</p>
                 <p className="mt-1 font-black">{summary.totalHandicap}</p>
               </div>
 
-              <div className="rounded-xl bg-slate-50 p-3">
+              <div className="rounded-xl bg-[#f3efe6] p-3">
                 <p className="text-xs font-bold text-slate-500">Wins</p>
                 <p className="mt-1 font-black">{summary.completedMatches}</p>
               </div>
