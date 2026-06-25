@@ -17,6 +17,36 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import type { Screen, TeamId } from "@/types";
 
+function MatchStatusPill({
+  status,
+}: {
+  status: "final" | "live" | "upcoming";
+}) {
+  if (status === "live") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-black text-red-700">
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-red-600" />
+        </span>
+        LIVE
+      </span>
+    );
+  }
+  if (status === "final") {
+    return (
+      <span className="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-black text-slate-600">
+        FINAL
+      </span>
+    );
+  }
+  return (
+    <span className="rounded-full bg-fairway-100 px-2.5 py-1 text-xs font-black text-fairway-900">
+      UP NEXT
+    </span>
+  );
+}
+
 export function MatchCenterScreen({
   setActiveScreen,
   setSelectedMatchId,
@@ -146,10 +176,10 @@ export function MatchCenterScreen({
           <button
             key={round.id}
             onClick={() => setSelectedRoundId(round.id)}
-            className={`rounded-xl px-3 py-2 text-sm font-black ${
+            className={`rounded-xl px-3 py-2 text-sm font-extrabold transition ${
               selectedRoundId === round.id
-                ? "bg-fairway-900 text-white"
-                : "bg-slate-100 text-slate-600"
+                ? "bg-fairway-900 text-white shadow-[0_8px_16px_-10px_rgba(19,100,63,0.8)]"
+                : "border border-line bg-white text-slate-600"
             }`}
           >
             Round {round.roundNumber}
@@ -290,6 +320,30 @@ export function MatchCenterScreen({
           const round = rounds.find((item) => item.id === match.roundId);
           const course = courses.find((item) => item.id === round?.courseId);
 
+          const grouped = round?.groupSize != null;
+          const started = grouped
+            ? groupScores.some(
+                (g) =>
+                  g.matchId === match.id &&
+                  (g.frontNineScore != null || g.grossScore != null)
+              )
+            : (() => {
+                const ids = new Set([...match.aPlayers, ...match.bPlayers]);
+                return scores.some(
+                  (sc) =>
+                    sc.roundId === match.roundId &&
+                    ids.has(sc.playerId) &&
+                    (typeof sc.frontNineScore === "number" ||
+                      typeof sc.grossScore === "number")
+                );
+              })();
+          const matchStatus: "final" | "live" | "upcoming" =
+            result.status === "final"
+              ? "final"
+              : started
+              ? "live"
+              : "upcoming";
+
           return (
             <button
               key={match.id}
@@ -316,9 +370,7 @@ export function MatchCenterScreen({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Pill tone={result.status === "final" ? "green" : "amber"}>
-                      {result.status}
-                    </Pill>
+                    <MatchStatusPill status={matchStatus} />
 
                     <ChevronRight className="h-5 w-5 text-slate-400" />
                   </div>
@@ -354,7 +406,7 @@ export function MatchCenterScreen({
                   </p>
                 </div>
 
-                <p className="mt-4 rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-600">
+                <p className="mt-4 rounded-xl bg-[#f3efe6] p-3 text-sm font-semibold text-slate-600">
                   {result.label}
                 </p>
               </Card>

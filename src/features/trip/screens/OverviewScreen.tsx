@@ -18,23 +18,21 @@ import { useTripState } from "@/features/trip/state/TripStateContext";
 import type { Screen } from "@/types";
 
 function AwardTile({
-  emoji,
+  img,
   label,
   award,
 }: {
-  emoji: string;
+  img: string;
   label: string;
   award: AwardResult;
 }) {
   return (
     <Card className="p-3 text-center">
-      <p className="text-xs font-bold text-slate-500">
-        {emoji} {label}
-      </p>
-      <p className="mt-1 text-sm font-black">
+      <img src={img} alt={label} className="mx-auto h-14 w-14 object-contain" />
+      <p className="mt-1 truncate text-sm font-black">
         {award ? award.players.map((p) => p.name).join(" & ") : "—"}
       </p>
-      <p className="mt-0.5 text-xs text-slate-500">
+      <p className="mt-0.5 text-[11px] text-slate-500">
         {award ? award.detail : "Not enough data"}
       </p>
     </Card>
@@ -255,7 +253,7 @@ export function OverviewScreen({
 
       {/* 3 — this round */}
       <section>
-        <h2 className="mb-3 flex items-center gap-2 text-xl font-black text-fairway-900"><span className="h-[18px] w-2 rounded-[3px] bg-accent" />This Round</h2>
+        <h2 className="mb-3 flex items-center gap-2 font-anton text-2xl tracking-tight text-ink"><span className="h-5 w-2 rounded-[3px] bg-mint" />This Round</h2>
         <Card className="p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -265,7 +263,7 @@ export function OverviewScreen({
               </p>
               <h3 className="mt-1 text-lg font-black">{featuredRound.title}</h3>
             </div>
-            <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
+            <div className="rounded-full bg-[#ece7db] px-3 py-1 text-xs font-black text-slate-600">
               {dispStatus === "complete"
                 ? "Final"
                 : dispStatus === "live"
@@ -275,15 +273,15 @@ export function OverviewScreen({
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-2 text-center">
-            <div className="rounded-xl bg-slate-50 p-3">
+            <div className="rounded-xl bg-[#f3efe6] p-3">
               <p className="text-xs font-bold text-slate-500">Front 9 In</p>
-              <p className="mt-1 text-xl font-black">
+              <p className="mt-1 font-anton text-2xl">
                 {dispFrontIn} / {dispTotal}
               </p>
             </div>
-            <div className="rounded-xl bg-slate-50 p-3">
+            <div className="rounded-xl bg-[#f3efe6] p-3">
               <p className="text-xs font-bold text-slate-500">Final In</p>
-              <p className="mt-1 text-xl font-black">
+              <p className="mt-1 font-anton text-2xl">
                 {dispFinalIn} / {dispTotal}
               </p>
             </div>
@@ -305,7 +303,7 @@ export function OverviewScreen({
 
           {/* hot right now */}
           {!isGroupedRound && hot ? (
-            <div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm">
+            <div className="mt-3 rounded-xl bg-[#f3efe6] p-3 text-sm">
               <p className="font-black">🔥 Hot Right Now</p>
               <p className="mt-1 flex items-center gap-1.5 text-slate-600">
                 <PlayerAvatar
@@ -328,7 +326,7 @@ export function OverviewScreen({
             <div className="mt-2 space-y-2">
               {isGroupedRound ? (
                 roundMatches.length === 0 ? (
-                  <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-500">
+                  <p className="rounded-xl bg-[#f3efe6] p-3 text-sm text-slate-500">
                     No matchups set up for this round yet.
                   </p>
                 ) : (
@@ -351,7 +349,7 @@ export function OverviewScreen({
                     return (
                       <div
                         key={m.id}
-                        className="space-y-1 rounded-xl bg-slate-50 p-3 text-sm"
+                        className="space-y-1 rounded-xl bg-[#f3efe6] p-3 text-sm"
                       >
                         <p className="text-xs font-bold text-slate-500">
                           {m.label}
@@ -382,14 +380,14 @@ export function OverviewScreen({
                   })
                 )
               ) : leaders.length === 0 ? (
-                <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-500">
+                <p className="rounded-xl bg-[#f3efe6] p-3 text-sm text-slate-500">
                   No scores submitted for this round yet.
                 </p>
               ) : (
                 (showAllLeaders ? standings : leaders).map((row, index) => (
                   <div
                     key={row.player.id}
-                    className="flex items-center justify-between rounded-xl bg-slate-50 p-3 text-sm"
+                    className="flex items-center justify-between rounded-xl bg-[#f3efe6] p-3 text-sm"
                   >
                     <div className="flex min-w-0 items-center gap-2.5">
                       <PlayerAvatar
@@ -439,7 +437,7 @@ export function OverviewScreen({
             leaders.length > 0 ? (
               <button
                 onClick={() => setShowAllLeaders((v) => !v)}
-                className="mt-3 w-full rounded-xl bg-slate-100 py-2 text-sm font-black text-slate-600"
+                className="mt-3 w-full rounded-xl bg-[#ece7db] py-2 text-sm font-black text-slate-600"
               >
                 {showAllLeaders
                   ? "Show top 3"
@@ -452,13 +450,13 @@ export function OverviewScreen({
 
       {/* 4 — tournament race */}
       <section>
-        <h2 className="mb-3 flex items-center gap-2 text-xl font-black text-fairway-900"><span className="h-[18px] w-2 rounded-[3px] bg-accent" />
+        <h2 className="mb-3 flex items-center gap-2 font-anton text-2xl tracking-tight text-ink"><span className="h-5 w-2 rounded-[3px] bg-mint" />
           Tournament Race
         </h2>
         <Card className="p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 className="text-xl font-black">
+              <h3 className="font-anton text-2xl">
                 Projected: {race.projectedTotalPoints.A} –{" "}
                 {race.projectedTotalPoints.B}
               </h3>
@@ -466,24 +464,24 @@ export function OverviewScreen({
                 Confirmed points plus current-round projections.
               </p>
             </div>
-            <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
+            <div className="rounded-full bg-[#ece7db] px-3 py-1 text-xs font-black text-slate-600">
               {race.totalProjectedRemaining} left
             </div>
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-2 text-center">
-            <div className="rounded-xl bg-slate-50 p-3">
+            <div className="rounded-xl bg-[#f3efe6] p-3">
               <p className="text-xs font-bold text-slate-500">{teamAName}</p>
-              <p className="mt-1 text-xl font-black">
+              <p className="mt-1 font-anton text-2xl">
                 {race.confirmedPriorPoints.A}
               </p>
               <p className="mt-1 text-xs text-slate-500">
                 +{race.currentProjectedPoints.A} this round
               </p>
             </div>
-            <div className="rounded-xl bg-slate-50 p-3">
+            <div className="rounded-xl bg-[#f3efe6] p-3">
               <p className="text-xs font-bold text-slate-500">{teamBName}</p>
-              <p className="mt-1 text-xl font-black">
+              <p className="mt-1 font-anton text-2xl">
                 {race.confirmedPriorPoints.B}
               </p>
               <p className="mt-1 text-xs text-slate-500">
@@ -499,7 +497,7 @@ export function OverviewScreen({
               <span className="text-team-south">{teamBName}</span>
             </div>
             <div className="relative mt-2 h-4">
-              <div className="absolute inset-0 overflow-hidden rounded-full border border-line bg-slate-100">
+              <div className="absolute inset-0 overflow-hidden rounded-full border border-line bg-[#ece7db]">
                 <div
                   className="absolute inset-y-0 left-0 bg-team-north"
                   style={{ width: `${aPct}%` }}
@@ -528,7 +526,7 @@ export function OverviewScreen({
 
       {/* 5 — stat highlights */}
       <section>
-        <h2 className="mb-3 flex items-center gap-2 text-xl font-black text-fairway-900"><span className="h-[18px] w-2 rounded-[3px] bg-accent" />Highlights</h2>
+        <h2 className="mb-3 flex items-center gap-2 font-anton text-2xl tracking-tight text-ink"><span className="h-5 w-2 rounded-[3px] bg-mint" />Highlights</h2>
         <div className="grid grid-cols-2 gap-3">
           <div className="flex items-center gap-2.5 rounded-[18px] border border-line bg-white p-3 shadow-[0_10px_24px_-20px_rgba(14,76,48,0.5)]">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e7f7ef] text-lg">
@@ -588,17 +586,17 @@ export function OverviewScreen({
 
       {/* 6 — awards */}
       <section>
-        <h2 className="mb-3 flex items-center gap-2 text-xl font-black text-fairway-900"><span className="h-[18px] w-2 rounded-[3px] bg-accent" />Awards</h2>
+        <h2 className="mb-3 flex items-center gap-2 font-anton text-2xl tracking-tight text-ink"><span className="h-5 w-2 rounded-[3px] bg-mint" />Awards</h2>
         <div className="grid grid-cols-3 gap-2">
-          <AwardTile emoji="🏆" label="MVP" award={awards.mvp} />
-          <AwardTile emoji="🎯" label="Clutch" award={awards.clutch} />
-          <AwardTile emoji="❄️" label="Coldest" award={awards.coldest} />
+          <AwardTile img="/brand/mvp.png" label="MVP" award={awards.mvp} />
+          <AwardTile img="/brand/clutch.png" label="Clutch" award={awards.clutch} />
+          <AwardTile img="/brand/coldest.png" label="Coldest" award={awards.coldest} />
         </div>
       </section>
 
       {/* 7 — progress */}
       <section>
-        <h2 className="mb-3 flex items-center gap-2 text-xl font-black text-fairway-900"><span className="h-[18px] w-2 rounded-[3px] bg-accent" />
+        <h2 className="mb-3 flex items-center gap-2 font-anton text-2xl tracking-tight text-ink"><span className="h-5 w-2 rounded-[3px] bg-mint" />
           Official Progress
         </h2>
         <Card className="p-5">
@@ -610,26 +608,26 @@ export function OverviewScreen({
               {Math.round(progress.progressPercent)}%
             </p>
           </div>
-          <div className="mt-3 h-4 overflow-hidden rounded-full bg-slate-100">
+          <div className="mt-3 h-4 overflow-hidden rounded-full bg-[#ece7db]">
             <div
-              className="h-full rounded-full bg-fairway-900"
+              className="h-full rounded-full bg-gradient-to-r from-fairway-700 to-mint"
               style={{ width: `${progress.progressPercent}%` }}
             />
           </div>
           <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-xl bg-slate-50 p-3">
+            <div className="rounded-xl bg-[#f3efe6] p-3">
               <p className="text-xs font-bold text-slate-500">{teamAName}</p>
-              <p className="mt-1 text-xl font-black">{progress.teamPoints.A}</p>
+              <p className="mt-1 font-anton text-2xl">{progress.teamPoints.A}</p>
             </div>
             <div className="rounded-xl bg-sand-50 p-3">
               <p className="text-xs font-bold text-slate-500">Remaining</p>
-              <p className="mt-1 text-xl font-black">
+              <p className="mt-1 font-anton text-2xl">
                 {progress.remainingPoints}
               </p>
             </div>
-            <div className="rounded-xl bg-slate-50 p-3">
+            <div className="rounded-xl bg-[#f3efe6] p-3">
               <p className="text-xs font-bold text-slate-500">{teamBName}</p>
-              <p className="mt-1 text-xl font-black">{progress.teamPoints.B}</p>
+              <p className="mt-1 font-anton text-2xl">{progress.teamPoints.B}</p>
             </div>
           </div>
         </Card>

@@ -30,16 +30,16 @@ export function StandingsCard() {
 
   return (
     <section>
-      <h2 className="mb-3 flex items-center gap-2 text-xl font-black text-fairway-900">
-        <span className="h-[18px] w-2 rounded-[3px] bg-accent" />
+      <h2 className="mb-3 flex items-center gap-2 font-anton text-2xl tracking-tight text-ink">
+        <span className="h-5 w-2 rounded-[3px] bg-mint" />
         Trip Standings
       </h2>
 
       <Card className="p-5">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 text-center">
           <div>
-            <p className="font-bold text-fairway-900">{teamAName}</p>
-            <p className="mt-2 text-5xl font-black text-fairway-900">
+            <p className="font-bold text-team-north">{teamAName}</p>
+            <p className="mt-2 font-anton text-5xl text-team-north">
               {totals.A}
             </p>
           </div>
@@ -47,8 +47,8 @@ export function StandingsCard() {
           <div className="text-5xl">🏆</div>
 
           <div>
-            <p className="font-bold text-clover">{teamBName}</p>
-            <p className="mt-2 text-5xl font-black text-clover">{totals.B}</p>
+            <p className="font-bold text-team-south">{teamBName}</p>
+            <p className="mt-2 font-anton text-5xl text-team-south">{totals.B}</p>
           </div>
         </div>
 

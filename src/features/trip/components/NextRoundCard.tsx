@@ -30,8 +30,8 @@ export function NextRoundCard({
   return (
     <section>
       <div className="mb-3 flex items-center gap-2">
-        <span className="h-[18px] w-2 rounded-[3px] bg-accent" />
-        <h2 className="text-xl font-black text-fairway-900">{heading}</h2>
+        <span className="h-5 w-2 rounded-[3px] bg-mint" />
+        <h2 className="font-anton text-2xl tracking-tight text-ink">{heading}</h2>
         {status === "live" ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-black text-red-700">
             <span className="relative flex h-2 w-2">
