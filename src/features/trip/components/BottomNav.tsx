@@ -7,11 +7,11 @@ export function BottomNav({
   activeScreen: Screen;
   setActiveScreen: (screen: Screen) => void;
 }) {
-  const items: { id: Screen; label: string; icon: string; primary?: boolean }[] = [
-    { id: "overview", label: "The Nest", icon: "🪺" },
-    { id: "tournament", label: "Pecking Order", icon: "🏆" },
-    { id: "addScore", label: "Tee It Up", icon: "⛳", primary: true },
-    { id: "more", label: "Locker", icon: "🗄️" },
+  const items: { id: Screen; label: string; img: string }[] = [
+    { id: "overview", label: "The Nest", img: "/brand/the-nest.png" },
+    { id: "tournament", label: "Pecking Order", img: "/brand/pecking-order.png" },
+    { id: "addScore", label: "Tee It Up", img: "/brand/tee-it-up.png" },
+    { id: "more", label: "Locker", img: "/brand/locker.png" },
   ];
 
   const tournamentScreens: Screen[] = [
@@ -36,31 +36,26 @@ export function BottomNav({
               ? tournamentScreens.includes(activeScreen)
               : activeScreen === item.id;
 
-          if (item.primary) {
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveScreen(item.id)}
-                className="flex flex-col items-center gap-1 text-[11px] font-extrabold text-fairway-900"
-              >
-                <span className="-mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-fairway-900 text-2xl text-white shadow-[0_12px_22px_-8px_rgba(19,100,63,0.75)] ring-4 ring-[#f7f6f1]">
-                  {item.icon}
-                </span>
-                {item.label}
-              </button>
-            );
-          }
-
           return (
             <button
               key={item.id}
               onClick={() => setActiveScreen(item.id)}
-              className={`flex flex-col items-center gap-1 rounded-xl px-1 py-1 text-[11px] font-extrabold ${
+              className={`flex flex-col items-center gap-1 text-[10px] font-extrabold leading-tight ${
                 active ? "text-fairway-900" : "text-slate-400"
               }`}
             >
-              <span className={`text-xl ${active ? "" : "opacity-50 grayscale"}`}>
-                {item.icon}
+              <span
+                className={`-mt-7 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-white ring-4 ring-[#f7f6f1] transition ${
+                  active
+                    ? "border-[3px] border-fairway-900 shadow-[0_14px_24px_-8px_rgba(19,100,63,0.6)] scale-105"
+                    : "border border-line shadow-[0_10px_20px_-8px_rgba(11,36,24,0.4)]"
+                }`}
+              >
+                <img
+                  src={item.img}
+                  alt={item.label}
+                  className="h-full w-full object-contain"
+                />
               </span>
               {item.label}
             </button>
