@@ -21,12 +21,13 @@ export function MatchDetailScreen({
   matchId: string;
   setActiveScreen: (screen: Screen) => void;
 }) {
-  const { courses, matches, players, rounds, scores, scoringSettings } =
+  const { courses, matches, players, rounds, scores, scoringSettings, groupScores } =
     useTripState();
 
   const match = matches.find((item) => item.id === matchId) ?? matches[0];
   const round = rounds.find((item) => item.id === match.roundId) ?? rounds[0];
   const course = courses.find((item) => item.id === round.courseId) ?? courses[0];
+  const isGrouped = round.groupSize != null;
 
   const result = resolveMatch(
     match,
@@ -36,6 +37,33 @@ export function MatchDetailScreen({
     courses,
     scoringSettings
   );
+
+  const renderGroupedSide = (side: "A" | "B", playerIds: string[]) => {
+    const gs = groupScores.find(
+      (g) => g.matchId === match.id && g.side === side
+    );
+    const names =
+      playerIds
+        .map((id) => players.find((p) => p.id === id)?.name)
+        .filter(Boolean)
+        .join(" & ") || "—";
+    return (
+      <div className="rounded-xl bg-slate-50 p-3 text-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-bold">{names}</p>
+            <p className="text-xs text-slate-500">Combined group score</p>
+          </div>
+          <div className="text-right">
+            <p className="font-black">{gs?.grossScore ?? "-"}</p>
+            <p className="text-xs text-slate-500">
+              Front: {gs?.frontNineScore ?? "-"}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const renderPlayerRows = (playerIds: string[]) =>
     playerIds.map((playerId) => {
@@ -141,12 +169,20 @@ export function MatchDetailScreen({
 
       <Card className="p-4">
         <h2 className="font-black text-red-800">Team A</h2>
-        <div className="mt-3 space-y-2">{renderPlayerRows(match.aPlayers)}</div>
+        <div className="mt-3 space-y-2">
+          {isGrouped
+            ? renderGroupedSide("A", match.aPlayers)
+            : renderPlayerRows(match.aPlayers)}
+        </div>
       </Card>
 
       <Card className="p-4">
         <h2 className="font-black text-blue-800">Team B</h2>
-        <div className="mt-3 space-y-2">{renderPlayerRows(match.bPlayers)}</div>
+        <div className="mt-3 space-y-2">
+          {isGrouped
+            ? renderGroupedSide("B", match.bPlayers)
+            : renderPlayerRows(match.bPlayers)}
+        </div>
       </Card>
     </div>
   );
