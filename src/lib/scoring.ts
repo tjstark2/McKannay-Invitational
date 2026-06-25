@@ -299,7 +299,7 @@ export function resolveMatch(
       label:
         match.manualResult === "T"
           ? "Tied"
-          : `Team ${match.manualResult} wins`,
+          : `Team ${match.manualResult} Wins`,
       waitingOn: [],
     };
   }
@@ -312,7 +312,7 @@ export function resolveMatch(
         label:
           match.manualResult === "T"
             ? "Manual result: Tie"
-            : `Manual result: Team ${match.manualResult} wins`,
+            : `Manual result: Team ${match.manualResult} Wins`,
         waitingOn: [],
         isManual: true,
       };
@@ -372,7 +372,7 @@ export function resolveMatch(
     aNet,
     bNet,
     label:
-      winner === "T" ? `Tie: ${aNet}` : `Team ${winner} wins ${aNet}–${bNet}`,
+      winner === "T" ? `Tie: ${aNet}` : `Team ${winner} Wins ${aNet}–${bNet}`,
     waitingOn: [],
   };
 }

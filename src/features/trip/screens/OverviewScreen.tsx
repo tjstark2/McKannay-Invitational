@@ -329,7 +329,7 @@ export function OverviewScreen({
                               ? "Tied"
                               : `${
                                   m.manualResult === "A" ? teamAName : teamBName
-                                } wins`
+                                } Wins`
                             : "In progress"}
                         </p>
                       </div>
