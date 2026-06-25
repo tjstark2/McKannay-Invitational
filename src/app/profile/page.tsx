@@ -80,7 +80,7 @@ export default function ProfilePage() {
             ring="#1f6f54"
           />
           <div>
-            <h1 className="text-3xl font-black text-ink">Profile</h1>
+            <h1 className="font-anton text-4xl tracking-tight text-ink">Profile</h1>
             <p className="mt-1 text-slate-500">Your account details.</p>
           </div>
         </div>

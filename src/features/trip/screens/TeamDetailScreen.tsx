@@ -52,8 +52,8 @@ export function TeamDetailScreen({
             <h1
               className={
                 team.id === "A"
-                  ? "text-3xl font-black text-red-800"
-                  : "text-3xl font-black text-blue-800"
+                  ? "font-anton text-4xl text-team-north"
+                  : "font-anton text-4xl text-team-south"
               }
             >
               {team.name}
@@ -71,14 +71,14 @@ export function TeamDetailScreen({
         <div className="mt-5 grid grid-cols-2 gap-2 text-center">
           <div className="rounded-xl bg-[#f3efe6] p-3">
             <p className="text-xs font-bold text-slate-500">Avg HCP</p>
-            <p className="mt-1 text-xl font-black">
+            <p className="mt-1 font-anton text-2xl">
               {summary?.averageHandicap.toFixed(1)}
             </p>
           </div>
 
           <div className="rounded-xl bg-[#f3efe6] p-3">
             <p className="text-xs font-bold text-slate-500">Match Wins</p>
-            <p className="mt-1 text-xl font-black">
+            <p className="mt-1 font-anton text-2xl">
               {summary?.completedMatches}
             </p>
           </div>

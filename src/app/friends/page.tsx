@@ -118,7 +118,7 @@ export default function FriendsPage() {
       </header>
 
       <main className="mx-auto max-w-3xl px-5 py-8">
-        <h1 className="text-3xl font-black text-ink">Friends</h1>
+        <h1 className="font-anton text-4xl tracking-tight text-ink">Friends</h1>
         <p className="mt-1 text-slate-500">
           Find people by name, @username, city, or state.
         </p>

@@ -11,7 +11,6 @@ import {
 } from "@/lib/scoring";
 import { formatPlusMinus, formatRoundFormat } from "@/lib/format";
 import { Card } from "@/components/ui/Card";
-import { Pill } from "@/components/ui/Pill";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import type { Screen } from "@/types";
 
@@ -39,6 +38,23 @@ export function MatchDetailScreen({
     scoringSettings
   );
 
+  const started = isGrouped
+    ? groupScores.some(
+        (g) =>
+          g.matchId === match.id &&
+          (g.frontNineScore != null || g.grossScore != null)
+      )
+    : [...match.aPlayers, ...match.bPlayers].some((pid) => {
+        const sc = getScore(scores, round.id, pid);
+        return (
+          sc &&
+          (typeof sc.frontNineScore === "number" ||
+            typeof sc.grossScore === "number")
+        );
+      });
+  const matchStatus: "final" | "live" | "upcoming" =
+    result.status === "final" ? "final" : started ? "live" : "upcoming";
+
   const renderGroupedSide = (side: "A" | "B", playerIds: string[]) => {
     const gs = groupScores.find(
       (g) => g.matchId === match.id && g.side === side
@@ -49,7 +65,7 @@ export function MatchDetailScreen({
         .filter(Boolean)
         .join(" & ") || "—";
     return (
-      <div className="rounded-xl bg-slate-50 p-3 text-sm">
+      <div className="rounded-xl bg-[#f3efe6] p-3 text-sm">
         <div className="flex items-center justify-between">
           <div>
             <p className="font-bold">{names}</p>
@@ -98,7 +114,7 @@ export function MatchDetailScreen({
         : null;
 
       return (
-        <div key={player.id} className="rounded-xl bg-slate-50 p-3 text-sm">
+        <div key={player.id} className="rounded-xl bg-[#f3efe6] p-3 text-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="flex items-center gap-2 font-bold">
@@ -156,7 +172,7 @@ export function MatchDetailScreen({
         <div className="p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-black">{match.label}</h1>
+              <h1 className="font-anton text-3xl tracking-tight text-ink">{match.label}</h1>
               <p className="mt-1 text-sm text-slate-500">
                 {round.title} · {course.name}
               </p>
@@ -165,9 +181,23 @@ export function MatchDetailScreen({
               </p>
             </div>
 
-            <Pill tone={result.status === "final" ? "green" : "amber"}>
-              {result.status}
-            </Pill>
+            {matchStatus === "live" ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-black text-red-700">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-red-600" />
+                </span>
+                LIVE
+              </span>
+            ) : matchStatus === "final" ? (
+              <span className="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-black text-slate-600">
+                FINAL
+              </span>
+            ) : (
+              <span className="rounded-full bg-fairway-100 px-2.5 py-1 text-xs font-black text-fairway-900">
+                UP NEXT
+              </span>
+            )}
           </div>
 
           <p className="mt-4 rounded-xl bg-sand-50 p-3 text-sm font-semibold text-slate-700">
@@ -177,7 +207,7 @@ export function MatchDetailScreen({
       </Card>
 
       <Card className="p-4">
-        <h2 className="font-black text-red-800">Team A</h2>
+        <h2 className="font-anton text-xl text-team-north">Team A</h2>
         <div className="mt-3 space-y-2">
           {isGrouped
             ? renderGroupedSide("A", match.aPlayers)
@@ -186,7 +216,7 @@ export function MatchDetailScreen({
       </Card>
 
       <Card className="p-4">
-        <h2 className="font-black text-blue-800">Team B</h2>
+        <h2 className="font-anton text-xl text-team-south">Team B</h2>
         <div className="mt-3 space-y-2">
           {isGrouped
             ? renderGroupedSide("B", match.bPlayers)

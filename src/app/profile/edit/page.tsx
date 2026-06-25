@@ -133,7 +133,7 @@ export default function EditProfilePage() {
       </header>
 
       <main className="mx-auto max-w-2xl px-5 py-8">
-        <h1 className="text-3xl font-black text-ink">Edit Profile</h1>
+        <h1 className="font-anton text-4xl tracking-tight text-ink">Edit Profile</h1>
         <p className="mt-1 text-slate-500">
           Update your handle, location, and notification preferences.
         </p>

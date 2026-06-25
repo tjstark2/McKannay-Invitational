@@ -3,7 +3,6 @@
 import { ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
-import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useViewer } from "@/features/trip/state/ViewerContext";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -48,10 +47,15 @@ export function MoreScreen({
 
   return (
     <div className="space-y-4">
-      <SectionHeader
-        title="More"
-        subtitle="Trip details, rules, setup, and utilities."
-      />
+      <div className="flex items-center gap-3">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-white shadow-[0_8px_18px_-12px_rgba(14,76,48,0.5)]">
+          <img src="/brand/locker.png" alt="Locker" className="h-full w-full object-contain" />
+        </span>
+        <div>
+          <h1 className="font-anton text-3xl leading-none tracking-tight text-ink">Locker</h1>
+          <p className="mt-1 text-xs font-semibold text-slate-500">Trip details, rules, setup, and utilities.</p>
+        </div>
+      </div>
 
       {canManage ? (
         <button
@@ -73,7 +77,7 @@ export function MoreScreen({
       ) : null}
 
       <Card className="p-5">
-        <h2 className="font-black">Trip Details</h2>
+        <h2 className="font-anton text-xl tracking-tight text-ink">Trip Details</h2>
 
         <div className="mt-4 space-y-2 text-sm text-slate-600">
           <p>
@@ -100,14 +104,14 @@ export function MoreScreen({
       </Card>
 
       <Card className="p-5">
-        <h2 className="font-black">Quick Links</h2>
+        <h2 className="font-anton text-xl tracking-tight text-ink">Quick Links</h2>
 
         <div className="mt-4 space-y-2">
           {links.map((link) => (
             <button
               key={link.label}
               onClick={() => setActiveScreen(link.screen)}
-              className="block w-full rounded-xl bg-[#f3efe6] p-4 text-left transition hover:bg-slate-100"
+              className="block w-full rounded-xl bg-[#f3efe6] p-4 text-left transition hover:bg-[#ece7db]"
             >
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -125,7 +129,7 @@ export function MoreScreen({
       </Card>
 
       <Card className="p-5">
-        <h2 className="font-black">{trip.name}</h2>
+        <h2 className="font-anton text-xl tracking-tight text-ink">{trip.name}</h2>
 
         <p className="mt-3 text-sm leading-6 text-slate-600">
           Tournament scoring, schedules, standings, and player stats are

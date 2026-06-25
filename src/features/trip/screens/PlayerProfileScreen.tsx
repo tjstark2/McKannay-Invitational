@@ -93,7 +93,7 @@ export function PlayerProfileScreen({
               ring={player.team === "A" ? "#dc2626" : "#2563eb"}
             />
             <div>
-              <h1 className="text-2xl font-black">{player.name}</h1>
+              <h1 className="font-anton text-3xl tracking-tight text-ink">{player.name}</h1>
               <p className="mt-1 text-sm text-slate-500">
                 {team?.name ?? `Team ${player.team}`}
               </p>
@@ -108,19 +108,19 @@ export function PlayerProfileScreen({
         <div className="mt-5 grid grid-cols-3 gap-2 text-center">
           <div className="rounded-xl bg-[#f3efe6] p-3">
             <p className="text-xs font-bold text-slate-500">Points</p>
-            <p className="mt-1 text-xl font-black">{pointsWon}</p>
+            <p className="mt-1 font-anton text-2xl">{pointsWon}</p>
           </div>
 
           <div className="rounded-xl bg-[#f3efe6] p-3">
             <p className="text-xs font-bold text-slate-500">Net +/-</p>
-            <p className="mt-1 text-xl font-black">
+            <p className="mt-1 font-anton text-2xl">
               {formatPlusMinus(totalNetToPar)}
             </p>
           </div>
 
           <div className="rounded-xl bg-[#f3efe6] p-3">
             <p className="text-xs font-bold text-slate-500">Rounds</p>
-            <p className="mt-1 text-xl font-black">
+            <p className="mt-1 font-anton text-2xl">
               {finalPlayerScores.length}
             </p>
           </div>

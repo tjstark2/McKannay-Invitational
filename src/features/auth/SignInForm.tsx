@@ -34,7 +34,7 @@ export function SignInForm() {
 
   return (
     <div>
-      <h1 className="text-2xl font-black text-fairway-900">Welcome back</h1>
+      <h1 className="font-anton text-3xl tracking-tight text-fairway-900">Welcome back</h1>
       <p className="mt-1 text-sm text-slate-500">Sign in to your account.</p>
 
       <div className="mt-6 space-y-4">

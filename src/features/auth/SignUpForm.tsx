@@ -71,7 +71,7 @@ export function SignUpForm() {
         <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/20 text-2xl">
           📧
         </span>
-        <h1 className="text-2xl font-black text-fairway-900">Check Your Email</h1>
+        <h1 className="font-anton text-3xl tracking-tight text-fairway-900">Check Your Email</h1>
         <p className="mt-2 text-sm leading-6 text-slate-600">
           We sent a confirmation link to <b>{sentTo}</b>. Click it to verify your
           account, then come back and sign in.
@@ -88,7 +88,7 @@ export function SignUpForm() {
 
   return (
     <div>
-      <h1 className="text-2xl font-black text-fairway-900">Create Your Account</h1>
+      <h1 className="font-anton text-3xl tracking-tight text-fairway-900">Create Your Account</h1>
       <p className="mt-1 text-sm text-slate-500">
         Join TourneyBirdie to run and play in tournaments.
       </p>
