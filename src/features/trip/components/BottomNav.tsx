@@ -47,7 +47,7 @@ export function BottomNav({
               <span
                 className={`-mt-7 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-white ring-4 ring-[#f7f6f1] transition ${
                   active
-                    ? "border-[3px] border-fairway-900 shadow-[0_14px_24px_-8px_rgba(19,100,63,0.6)] scale-105"
+                    ? "scale-[1.18] -translate-y-1.5 border-[3px] border-fairway-900 shadow-[0_18px_28px_-8px_rgba(19,100,63,0.65)]"
                     : "border border-line shadow-[0_10px_20px_-8px_rgba(11,36,24,0.4)]"
                 }`}
               >

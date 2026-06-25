@@ -205,6 +205,31 @@ export function OverviewScreen({
 
   return (
     <div className="space-y-6">
+      {/* 0 — The Nest */}
+      <div className="relative flex items-center gap-3 rounded-[20px] border border-line bg-white px-4 py-3 pr-28 shadow-[0_14px_30px_-22px_rgba(14,76,48,0.4)]">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-white">
+          <img
+            src="/brand/the-nest.png"
+            alt="The Nest"
+            className="h-full w-full object-contain"
+          />
+        </span>
+        <div className="min-w-0">
+          <h2 className="font-anton text-2xl leading-none tracking-tight text-ink">
+            The Nest
+          </h2>
+          <p className="mt-1 text-xs font-semibold text-slate-500">
+            Your tournament home base.
+          </p>
+        </div>
+        <img
+          src="/brand/hero-mascot.png"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-5 right-2 h-24 w-auto drop-shadow-[0_10px_14px_rgba(11,36,24,0.35)]"
+        />
+      </div>
+
       {/* 1 — hero */}
       <NextRoundCard
         round={featuredRound}
