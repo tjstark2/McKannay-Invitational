@@ -10,7 +10,7 @@ import { AuthShell } from "@/features/auth/AuthShell";
 type FmtOpt = {
   id: string;
   label: string;
-  format: "casual" | "scramble" | "best_ball";
+  format: "casual" | "scramble" | "best_ball" | "match_play" | "net_score";
   groupSize: number | null;
   teePer: number; // players per tee-time group
   increment: number; // roster must be a multiple of this (1 = any)
@@ -23,6 +23,8 @@ const FORMATS: FmtOpt[] = [
   { id: "scramble_4", label: "Scramble · 4 v 4", format: "scramble", groupSize: 4, teePer: 8, increment: 8, desc: "Foursomes play one ball; one combined score per group." },
   { id: "bestball_2", label: "Best Ball · 2 v 2", format: "best_ball", groupSize: 2, teePer: 4, increment: 4, desc: "Pairs; one combined score per pair." },
   { id: "bestball_4", label: "Best Ball · 4 v 4", format: "best_ball", groupSize: 4, teePer: 8, increment: 8, desc: "Foursomes; one combined score per group." },
+  { id: "match_play", label: "Singles Match Play", format: "match_play", groupSize: null, teePer: 4, increment: 1, desc: "Head-to-head pairings for points." },
+  { id: "net_score", label: "Net Stroke Play", format: "net_score", groupSize: null, teePer: 4, increment: 1, desc: "Individual net leaderboard." },
 ];
 
 type CourseDraft = { name: string; par: string };
