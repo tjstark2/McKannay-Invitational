@@ -35,6 +35,7 @@ export type TripRow = {
   defending_team: string | null;
   current_round_id: string | null;
   default_format: string | null;
+  roster_size: number | null;
 };
 
 export type ScoringSettingsRow = {
@@ -136,6 +137,7 @@ export function mapTrip(row: TripRow): Trip {
     retainNumber: Number(row.retain_number ?? 0),
     defendingTeam: (row.defending_team as TeamId | null) ?? null,
     defaultFormat: row.default_format ?? null,
+    rosterSize: Number(row.roster_size ?? 0),
   };
 }
 

@@ -124,6 +124,21 @@ export function AdminScreen() {
   const teamBCount = players.filter((p) => p.team === "B").length;
   const teamsUneven = teamACount !== teamBCount;
 
+  // Grouped formats (2v2 / 4v4) are offered only when the EXPECTED roster
+  // divides evenly into them (2v2 -> multiple of 4, 4v4 -> multiple of 8) —
+  // same rule as the create wizard. Falls back to assigned players for older
+  // trips created before a roster size was recorded.
+  const groupedFits = (gs: number) => {
+    const expected =
+      trip.rosterSize > 0 ? trip.rosterSize : teamACount + teamBCount;
+    return expected >= 2 * gs && expected % (2 * gs) === 0;
+  };
+  const formatIsAvailable = (presetId: string) => {
+    const f = ROUND_FORMATS.find((x) => x.id === presetId);
+    if (!f) return false;
+    return f.groupSize == null || groupedFits(f.groupSize);
+  };
+
   function toggleRound(id: string) {
     setExpandedRound((cur) => (cur === id ? null : id));
   }
@@ -445,35 +460,57 @@ export function AdminScreen() {
       {activeTab === "rounds" ? (
         <>
           <Card className="p-4">
-            <h2 className="font-black">Active Round</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              The default round for Log Round and live views.
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="font-black">Active Round</h2>
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-amber-700">
+                Manual override
+              </span>
+            </div>
+            <p className="mt-1 text-sm leading-6 text-slate-500">
+              Tap a round to set which one is <strong>current</strong>. This
+              controls what Log Round and the live standings open to, and which
+              round shows as active across the app. Use it to move on to the
+              next round even when the current round&apos;s scores aren&apos;t
+              all in yet.
             </p>
             <div className="mt-3 grid gap-2">
-              {rounds.map((round) => (
-                <button
-                  key={round.id}
-                  onClick={() => updateCurrentRound(round.id)}
-                  className={`rounded-xl p-3 text-left ${
-                    currentRoundId === round.id
-                      ? "bg-fairway-900 text-white"
-                      : "bg-slate-50 text-slate-700"
-                  }`}
-                >
-                  <p className="font-black">
-                    Round {round.roundNumber}: {round.title}
-                  </p>
-                  <p
-                    className={`mt-1 text-xs ${
-                      currentRoundId === round.id
-                        ? "text-white/80"
-                        : "text-slate-500"
+              {rounds.map((round) => {
+                const isActive = currentRoundId === round.id;
+                return (
+                  <button
+                    key={round.id}
+                    onClick={() => updateCurrentRound(round.id)}
+                    aria-pressed={isActive}
+                    className={`rounded-xl p-3 text-left ${
+                      isActive
+                        ? "bg-fairway-900 text-white ring-2 ring-fairway-900 ring-offset-2"
+                        : "bg-slate-50 text-slate-700"
                     }`}
                   >
-                    {round.dateLabel} · {round.format.replace("_", " ")}
-                  </p>
-                </button>
-              ))}
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-black">
+                        Round {round.roundNumber}: {round.title}
+                      </p>
+                      {isActive ? (
+                        <span className="shrink-0 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white">
+                          ● Active
+                        </span>
+                      ) : (
+                        <span className="shrink-0 text-[11px] font-bold text-slate-400">
+                          Set active
+                        </span>
+                      )}
+                    </div>
+                    <p
+                      className={`mt-1 text-xs ${
+                        isActive ? "text-white/80" : "text-slate-500"
+                      }`}
+                    >
+                      {round.dateLabel} · {round.format.replace("_", " ")}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
           </Card>
 
@@ -593,7 +630,11 @@ export function AdminScreen() {
                           }}
                           className={inputClass}
                         >
-                          {ROUND_FORMATS.map((f) => (
+                          {ROUND_FORMATS.filter(
+                            (f) =>
+                              formatIsAvailable(f.id) ||
+                              f.id === roundFormatPresetId(round)
+                          ).map((f) => (
                             <option key={f.id} value={f.id}>
                               {f.label}
                             </option>
@@ -601,9 +642,9 @@ export function AdminScreen() {
                         </select>
                         <p className="mt-2 text-xs leading-5 text-slate-500">
                           Changing format rebuilds this round&apos;s match
-                          pairings. Group formats (Scramble / Best Ball 2v2 &amp;
-                          4v4) create one matchup per group; assign players in
-                          Matches below.
+                          pairings. Group formats (2v2 / 4v4) only appear when
+                          your {trip.rosterSize}-player roster divides evenly
+                          into them; assign players in Matches below.
                         </p>
 
                         <label className={`mt-3 ${labelClass}`}>
@@ -931,7 +972,9 @@ export function AdminScreen() {
                 }
                 className={inputClass}
               >
-                {ROUND_FORMATS.map((f) => (
+                {ROUND_FORMATS.filter(
+                  (f) => formatIsAvailable(f.id) || f.id === roundDraft.presetId
+                ).map((f) => (
                   <option key={f.id} value={f.id}>
                     {f.label}
                   </option>

@@ -41,6 +41,7 @@ export type Trip = {
   retainNumber: number;
   defendingTeam: TeamId | null;
   defaultFormat: string | null;
+  rosterSize: number;
 };
 
 export type Team = {

@@ -25,6 +25,7 @@ export const initialTrip: Trip = {
   retainNumber: 9,
   defendingTeam: null,
   defaultFormat: null,
+  rosterSize: 12,
 };
 
 export const initialTeams: Team[] = [
