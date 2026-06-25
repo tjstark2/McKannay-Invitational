@@ -29,6 +29,7 @@ export function MatchCenterScreen({
     players,
     rounds,
     scores,
+    groupScores,
     scoringSettings,
     currentRoundId,
   } = useTripState();
@@ -316,12 +317,30 @@ export function MatchCenterScreen({
                 <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
                   <p className="text-sm font-bold text-red-800">
                     {match.aPlayers.map(getPlayerName).join(" + ")}
+                    {round?.groupSize != null
+                      ? (() => {
+                          const g = groupScores.find(
+                            (x) => x.matchId === match.id && x.side === "A"
+                          );
+                          const v = g?.grossScore ?? g?.frontNineScore;
+                          return v != null ? ` · ${v}` : "";
+                        })()
+                      : ""}
                   </p>
 
                   <p className="text-xs font-bold text-slate-400">VS</p>
 
                   <p className="text-sm font-bold text-blue-800">
                     {match.bPlayers.map(getPlayerName).join(" + ")}
+                    {round?.groupSize != null
+                      ? (() => {
+                          const g = groupScores.find(
+                            (x) => x.matchId === match.id && x.side === "B"
+                          );
+                          const v = g?.grossScore ?? g?.frontNineScore;
+                          return v != null ? ` · ${v}` : "";
+                        })()
+                      : ""}
                   </p>
                 </div>
 

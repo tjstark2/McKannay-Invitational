@@ -52,6 +52,7 @@ export function OverviewScreen({
     rounds,
     matches,
     scores,
+    groupScores,
     courses,
     scoringSettings,
     currentRoundId,
@@ -168,12 +169,45 @@ export function OverviewScreen({
     projA > projB ? teamAName : projB > projA ? teamBName : null;
   const momentumMargin = Math.abs(projA - projB);
 
+  // Grouped rounds (Scramble / Best Ball 2v2-4v4) record one combined score
+  // per SIDE, not per player — so progress, status, and leaders come from
+  // group_scores, not per-player score entries.
+  const isGroupedRound = featuredRound.groupSize != null;
+  const roundMatches = matches.filter((m) => m.roundId === featuredRound.id);
+  const roundMatchIds = new Set(roundMatches.map((m) => m.id));
+  const roundGroupScores = groupScores.filter((g) =>
+    roundMatchIds.has(g.matchId)
+  );
+  const totalSides = roundMatches.length * 2;
+  const groupFrontIn = roundGroupScores.filter(
+    (g) => g.frontNineScore != null
+  ).length;
+  const groupFinalIn = roundGroupScores.filter(
+    (g) => g.grossScore != null
+  ).length;
+  const groupStatus =
+    totalSides > 0 && groupFinalIn === totalSides
+      ? "complete"
+      : groupFrontIn > 0 || groupFinalIn > 0
+      ? "live"
+      : "not_started";
+
+  const dispStatus = isGroupedRound ? groupStatus : featuredStatus;
+  const dispFrontIn = isGroupedRound ? groupFrontIn : frontNineSubmitted;
+  const dispFinalIn = isGroupedRound ? groupFinalIn : finalSubmitted;
+  const dispTotal = isGroupedRound ? totalSides : players.length;
+  const sideNames = (ids: string[]) =>
+    ids
+      .map((id) => players.find((p) => p.id === id)?.name)
+      .filter(Boolean)
+      .join(" & ") || "—";
+
   return (
     <div className="space-y-6">
       {/* 1 — hero */}
       <NextRoundCard
         round={featuredRound}
-        status={featuredStatus}
+        status={dispStatus}
         setActiveScreen={setActiveScreen}
       />
 
@@ -193,9 +227,9 @@ export function OverviewScreen({
               <h3 className="mt-1 text-lg font-black">{featuredRound.title}</h3>
             </div>
             <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
-              {featuredStatus === "complete"
+              {dispStatus === "complete"
                 ? "Final"
-                : featuredStatus === "live"
+                : dispStatus === "live"
                 ? "In Progress"
                 : "Not Started"}
             </div>
@@ -205,13 +239,13 @@ export function OverviewScreen({
             <div className="rounded-xl bg-slate-50 p-3">
               <p className="text-xs font-bold text-slate-500">Front 9 In</p>
               <p className="mt-1 text-xl font-black">
-                {frontNineSubmitted} / {players.length}
+                {dispFrontIn} / {dispTotal}
               </p>
             </div>
             <div className="rounded-xl bg-slate-50 p-3">
               <p className="text-xs font-bold text-slate-500">Final In</p>
               <p className="mt-1 text-xl font-black">
-                {finalSubmitted} / {players.length}
+                {dispFinalIn} / {dispTotal}
               </p>
             </div>
           </div>
@@ -224,14 +258,14 @@ export function OverviewScreen({
                 ? `${momentumLeader} projected to take this round by ${momentumMargin} ${
                     momentumMargin === 1 ? "point" : "points"
                   } (${projA}–${projB}).`
-                : featuredStatus === "not_started"
+                : dispStatus === "not_started"
                 ? "No scores in yet — momentum opens once play starts."
                 : `Dead even this round (${projA}–${projB}).`}
             </p>
           </div>
 
           {/* hot right now */}
-          {hot ? (
+          {!isGroupedRound && hot ? (
             <div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm">
               <p className="font-black">🔥 Hot Right Now</p>
               <p className="mt-1 text-slate-600">
@@ -247,7 +281,62 @@ export function OverviewScreen({
               Live Leaders
             </p>
             <div className="mt-2 space-y-2">
-              {leaders.length === 0 ? (
+              {isGroupedRound ? (
+                roundMatches.length === 0 ? (
+                  <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-500">
+                    No matchups set up for this round yet.
+                  </p>
+                ) : (
+                  roundMatches.map((m) => {
+                    const a = roundGroupScores.find(
+                      (g) => g.matchId === m.id && g.side === "A"
+                    );
+                    const b = roundGroupScores.find(
+                      (g) => g.matchId === m.id && g.side === "B"
+                    );
+                    const show = (s?: {
+                      frontNineScore?: number;
+                      grossScore?: number;
+                    }) =>
+                      s?.grossScore != null
+                        ? String(s.grossScore)
+                        : s?.frontNineScore != null
+                        ? `${s.frontNineScore} (F9)`
+                        : "—";
+                    return (
+                      <div
+                        key={m.id}
+                        className="space-y-1 rounded-xl bg-slate-50 p-3 text-sm"
+                      >
+                        <p className="text-xs font-bold text-slate-500">
+                          {m.label}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-red-800">
+                            {teamAName} · {sideNames(m.aPlayers)}
+                          </span>
+                          <span className="font-black">{show(a)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-blue-800">
+                            {teamBName} · {sideNames(m.bPlayers)}
+                          </span>
+                          <span className="font-black">{show(b)}</span>
+                        </div>
+                        <p className="text-xs font-bold text-fairway-900">
+                          {m.manualResult
+                            ? m.manualResult === "T"
+                              ? "Tied"
+                              : `${
+                                  m.manualResult === "A" ? teamAName : teamBName
+                                } wins`
+                            : "In progress"}
+                        </p>
+                      </div>
+                    );
+                  })
+                )
+              ) : leaders.length === 0 ? (
                 <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-500">
                   No scores submitted for this round yet.
                 </p>
@@ -292,7 +381,9 @@ export function OverviewScreen({
               )}
             </div>
 
-            {standings.length > leaders.length && leaders.length > 0 ? (
+            {!isGroupedRound &&
+            standings.length > leaders.length &&
+            leaders.length > 0 ? (
               <button
                 onClick={() => setShowAllLeaders((v) => !v)}
                 className="mt-3 w-full rounded-xl bg-slate-100 py-2 text-sm font-black text-slate-600"
