@@ -8,6 +8,33 @@ import type { Round, TeamId, Winner } from "@/types";
 
 type AdminTab = "setup" | "rounds" | "scoring";
 
+const ROUND_FORMATS: {
+  id: string;
+  label: string;
+  format: Round["format"];
+  groupSize: number | null;
+}[] = [
+  { id: "casual", label: "Casual", format: "casual", groupSize: null },
+  { id: "scramble_2", label: "Scramble · 2 v 2", format: "scramble", groupSize: 2 },
+  { id: "scramble_4", label: "Scramble · 4 v 4", format: "scramble", groupSize: 4 },
+  { id: "bestball_2", label: "Best Ball · 2 v 2", format: "best_ball", groupSize: 2 },
+  { id: "bestball_4", label: "Best Ball · 4 v 4", format: "best_ball", groupSize: 4 },
+  { id: "best_ball", label: "Best Ball (classic)", format: "best_ball", groupSize: null },
+  { id: "match_play", label: "Singles Match Play", format: "match_play", groupSize: null },
+  { id: "net_score", label: "Net Stroke Play", format: "net_score", groupSize: null },
+];
+
+function roundFormatPresetId(round: Round): string {
+  const gs = round.groupSize ?? null;
+  if (gs && round.format === "scramble") return gs === 4 ? "scramble_4" : "scramble_2";
+  if (gs && round.format === "best_ball") return gs === 4 ? "bestball_4" : "bestball_2";
+  if (round.format === "match_play") return "match_play";
+  if (round.format === "net_score") return "net_score";
+  if (round.format === "casual") return "casual";
+  return "best_ball";
+}
+
+
 export function AdminScreen() {
   const {
     trip,
@@ -55,6 +82,12 @@ export function AdminScreen() {
   const [newCourseRating, setNewCourseRating] = useState("72");
   const [newCourseSlope, setNewCourseSlope] = useState("113");
   const [newCourseTee, setNewCourseTee] = useState("Blue");
+
+  const [roundDraft, setRoundDraft] = useState<null | {
+    title: string;
+    courseId: string;
+    presetId: string;
+  }>(null);
   const [newCourseYardage, setNewCourseYardage] = useState("");
 
   const [toast, setToast] = useState<string | null>(null);
@@ -115,15 +148,28 @@ export function AdminScreen() {
     setNewPlayerHandicap("");
   }
 
-  function handleAddRound() {
-    addRound({
+  function openRoundDraft() {
+    setRoundDraft({
       title: `Round ${rounds.length + 1}`,
-      dateLabel: "",
       courseId: courses[0]?.id ?? "",
-      format: "net_score",
+      presetId: "net_score",
+    });
+  }
+
+  function createRoundFromDraft() {
+    if (!roundDraft) return;
+    const preset =
+      ROUND_FORMATS.find((f) => f.id === roundDraft.presetId) ?? ROUND_FORMATS[0];
+    addRound({
+      title: roundDraft.title.trim() || `Round ${rounds.length + 1}`,
+      dateLabel: "",
+      courseId: roundDraft.courseId || courses[0]?.id || "",
+      format: preset.format,
+      groupSize: preset.groupSize,
       pointsAvailable: Math.floor(players.length / 2),
       arrivalTime: "",
     });
+    setRoundDraft(null);
   }
 
   function handleAddCourse() {
@@ -533,22 +579,31 @@ export function AdminScreen() {
 
                         <label className={`mt-3 ${labelClass}`}>Format</label>
                         <select
-                          value={round.format}
-                          onChange={(event) =>
-                            updateRoundFormat(
-                              round.id,
-                              event.target.value as Round["format"]
-                            )
-                          }
+                          value={roundFormatPresetId(round)}
+                          onChange={(event) => {
+                            const preset = ROUND_FORMATS.find(
+                              (f) => f.id === event.target.value
+                            );
+                            if (preset)
+                              updateRoundFormat(
+                                round.id,
+                                preset.format,
+                                preset.groupSize
+                              );
+                          }}
                           className={inputClass}
                         >
-                          <option value="best_ball">Best Ball</option>
-                          <option value="match_play">Singles</option>
-                          <option value="net_score">Net Score</option>
+                          {ROUND_FORMATS.map((f) => (
+                            <option key={f.id} value={f.id}>
+                              {f.label}
+                            </option>
+                          ))}
                         </select>
                         <p className="mt-2 text-xs leading-5 text-slate-500">
                           Changing format rebuilds this round&apos;s match
-                          pairings.
+                          pairings. Group formats (Scramble / Best Ball 2v2 &amp;
+                          4v4) create one matchup per group; assign players in
+                          Matches below.
                         </p>
 
                         <label className={`mt-3 ${labelClass}`}>
@@ -828,16 +883,90 @@ export function AdminScreen() {
             })}
           </div>
 
-          <button
-            onClick={handleAddRound}
-            className="w-full rounded-xl bg-fairway-900 py-3 font-black text-white"
-          >
-            Add Round
-          </button>
-          <p className="text-xs leading-5 text-slate-500">
-            New rounds default to Net Score on the first course — open the round
-            to set its course, format, points, tee times, and matches.
-          </p>
+          {roundDraft ? (
+            <Card className="p-4">
+              <h3 className="font-black text-ink">New round</h3>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Set the basics, then create it. You can fine-tune tee times and
+                matches after.
+              </p>
+              <label className={`mt-3 ${labelClass}`}>Round title</label>
+              <input
+                value={roundDraft.title}
+                onChange={(event) =>
+                  setRoundDraft((d) =>
+                    d ? { ...d, title: event.target.value } : d
+                  )
+                }
+                className={inputClass}
+                placeholder={`Round ${rounds.length + 1}`}
+              />
+              <label className={`mt-3 ${labelClass}`}>Course</label>
+              <select
+                value={roundDraft.courseId}
+                onChange={(event) =>
+                  setRoundDraft((d) =>
+                    d ? { ...d, courseId: event.target.value } : d
+                  )
+                }
+                className={inputClass}
+              >
+                {courses.length === 0 ? (
+                  <option value="">No courses yet — add one first</option>
+                ) : (
+                  courses.map((course) => (
+                    <option key={course.id} value={course.id}>
+                      {course.name}
+                    </option>
+                  ))
+                )}
+              </select>
+              <label className={`mt-3 ${labelClass}`}>Format</label>
+              <select
+                value={roundDraft.presetId}
+                onChange={(event) =>
+                  setRoundDraft((d) =>
+                    d ? { ...d, presetId: event.target.value } : d
+                  )
+                }
+                className={inputClass}
+              >
+                {ROUND_FORMATS.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setRoundDraft(null)}
+                  className="rounded-xl border-[1.5px] border-sand-200 py-3 font-black text-slate-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={createRoundFromDraft}
+                  disabled={courses.length === 0}
+                  className="rounded-xl bg-fairway-900 py-3 font-black text-white disabled:opacity-50"
+                >
+                  Create Round
+                </button>
+              </div>
+            </Card>
+          ) : (
+            <>
+              <button
+                onClick={openRoundDraft}
+                className="w-full rounded-xl bg-fairway-900 py-3 font-black text-white"
+              >
+                Add Round
+              </button>
+              <p className="text-xs leading-5 text-slate-500">
+                You&apos;ll pick the title, course, and format before it&apos;s
+                created — then set tee times and matches inside the round.
+              </p>
+            </>
+          )}
         </>
       ) : null}
 

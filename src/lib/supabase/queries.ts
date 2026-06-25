@@ -377,6 +377,7 @@ export async function persistRoundUpdates(
   if (updates.dateLabel !== undefined) row.date_label = updates.dateLabel;
   if (updates.arrivalTime !== undefined) row.arrival_time = updates.arrivalTime;
   if (updates.format !== undefined) row.format = updates.format;
+  if (updates.groupSize !== undefined) row.group_size = updates.groupSize;
   if (updates.pointsAvailable !== undefined)
     row.points_available = updates.pointsAvailable;
   if (updates.courseId !== undefined) row.course_id = updates.courseId;

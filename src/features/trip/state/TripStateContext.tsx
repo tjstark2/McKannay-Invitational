@@ -63,7 +63,11 @@ type TripStateContextValue = TripState & {
   updateTeam: (teamId: TeamId, updates: Partial<Team>) => void;
   updatePlayer: (playerId: string, updates: Partial<Player>) => void;
   updateRound: (roundId: string, updates: Partial<Round>) => void;
-  updateRoundFormat: (roundId: string, format: Round["format"]) => void;
+  updateRoundFormat: (
+    roundId: string,
+    format: Round["format"],
+    groupSize?: number | null
+  ) => void;
   updateCurrentRound: (roundId: string) => void;
   updateTeeTime: (roundId: string, teeTimeId: string, time: string) => void;
   updateMatch: (matchId: string, updates: Partial<Match>) => void;
@@ -106,6 +110,7 @@ type TripStateContextValue = TripState & {
       dateLabel: string;
       courseId: string;
       format: Round["format"];
+      groupSize?: number | null;
       pointsAvailable: number;
       arrivalTime: string;
     },
@@ -397,7 +402,8 @@ export function TripStateProvider({
         persist((s) => persistCurrentRound(s, tripId, roundId));
       },
 
-      updateRoundFormat: (roundId, format) => {
+      updateRoundFormat: (roundId, format, groupSize) => {
+        const gs = groupSize ?? null;
         const round = state.rounds.find((item) => item.id === roundId);
         if (!round) return;
 
@@ -410,7 +416,25 @@ export function TripStateProvider({
 
         let newRoundMatches: Match[] = [];
 
-        if (format === "best_ball") {
+        const groupCount = gs
+          ? Math.floor(Math.min(teamAPlayers.length, teamBPlayers.length) / gs)
+          : 0;
+        if (gs && (format === "scramble" || format === "best_ball")) {
+          newRoundMatches = Array.from({ length: groupCount }, (_, index) => {
+            const start = index * gs;
+            return {
+              id: `${roundId}-match-${index + 1}`,
+              roundId,
+              label: `${round.title} Group ${index + 1}`,
+              points: 1,
+              aPlayers: teamAPlayers.slice(start, start + gs),
+              bPlayers: teamBPlayers.slice(start, start + gs),
+              manualResult: null,
+            };
+          });
+        }
+
+        if (!gs && format === "best_ball") {
           const pairCount = Math.floor(
             Math.min(teamAPlayers.length, teamBPlayers.length) / 2
           );
@@ -450,8 +474,9 @@ export function TripStateProvider({
             ? state.scoringSettings.netScorePointsOverride
             : Math.floor(state.players.length / 2);
 
-        const newPointsAvailable =
-          format === "best_ball"
+        const newPointsAvailable = gs
+          ? groupCount
+          : format === "best_ball"
             ? pairCount * 2
             : format === "match_play"
             ? minTeam
@@ -462,7 +487,7 @@ export function TripStateProvider({
         setState((current) => {
           const rounds = current.rounds.map((item) =>
             item.id === roundId
-              ? { ...item, format, pointsAvailable: newPointsAvailable }
+              ? { ...item, format, groupSize: gs, pointsAvailable: newPointsAvailable }
               : item
           );
           return {
@@ -481,6 +506,7 @@ export function TripStateProvider({
         persist(async (s) => {
           await persistRoundUpdates(s, roundId, {
             format,
+            groupSize: gs,
             pointsAvailable: newPointsAvailable,
           });
           await persistRoundMatchesRebuild(s, roundId, newRoundMatches);
