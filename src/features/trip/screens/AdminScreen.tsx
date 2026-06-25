@@ -43,6 +43,7 @@ export function AdminScreen() {
     courses,
     rounds,
     matches,
+    groupScores,
     scoringSettings,
     currentRoundId,
     updateTrip,
@@ -137,6 +138,15 @@ export function AdminScreen() {
     const f = ROUND_FORMATS.find((x) => x.id === presetId);
     if (!f) return false;
     return f.groupSize == null || groupedFits(f.groupSize);
+  };
+
+  // How many combined group scores already exist for a round (so we can warn
+  // before a format change rebuilds its matches and discards them).
+  const roundGroupScoreCount = (roundId: string) => {
+    const ids = new Set(
+      matches.filter((m) => m.roundId === roundId).map((m) => m.id)
+    );
+    return groupScores.filter((g) => ids.has(g.matchId)).length;
   };
 
   function toggleRound(id: string) {
@@ -621,12 +631,23 @@ export function AdminScreen() {
                             const preset = ROUND_FORMATS.find(
                               (f) => f.id === event.target.value
                             );
-                            if (preset)
-                              updateRoundFormat(
-                                round.id,
-                                preset.format,
-                                preset.groupSize
-                              );
+                            if (!preset) return;
+                            const existing = roundGroupScoreCount(round.id);
+                            if (
+                              existing > 0 &&
+                              !window.confirm(
+                                `This round already has ${existing} group score${
+                                  existing === 1 ? "" : "s"
+                                } entered. Changing the format rebuilds its matchups and will delete those scores. Continue?`
+                              )
+                            ) {
+                              return;
+                            }
+                            updateRoundFormat(
+                              round.id,
+                              preset.format,
+                              preset.groupSize
+                            );
                           }}
                           className={inputClass}
                         >

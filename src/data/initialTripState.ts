@@ -17,7 +17,6 @@ export const initialTrip: Trip = {
   dates: "Sept 9–13",
   joinCode: "MCK2026",
   seriesId: null,
-  adminCode: "Admin",
   lodgingName: "Sea Pines Resort",
   lodgingAddress: "Hilton Head Island, South Carolina",
   totalPoints: 18,

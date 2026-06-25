@@ -9,7 +9,7 @@
 export const APP_CONFIG = {
   // Which trip the app loads by default. The data layer is already trip-aware,
   // so a future trip-selector screen just changes this value at runtime.
-  defaultJoinCode: "MCK2026",
+  defaultJoinCode: "",
 
   // Password to enter the app at all.
   entryPassword: "Pass",

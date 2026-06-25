@@ -137,7 +137,6 @@ export async function joinTripByCode(
 export type CreateTripInput = {
   name: string;
   joinCode: string;
-  adminCode?: string;
   location?: string;
   dates?: string;
   teamAName: string;
@@ -177,8 +176,11 @@ export async function loadTripState(
     .from("trips")
     .select("*")
     .eq("join_code", joinCode)
-    .single();
+    .maybeSingle();
   throwIf(tripResult.error, "load trip");
+  if (!tripResult.data) {
+    throw new Error("We couldn't find a tournament for that code.");
+  }
   const tripRow = tripResult.data as TripRow;
   const tripId = tripRow.id;
 

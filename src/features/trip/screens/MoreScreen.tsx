@@ -125,7 +125,7 @@ export function MoreScreen({
       </Card>
 
       <Card className="p-5">
-        <h2 className="font-black">McKannay Invitational</h2>
+        <h2 className="font-black">{trip.name}</h2>
 
         <p className="mt-3 text-sm leading-6 text-slate-600">
           Tournament scoring, schedules, standings, and player stats are

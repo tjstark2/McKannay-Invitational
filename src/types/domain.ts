@@ -33,7 +33,6 @@ export type Trip = {
   dates: string;
   joinCode: string;
   seriesId: string | null;
-  adminCode: string | null;
   lodgingName: string;
   lodgingAddress: string;
   totalPoints: number;
