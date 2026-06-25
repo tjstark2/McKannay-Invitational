@@ -151,61 +151,20 @@ export async function createTrip(
   supabase: SupabaseClient,
   input: CreateTripInput
 ): Promise<{ ok: boolean; error?: string; tripId?: string }> {
-  const code = input.joinCode.trim();
-
-  const taken = await tripExists(supabase, code);
-  if (taken) {
-    return { ok: false, error: "That join code is already taken — pick another." };
-  }
-
-  const tripIns = await supabase
-    .from("trips")
-    .insert({
-      name: input.name.trim(),
-      join_code: code,
-      admin_code: input.adminCode?.trim() || "",
-      location: input.location?.trim() || null,
-      dates: input.dates?.trim() || null,
-      owner_id: input.ownerId,
-      default_format: input.defaultFormat?.trim() || null,
-      roster_size:
-        Number.isFinite(input.rosterSize) && input.rosterSize > 0
-          ? Math.round(input.rosterSize)
-          : 12,
-      total_points: 0,
-      winning_number: 0,
-      retain_number: 0,
-    })
-    .select("id")
-    .single();
-  if (tripIns.error || !tripIns.data) {
-    return {
-      ok: false,
-      error: tripIns.error?.message ?? "Could not create the tournament.",
-    };
-  }
-  const tripId = (tripIns.data as { id: string }).id;
-
-  const teamIns = await supabase.from("teams").insert([
-    { trip_id: tripId, code: "A", name: input.teamAName.trim() || "Team A", color: "red" },
-    { trip_id: tripId, code: "B", name: input.teamBName.trim() || "Team B", color: "blue" },
-  ]);
-  if (teamIns.error) return { ok: false, error: teamIns.error.message };
-
-  await supabase.from("scoring_settings").insert({
-    trip_id: tripId,
-    best_ball_handicap_allowance: 90,
-    singles_handicap_allowance: 100,
-    net_score_handicap_allowance: 100,
-    net_score_points_override: null,
+  const { data, error } = await supabase.rpc("create_trip", {
+    p_name: input.name,
+    p_join_code: input.joinCode,
+    p_location: input.location ?? "",
+    p_dates: input.dates ?? "",
+    p_team_a: input.teamAName,
+    p_team_b: input.teamBName,
+    p_roster_size: Number.isFinite(input.rosterSize)
+      ? Math.round(input.rosterSize)
+      : 12,
+    p_default_format: input.defaultFormat ?? "",
   });
-
-  await supabase.from("trip_members").upsert(
-    { trip_id: tripId, user_id: input.ownerId, role: "owner" },
-    { onConflict: "trip_id,user_id", ignoreDuplicates: true }
-  );
-
-  return { ok: true, tripId };
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, tripId: data as string };
 }
 
 export async function loadTripState(

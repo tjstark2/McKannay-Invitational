@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { createTrip, insertCourse, insertRound } from "@/lib/supabase/queries";
+import { createTrip, insertCourse, insertRound, insertTeeTime } from "@/lib/supabase/queries";
 import { AuthShell } from "@/features/auth/AuthShell";
 
 type FormatOption = { id: string; label: string; desc: string };
@@ -16,7 +16,7 @@ const FORMATS: FormatOption[] = [
 ];
 
 type CourseDraft = { name: string; par: string };
-type RoundDraft = { courseIdx: number; format: string; teeTime: string };
+type RoundDraft = { courseIdx: number; format: string; teeTimes: string[] };
 
 export default function CreatePage() {
   const { user, loading } = useAuth();
@@ -48,6 +48,19 @@ export default function CreatePage() {
     () => courses.filter((c) => c.name.trim()),
     [courses]
   );
+
+  // One tee time per foursome by default (12 players -> 3, 8 -> 2).
+  const defaultTeeCount = Math.max(
+    1,
+    Math.ceil((Number(rosterSize) || 12) / 4)
+  );
+  function newRound(): RoundDraft {
+    return {
+      courseIdx: 0,
+      format: "casual",
+      teeTimes: Array(defaultTeeCount).fill(""),
+    };
+  }
 
   const basicsValid =
     name.trim() && joinCode.trim() && teamAName.trim() && teamBName.trim();
@@ -93,20 +106,26 @@ export default function CreatePage() {
         courseIds.push(id);
       }
 
-      // Create rounds linked to the chosen course.
+      // Create rounds linked to the chosen course, with their tee times.
       if (setRoundsNow) {
         let n = 0;
         for (const r of rounds) {
           n += 1;
-          await insertRound(supabase, tripId, {
+          const firstTime = r.teeTimes.find((t) => t.trim())?.trim() ?? "";
+          const roundId = await insertRound(supabase, tripId, {
             roundNumber: n,
             title: `Round ${n}`,
-            dateLabel: r.teeTime.trim() || "",
+            dateLabel: "",
             courseId: courseIds[r.courseIdx] ?? courseIds[0] ?? "",
             format: r.format as "casual" | "best_ball" | "match_play" | "net_score",
             pointsAvailable: 1,
-            arrivalTime: r.teeTime.trim() || "",
+            arrivalTime: firstTime,
           });
+          let order = 0;
+          for (const t of r.teeTimes) {
+            order += 1;
+            await insertTeeTime(supabase, roundId, t.trim() || "TBD", order);
+          }
         }
       }
 
@@ -260,7 +279,7 @@ export default function CreatePage() {
               <button
                 onClick={() => {
                   setSetRoundsNow(true);
-                  if (rounds.length === 0) setRounds([{ courseIdx: 0, format: "casual", teeTime: "" }]);
+                  if (rounds.length === 0) setRounds([newRound()]);
                 }}
                 className={`rounded-2xl border-[1.5px] p-3 text-sm font-black ${setRoundsNow === true ? "border-fairway-900 bg-fairway-900/5" : "border-sand-200 bg-white"}`}
               >
@@ -318,22 +337,54 @@ export default function CreatePage() {
                           <option key={f.id} value={f.id}>{f.label}</option>
                         ))}
                       </select>
-                      <input
-                        className={inp}
-                        value={r.teeTime}
-                        onChange={(e) => setRounds((p) => p.map((x, j) => (j === i ? { ...x, teeTime: e.target.value } : x)))}
-                        placeholder="Tee time (optional, e.g. 9:00 AM)"
-                      />
+                      <div className="rounded-xl bg-slate-50 p-2.5">
+                        <div className="mb-1 flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-500">
+                            Tee times ({r.teeTimes.length})
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() =>
+                                setRounds((p) => p.map((x, j) => (j === i && x.teeTimes.length > 1 ? { ...x, teeTimes: x.teeTimes.slice(0, -1) } : x)))
+                              }
+                              className="h-7 w-7 rounded-lg bg-white text-sm font-black text-slate-500"
+                            >
+                              −
+                            </button>
+                            <button
+                              onClick={() =>
+                                setRounds((p) => p.map((x, j) => (j === i ? { ...x, teeTimes: [...x.teeTimes, ""] } : x)))
+                              }
+                              className="h-7 w-7 rounded-lg bg-white text-sm font-black text-slate-500"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          {r.teeTimes.map((t, ti) => (
+                            <input
+                              key={ti}
+                              className="w-full rounded-lg border-[1.5px] border-sand-200 bg-white px-3 py-2 text-sm outline-none focus:border-fairway-900"
+                              value={t}
+                              onChange={(e) =>
+                                setRounds((p) => p.map((x, j) => (j === i ? { ...x, teeTimes: x.teeTimes.map((v, k) => (k === ti ? e.target.value : v)) } : x)))
+                              }
+                              placeholder={`Tee time ${ti + 1} (optional, e.g. ${9 + ti}:00 AM)`}
+                            />
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
                 <button
-                  onClick={() => setRounds((p) => [...p, { courseIdx: 0, format: "casual", teeTime: "" }])}
+                  onClick={() => setRounds((p) => [...p, newRound()])}
                   className="w-full rounded-2xl border-[1.5px] border-dashed border-sand-200 py-3 text-sm font-bold text-slate-500"
                 >
                   + Add another round
                 </button>
-                {rounds.some((r) => !r.teeTime.trim()) ? (
+                {rounds.some((r) => r.teeTimes.some((t) => !t.trim())) ? (
                   <p className="text-sm text-slate-400">
                     Tee times left blank will be defaulted for now — you can adjust
                     them anytime in Admin.
