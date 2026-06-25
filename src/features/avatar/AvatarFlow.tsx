@@ -24,10 +24,16 @@ export function AvatarFlow({
   avatars,
   grantedIds,
   onComplete,
+  mode = "firstLogin",
+  initialId,
+  onCancel,
 }: {
   avatars: Avatar[];
   grantedIds: string[];
   onComplete: (avatarId: string) => Promise<{ ok: boolean; error?: string }>;
+  mode?: "firstLogin" | "edit";
+  initialId?: string;
+  onCancel?: () => void;
 }) {
   const granted = useMemo(() => new Set(grantedIds), [grantedIds]);
   const isGranted = (a: Avatar) => granted.has(a.id);
@@ -48,8 +54,8 @@ export function AvatarFlow({
   const defaultId =
     avatars.find((a) => a.id === "Duckling_Rookie")?.id ?? avatars[0]?.id ?? "";
 
-  const [step, setStep] = useState<Step>("intro");
-  const [selectedId, setSelectedId] = useState(defaultId);
+  const [step, setStep] = useState<Step>(mode === "edit" ? "choose" : "intro");
+  const [selectedId, setSelectedId] = useState(initialId || defaultId);
   const [tab, setTab] = useState<AvatarTier | null>("free");
   const [soundOn, setSoundOn] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
@@ -99,6 +105,10 @@ export function AvatarFlow({
     }
     if (!isUnlocked(b)) showToast("That bird’s locked — opening upgrade.");
     birdVoice(b.id);
+    if (mode === "edit") {
+      complete();
+      return;
+    }
     setTimeout(() => setStep("paywall"), 380);
   }
   async function complete() {
@@ -171,9 +181,15 @@ export function AvatarFlow({
         {/* CHOOSE */}
         <section className={`${styles.screen} ${step === "choose" ? styles.on : ""}`}>
           <div className={styles.bar}>
-            <div className={styles.wordmark}>
-              Tourney<b>Birdie</b>
-            </div>
+            {mode === "edit" && onCancel ? (
+              <button className={styles.iconbtn} onClick={onCancel} aria-label="Cancel">
+                ✕
+              </button>
+            ) : (
+              <div className={styles.wordmark}>
+                Tourney<b>Birdie</b>
+              </div>
+            )}
             <button className={styles.iconbtn} onClick={toggleSound} aria-label="Toggle sound">
               {soundOn ? "🔊" : "🔇"}
             </button>
@@ -224,7 +240,9 @@ export function AvatarFlow({
             onClick={play}
           >
             {selUnlocked
-              ? `Play as ${selected?.name ?? ""}`
+              ? mode === "edit"
+                ? `Use ${selected?.name ?? ""}`
+                : `Play as ${selected?.name ?? ""}`
               : selSpecial
               ? "Special access only"
               : "Upgrade to unlock"}

@@ -3,6 +3,7 @@ import { buildLeaderboard, getTournamentAwards } from "@/lib/scoring";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useTripState } from "@/features/trip/state/TripStateContext";
+import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 
 export function LeaderboardScreen() {
   const { courses, matches, players, rounds, scores, scoringSettings } =
@@ -66,11 +67,20 @@ export function LeaderboardScreen() {
             key={row.player.id}
             className="grid grid-cols-5 items-center border-b border-slate-50 py-3 text-sm last:border-b-0"
           >
-            <div className="col-span-2">
-              <p className="font-black">
-                {index + 1}. {row.player.name}
-              </p>
-              <p className="text-xs text-slate-500">Team {row.player.team}</p>
+            <div className="col-span-2 flex items-center gap-2.5">
+              <span className="w-4 text-right text-xs font-black text-slate-400">
+                {index + 1}
+              </span>
+              <PlayerAvatar
+                avatarId={row.player.avatarId}
+                emoji={row.player.avatarEmoji}
+                name={row.player.name}
+                size={32}
+              />
+              <div className="min-w-0">
+                <p className="truncate font-black">{row.player.name}</p>
+                <p className="text-xs text-slate-500">Team {row.player.team}</p>
+              </div>
             </div>
 
             <div className="text-center font-bold">{row.pointsWon}</div>

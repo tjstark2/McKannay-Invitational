@@ -6,6 +6,7 @@ import { ChevronDown, Home, LogOut, User, Users } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { pendingIncomingCount } from "@/lib/supabase/friends";
+import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 
 /** Consistent account control: shows on the dashboard, profile, and inside a
  *  trip. Always offers My Tournaments, Profile, and Sign out (-> landing). */
@@ -14,6 +15,7 @@ export function AccountMenu({ tone = "light" }: { tone?: "light" | "onPhoto" }) 
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [avatarId, setAvatarId] = useState<string | null>(null);
   const [pending, setPending] = useState(0);
 
   useEffect(() => {
@@ -24,10 +26,11 @@ export function AccountMenu({ tone = "light" }: { tone?: "light" | "onPhoto" }) 
     (async () => {
       const p = await supabase
         .from("profiles")
-        .select("first_name")
+        .select("first_name,avatar_id")
         .eq("id", user.id)
         .maybeSingle();
       if (active) setName((p.data?.first_name as string) ?? "");
+      if (active) setAvatarId((p.data?.avatar_id as string) ?? null);
       const c = await pendingIncomingCount(supabase, user.id);
       if (active) setPending(c);
     })();
@@ -36,7 +39,6 @@ export function AccountMenu({ tone = "light" }: { tone?: "light" | "onPhoto" }) 
     };
   }, [user]);
 
-  const initial = (name || user?.email || "?").charAt(0).toUpperCase();
   const btnCls =
     tone === "onPhoto"
       ? "bg-white/90 text-fairway-900 shadow-lg backdrop-blur"
@@ -54,9 +56,7 @@ export function AccountMenu({ tone = "light" }: { tone?: "light" | "onPhoto" }) 
         onClick={() => setOpen((o) => !o)}
         className={`relative inline-flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3 text-sm font-extrabold ${btnCls}`}
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-fairway-900 text-xs font-black text-white">
-          {initial}
-        </span>
+        <PlayerAvatar avatarId={avatarId} name={name || user?.email} size={28} />
         <span className="hidden sm:block">{name || "Account"}</span>
         <ChevronDown className="h-4 w-4" />
         {pending > 0 ? (

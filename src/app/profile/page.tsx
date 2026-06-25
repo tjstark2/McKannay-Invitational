@@ -6,6 +6,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { BrandHeaderMark } from "@/features/trip/components/Brand";
 import { AccountMenu } from "@/features/account/AccountMenu";
+import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 
 type Profile = {
   first_name: string | null;
@@ -17,6 +18,7 @@ type Profile = {
   phone: string | null;
   marketing_opt_in: boolean | null;
   sms_opt_in: boolean | null;
+  avatar_id: string | null;
 };
 
 export default function ProfilePage() {
@@ -37,7 +39,7 @@ export default function ProfilePage() {
       const p = await supabase
         .from("profiles")
         .select(
-          "first_name,last_name,username,city,state,email,phone,marketing_opt_in,sms_opt_in"
+          "first_name,last_name,username,city,state,email,phone,marketing_opt_in,sms_opt_in,avatar_id"
         )
         .eq("id", user.id)
         .maybeSingle();
@@ -70,8 +72,18 @@ export default function ProfilePage() {
       </header>
 
       <main className="mx-auto max-w-2xl px-5 py-8">
-        <h1 className="text-3xl font-black text-ink">Profile</h1>
-        <p className="mt-1 text-slate-500">Your account details.</p>
+        <div className="flex items-center gap-4">
+          <PlayerAvatar
+            avatarId={profile?.avatar_id}
+            name={fullName || user.email}
+            size={64}
+            ring="#1f6f54"
+          />
+          <div>
+            <h1 className="text-3xl font-black text-ink">Profile</h1>
+            <p className="mt-1 text-slate-500">Your account details.</p>
+          </div>
+        </div>
 
         <div className="mt-6 divide-y divide-sand-100 overflow-hidden rounded-2xl border border-sand-100 bg-white">
           <Row label="Username" value={profile?.username ? `@${profile.username}` : "—"} />
@@ -92,6 +104,12 @@ export default function ProfilePage() {
         </div>
 
         <div className="mt-6 grid gap-2">
+          <button
+            onClick={() => router.push("/profile/avatar")}
+            className="w-full rounded-2xl border border-sand-100 bg-white px-4 py-3.5 font-black text-fairway-900"
+          >
+            🐦 Change your birdie
+          </button>
           <button
             onClick={() => router.push("/profile/edit")}
             className="w-full rounded-2xl bg-fairway-900 px-4 py-3.5 font-black text-white"

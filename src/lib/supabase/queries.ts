@@ -241,6 +241,30 @@ export async function loadTripState(
   const players: Player[] = playerRows.map((row) =>
     mapPlayer(row, teamCodeById)
   );
+
+  // Attach each account-linked player's chosen bird (from their profile) so it
+  // can be shown on leaderboards, matches, pairings, etc. Typed players keep
+  // their emoji. Best-effort: failures just leave avatarId undefined.
+  const accountIds = Array.from(
+    new Set(players.map((p) => p.accountId).filter(Boolean) as string[])
+  );
+  if (accountIds.length > 0) {
+    const av = await supabase
+      .from("public_profiles")
+      .select("id,avatar_id")
+      .in("id", accountIds);
+    if (!av.error && av.data) {
+      const byAccount = new Map<string, string>();
+      for (const row of av.data as { id: string; avatar_id: string | null }[]) {
+        if (row.avatar_id) byAccount.set(row.id, row.avatar_id);
+      }
+      for (const p of players) {
+        if (p.accountId && byAccount.has(p.accountId)) {
+          p.avatarId = byAccount.get(p.accountId);
+        }
+      }
+    }
+  }
   const courses = courseRows.map(mapCourse);
   const rounds: Round[] = roundRows.map(mapRound);
 

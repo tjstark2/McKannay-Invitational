@@ -56,6 +56,7 @@ export type Player = {
   handicapIndex: number;
   avatarEmoji?: string;
   accountId?: string;
+  avatarId?: string; // chosen bird (from the account profile), shown everywhere
 };
 
 export type Course = {
