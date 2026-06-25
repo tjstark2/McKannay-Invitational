@@ -1,3 +1,4 @@
+import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import { ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
@@ -33,9 +34,12 @@ export function PlayersScreen({
           <Card className="p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl">
-                  {player.avatarEmoji ?? "🏌️"}
-                </div>
+                <PlayerAvatar
+                  avatarId={player.avatarId}
+                  emoji={player.avatarEmoji}
+                  name={player.name}
+                  size={40}
+                />
                 <div className="min-w-0">
                   <p className="truncate font-black">{player.name}</p>
                   <p className="truncate text-sm text-slate-500">{getTeamName(player.team)}</p>

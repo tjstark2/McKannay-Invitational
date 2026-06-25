@@ -1,3 +1,4 @@
+import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import { formatPlusMinus } from "@/lib/format";
 import {
   frontNineNetScore,
@@ -83,11 +84,20 @@ export function PlayerProfileScreen({
 
       <Card className="p-5">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-black">{player.name}</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              {team?.name ?? `Team ${player.team}`}
-            </p>
+          <div className="flex items-center gap-3">
+            <PlayerAvatar
+              avatarId={player.avatarId}
+              emoji={player.avatarEmoji}
+              name={player.name}
+              size={56}
+              ring={player.team === "A" ? "#dc2626" : "#2563eb"}
+            />
+            <div>
+              <h1 className="text-2xl font-black">{player.name}</h1>
+              <p className="mt-1 text-sm text-slate-500">
+                {team?.name ?? `Team ${player.team}`}
+              </p>
+            </div>
           </div>
 
           <Pill tone={player.team === "A" ? "red" : "blue"}>

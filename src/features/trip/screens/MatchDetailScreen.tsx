@@ -1,3 +1,4 @@
+import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import {
   allowedCourseHandicap,
   frontNineNetScore,
@@ -100,7 +101,15 @@ export function MatchDetailScreen({
         <div key={player.id} className="rounded-xl bg-slate-50 p-3 text-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-bold">{player.name}</p>
+              <p className="flex items-center gap-2 font-bold">
+                <PlayerAvatar
+                  avatarId={player.avatarId}
+                  emoji={player.avatarEmoji}
+                  name={player.name}
+                  size={28}
+                />
+                {player.name}
+              </p>
               <p className="text-xs text-slate-500">
                 Index {player.handicapIndex} · Allowed CH{" "}
                 {allowedCourseHandicap(

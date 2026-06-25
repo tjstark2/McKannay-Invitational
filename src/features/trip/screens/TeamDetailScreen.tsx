@@ -1,3 +1,4 @@
+import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import { ChevronRight } from "lucide-react";
 import { buildTeamSummaries, resolveMatch } from "@/lib/scoring";
 import { Card } from "@/components/ui/Card";
@@ -98,7 +99,15 @@ export function TeamDetailScreen({
               className="block w-full rounded-xl bg-slate-50 p-3 text-left text-sm"
             >
               <div className="flex items-center justify-between gap-3">
-                <p className="font-bold">{player.name}</p>
+                <span className="flex min-w-0 items-center gap-2.5 font-bold">
+                  <PlayerAvatar
+                    avatarId={player.avatarId}
+                    emoji={player.avatarEmoji}
+                    name={player.name}
+                    size={32}
+                  />
+                  <span className="truncate">{player.name}</span>
+                </span>
 
                 <div className="flex items-center gap-2">
                   <p className="text-xs font-bold text-slate-500">

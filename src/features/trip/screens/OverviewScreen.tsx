@@ -1,3 +1,4 @@
+import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import { useState } from "react";
 import { formatRoundFormat } from "@/lib/format";
 import {
@@ -346,8 +347,15 @@ export function OverviewScreen({
                     key={row.player.id}
                     className="flex items-center justify-between rounded-xl bg-slate-50 p-3 text-sm"
                   >
-                    <div>
-                      <p className="font-black">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <PlayerAvatar
+                        avatarId={row.player.avatarId}
+                        emoji={row.player.avatarEmoji}
+                        name={row.player.name}
+                        size={30}
+                      />
+                      <div className="min-w-0">
+                      <p className="truncate font-black">
                         {row.displayNet !== null ? `${index + 1}. ` : ""}
                         {row.player.name}
                       </p>
@@ -359,6 +367,7 @@ export function OverviewScreen({
                           ? "Through 9 · proj"
                           : "Not started"}
                       </p>
+                      </div>
                     </div>
                     <div className="text-right">
                       <p className="font-black">

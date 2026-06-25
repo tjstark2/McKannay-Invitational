@@ -1,3 +1,4 @@
+import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import { useState } from "react";
 import { ChevronRight } from "lucide-react";
 import {
@@ -216,10 +217,18 @@ export function MatchCenterScreen({
                   key={row.player.id}
                   className="grid grid-cols-6 items-center py-3 text-sm"
                 >
-                  <div className="col-span-2">
-                    <p className="font-black">
-                      {index + 1}. {row.player.name}
-                    </p>
+                  <div className="col-span-2 flex items-center gap-2.5">
+                    <span className="w-4 shrink-0 text-right text-xs font-black text-slate-400">
+                      {index + 1}
+                    </span>
+                    <PlayerAvatar
+                      avatarId={row.player.avatarId}
+                      emoji={row.player.avatarEmoji}
+                      name={row.player.name}
+                      size={30}
+                    />
+                    <div className="min-w-0">
+                    <p className="truncate font-black">{row.player.name}</p>
 
                     <p className="text-xs text-slate-500">
                       Team {row.player.team}
@@ -234,6 +243,7 @@ export function MatchCenterScreen({
                         ? " · +1 projected"
                         : ""}
                     </p>
+                    </div>
                   </div>
 
                   <div className="text-center font-bold">
