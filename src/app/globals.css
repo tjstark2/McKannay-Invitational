@@ -5,6 +5,8 @@
 :root {
   color-scheme: light;
   --font-display: 'Montserrat', system-ui, sans-serif;
+  --font-anton: 'Anton', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
 }
 
 * {
@@ -19,7 +21,7 @@ body {
 }
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
 }
 
 h1,

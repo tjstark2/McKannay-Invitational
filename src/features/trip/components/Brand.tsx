@@ -11,7 +11,7 @@ export function BrandWordmark({
   const text = size === "sm" ? "text-sm" : "text-base";
   return (
     <span
-      className={`font-display font-extrabold tracking-tight ${text} ${className}`}
+      className={`font-anton tracking-tight ${text} ${className}`}
     >
       <span className="text-ink">TOURNEY</span>
       <span className="text-green">BIRDIE</span>
@@ -68,7 +68,7 @@ export function BrandLockup() {
   return (
     <div className="flex flex-col items-center text-center">
       <IconTile className="mb-5 h-32 w-32 rounded-[28px] shadow-2xl" />
-      <span className="font-display text-3xl font-extrabold tracking-tight">
+      <span className="font-anton text-3xl tracking-tight">
         <span className="text-ink">TOURNEY</span>
         <span className="text-green">BIRDIE</span>
       </span>

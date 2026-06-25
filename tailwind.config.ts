@@ -12,6 +12,12 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        mint: { DEFAULT: "#34d399", soft: "#6ee7b7", ink: "#06231a" },
+        gold: "#f3b50a",
+        silver: "#aab3bd",
+        bronze: "#a87a45",
+        team: { north: "#e5484d", south: "#3b82f6" },
+        line: "#e8e3d6",
         fairway: {
           50: "#eef8f1",
           100: "#d7efdf",
@@ -43,7 +49,9 @@ const config: Config = {
         phone: "0 24px 80px rgba(15, 23, 42, 0.22)"
       },
       fontFamily: {
-        display: ["var(--font-display)", "system-ui", "sans-serif"]
+        display: ["var(--font-display)", "system-ui", "sans-serif"],
+        anton: ["var(--font-anton)", "system-ui", "sans-serif"],
+        body: ["var(--font-body)", "system-ui", "sans-serif"]
       }
     }
   },
