@@ -280,6 +280,30 @@ export function resolveMatch(
     };
   }
 
+  // Grouped formats (Scramble / Best Ball 2v2 & 4v4): the matchup winner is
+  // derived from the two combined gross scores (lower wins) and carried on
+  // match.manualResult by the state layer. No handicaps. An admin override
+  // (also on manualResult) takes precedence automatically.
+  if (round.groupSize != null) {
+    if (!match.manualResult) {
+      return {
+        status: "open",
+        winner: null,
+        label: "Waiting on group scores",
+        waitingOn: [],
+      };
+    }
+    return {
+      status: "final",
+      winner: match.manualResult,
+      label:
+        match.manualResult === "T"
+          ? "Tied"
+          : `Team ${match.manualResult} wins`,
+      waitingOn: [],
+    };
+  }
+
   if (round.format === "best_ball") {
     if (match.manualResult) {
       return {

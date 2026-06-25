@@ -2,11 +2,25 @@ import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useViewer } from "@/features/trip/state/ViewerContext";
+import { useAuth } from "@/features/auth/AuthContext";
 import type { Match, Round } from "@/types";
 
 export function GroupedRoundEntry({ round }: { round: Round }) {
   const { teams, players, matches, groupScores, upsertGroupScore } = useTripState();
   const { canManage } = useViewer();
+  const { user } = useAuth();
+
+  // The player linked to the signed-in account (used to scope who can enter
+  // which side's score). Admins/owners can enter any side.
+  const myPlayerId = user
+    ? players.find((p) => p.accountId === user.id)?.id ?? null
+    : null;
+  const canEditSide = (match: Match, side: "A" | "B") => {
+    if (canManage) return true;
+    if (!myPlayerId) return false;
+    const sidePlayers = side === "A" ? match.aPlayers : match.bPlayers;
+    return sidePlayers.includes(myPlayerId);
+  };
 
   const roundMatches = matches.filter((m) => m.roundId === round.id);
   const teamName = (code: "A" | "B") =>
@@ -37,7 +51,8 @@ export function GroupedRoundEntry({ round }: { round: Round }) {
         <Card key={match.id} className="p-4">
           <h3 className="font-black text-ink">{match.label || "Matchup"}</h3>
           <p className="mt-0.5 text-xs text-slate-500">
-            One combined score per side (gross). Anyone in the group can enter it.
+            One combined score per side (gross). Only that team&apos;s players
+            (or an organizer) can enter it.
           </p>
           <div className="mt-3 space-y-3">
             <SideRow
@@ -47,6 +62,7 @@ export function GroupedRoundEntry({ round }: { round: Round }) {
               heading={teamName("A")}
               sub={namesFor(match.aPlayers)}
               canManage={canManage}
+              canEdit={canEditSide(match, "A")}
               existing={groupScores.find((g) => g.matchId === match.id && g.side === "A")}
               onSave={upsertGroupScore}
             />
@@ -57,6 +73,7 @@ export function GroupedRoundEntry({ round }: { round: Round }) {
               heading={teamName("B")}
               sub={namesFor(match.bPlayers)}
               canManage={canManage}
+              canEdit={canEditSide(match, "B")}
               existing={groupScores.find((g) => g.matchId === match.id && g.side === "B")}
               onSave={upsertGroupScore}
             />
@@ -74,6 +91,7 @@ function SideRow({
   heading,
   sub,
   canManage,
+  canEdit,
   existing,
   onSave,
 }: {
@@ -83,6 +101,7 @@ function SideRow({
   heading: string;
   sub: string;
   canManage: boolean;
+  canEdit: boolean;
   existing?: { frontNineScore?: number; grossScore?: number };
   onSave: (input: {
     matchId: string;
@@ -176,7 +195,13 @@ function SideRow({
         </p>
       ) : null}
 
-      {memberLocked ? (
+      {!canEdit ? (
+        <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-500">
+          {existingGross != null
+            ? "Submitted."
+            : "Only this team's players (or an organizer) can enter this score."}
+        </div>
+      ) : memberLocked ? (
         <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-sm text-amber-900">
           Final score submitted — locked. Contact your organizer to adjust.
         </div>

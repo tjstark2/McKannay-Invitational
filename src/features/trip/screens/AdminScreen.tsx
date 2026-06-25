@@ -782,7 +782,9 @@ export function AdminScreen() {
                             ) : null}
 
                             {roundMatches.map((match) => {
-                              const isBestBall = round.format === "best_ball";
+                              const isBestBall =
+                                round.format === "best_ball" &&
+                                round.groupSize == null;
                               return (
                                 <div
                                   key={match.id}

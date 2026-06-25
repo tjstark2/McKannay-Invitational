@@ -336,8 +336,28 @@ export function TripStateProvider({
   const value = useMemo<TripStateContextValue>(() => {
     const tripId = state.trip.id;
 
+    // Derive the winner of each grouped (Scramble / Best Ball 2v2-4v4) matchup
+    // from its two combined gross scores (lower wins). Surfaced via
+    // manualResult so the existing points/standings pipeline resolves it with
+    // no special-casing. A real admin override (manualResult already set) wins.
+    const enrichedMatches = state.matches.map((m) => {
+      const round = state.rounds.find((r) => r.id === m.roundId);
+      if (!round || round.groupSize == null) return m;
+      if (m.manualResult) return m;
+      const a = state.groupScores.find(
+        (g) => g.matchId === m.id && g.side === "A"
+      )?.grossScore;
+      const b = state.groupScores.find(
+        (g) => g.matchId === m.id && g.side === "B"
+      )?.grossScore;
+      if (a == null || b == null) return m;
+      const winner: Winner = a < b ? "A" : b < a ? "B" : "T";
+      return { ...m, manualResult: winner };
+    });
+
     return {
       ...state,
+      matches: enrichedMatches,
       loading,
       error,
       saving,
