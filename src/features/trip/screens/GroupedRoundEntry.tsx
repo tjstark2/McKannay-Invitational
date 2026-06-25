@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import { Card } from "@/components/ui/Card";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useViewer } from "@/features/trip/state/ViewerContext";
@@ -25,11 +26,27 @@ export function GroupedRoundEntry({ round }: { round: Round }) {
   const roundMatches = matches.filter((m) => m.roundId === round.id);
   const teamName = (code: "A" | "B") =>
     teams.find((t) => t.id === code)?.name ?? `Team ${code}`;
-  const namesFor = (ids: string[]) =>
-    ids
-      .map((id) => players.find((p) => p.id === id)?.name)
-      .filter(Boolean)
-      .join(" & ");
+  const rosterChips = (ids: string[]): ReactNode => {
+    const ps = ids
+      .map((id) => players.find((p) => p.id === id))
+      .filter(Boolean);
+    if (ps.length === 0) return "—";
+    return (
+      <span className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
+        {ps.map((p) => (
+          <span key={p!.id} className="inline-flex items-center gap-1">
+            <PlayerAvatar
+              avatarId={p!.avatarId}
+              emoji={p!.avatarEmoji}
+              name={p!.name}
+              size={16}
+            />
+            {p!.name}
+          </span>
+        ))}
+      </span>
+    );
+  };
 
   if (roundMatches.length === 0) {
     return (
@@ -60,7 +77,7 @@ export function GroupedRoundEntry({ round }: { round: Round }) {
               match={match}
               side="A"
               heading={teamName("A")}
-              sub={namesFor(match.aPlayers)}
+              sub={rosterChips(match.aPlayers)}
               canManage={canManage}
               canEdit={canEditSide(match, "A")}
               existing={groupScores.find((g) => g.matchId === match.id && g.side === "A")}
@@ -71,7 +88,7 @@ export function GroupedRoundEntry({ round }: { round: Round }) {
               match={match}
               side="B"
               heading={teamName("B")}
-              sub={namesFor(match.bPlayers)}
+              sub={rosterChips(match.bPlayers)}
               canManage={canManage}
               canEdit={canEditSide(match, "B")}
               existing={groupScores.find((g) => g.matchId === match.id && g.side === "B")}
@@ -99,7 +116,7 @@ function SideRow({
   match: Match;
   side: "A" | "B";
   heading: string;
-  sub: string;
+  sub: ReactNode;
   canManage: boolean;
   canEdit: boolean;
   existing?: { frontNineScore?: number; grossScore?: number };
@@ -185,7 +202,7 @@ function SideRow({
     <div className="rounded-xl border border-sand-200 p-3">
       <div className="flex items-baseline justify-between">
         <p className="font-black text-ink">{heading}</p>
-        <p className="text-xs text-slate-500">{sub || "—"}</p>
+        <div className="text-xs text-slate-500">{sub}</div>
       </div>
 
       {existing ? (

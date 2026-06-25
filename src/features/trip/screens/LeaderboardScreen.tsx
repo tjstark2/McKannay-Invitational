@@ -37,19 +37,49 @@ export function LeaderboardScreen() {
       <div className="grid grid-cols-3 gap-2">
         <Card className="p-3 text-center">
           <p className="text-xs font-bold text-slate-500">🏆 MVP</p>
-          <p className="mt-1 font-black">{awards.mvp?.player.name ?? "-"}</p>
+          <div className="mt-1 flex flex-col items-center gap-1">
+            {awards.mvp ? (
+              <PlayerAvatar
+                avatarId={awards.mvp.player.avatarId}
+                emoji={awards.mvp.player.avatarEmoji}
+                name={awards.mvp.player.name}
+                size={28}
+              />
+            ) : null}
+            <p className="font-black">{awards.mvp?.player.name ?? "-"}</p>
+          </div>
           <p className="mt-1 text-xs text-slate-500">Most points</p>
         </Card>
 
         <Card className="p-3 text-center">
           <p className="text-xs font-bold text-slate-500">🎯 Clutch</p>
-          <p className="mt-1 font-black">{awards.clutch?.player.name ?? "-"}</p>
+          <div className="mt-1 flex flex-col items-center gap-1">
+            {awards.clutch ? (
+              <PlayerAvatar
+                avatarId={awards.clutch.player.avatarId}
+                emoji={awards.clutch.player.avatarEmoji}
+                name={awards.clutch.player.name}
+                size={28}
+              />
+            ) : null}
+            <p className="font-black">{awards.clutch?.player.name ?? "-"}</p>
+          </div>
           <p className="mt-1 text-xs text-slate-500">Point impact</p>
         </Card>
 
         <Card className="p-3 text-center">
           <p className="text-xs font-bold text-slate-500">❄️ Coldest</p>
-          <p className="mt-1 font-black">{awards.coldest?.player.name ?? "-"}</p>
+          <div className="mt-1 flex flex-col items-center gap-1">
+            {awards.coldest ? (
+              <PlayerAvatar
+                avatarId={awards.coldest.player.avatarId}
+                emoji={awards.coldest.player.avatarEmoji}
+                name={awards.coldest.player.name}
+                size={28}
+              />
+            ) : null}
+            <p className="font-black">{awards.coldest?.player.name ?? "-"}</p>
+          </div>
           <p className="mt-1 text-xs text-slate-500">Worst net avg</p>
         </Card>
       </div>

@@ -1,3 +1,4 @@
+import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import { ChevronRight } from "lucide-react";
 import { formatRoundFormat } from "@/lib/format";
 import { Card } from "@/components/ui/Card";
@@ -73,7 +74,22 @@ export function ScheduleScreen({
                       <p className="font-black">Tee Time {index + 1}</p>
                       <p className="font-bold text-fairway-900">{tee.time}</p>
                     </div>
-                    <p className="mt-2 text-slate-600">{tee.players.map(getPlayerName).join(" · ")}</p>
+                    <div className="mt-2 flex flex-col gap-1 text-slate-600">
+                      {tee.players.map((pid) => {
+                        const p = players.find((x) => x.id === pid);
+                        return (
+                          <span key={pid} className="flex items-center gap-1.5">
+                            <PlayerAvatar
+                              avatarId={p?.avatarId}
+                              emoji={p?.avatarEmoji}
+                              name={p?.name ?? pid}
+                              size={18}
+                            />
+                            <span>{p?.name ?? pid}</span>
+                          </span>
+                        );
+                      })}
+                    </div>
                   </div>
                 ))}
               </div>

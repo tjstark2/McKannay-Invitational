@@ -309,7 +309,7 @@ export function MatchCenterScreen({
                     <h2 className="mt-1 font-black">{match.label}</h2>
 
                     <p className="mt-1 text-xs text-slate-500">
-                      {round ? formatRoundFormat(round.format) : ""}
+                      {round ? formatRoundFormat(round.format, round.groupSize) : ""}
                       {" · "}
                       {match.points} pts
                     </p>

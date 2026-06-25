@@ -1,3 +1,4 @@
+import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import { useEffect, useState } from "react";
 import { formatPlusMinus } from "@/lib/format";
 import { frontNineNetScore, netScore, playerNetToPar } from "@/lib/scoring";
@@ -312,7 +313,13 @@ export function AddScoreScreen() {
             ))}
           </select>
         ) : (
-          <div className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 p-3 font-bold">
+          <div className="mt-2 flex w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 p-3 font-bold">
+            <PlayerAvatar
+              avatarId={selectedPlayer.avatarId}
+              emoji={selectedPlayer.avatarEmoji}
+              name={selectedPlayer.name}
+              size={28}
+            />
             {selectedPlayer.name}
           </div>
         )}
@@ -434,11 +441,19 @@ export function AddScoreScreen() {
                 key={`${score.roundId}-${score.playerId}`}
                 className="flex items-center justify-between rounded-xl bg-slate-50 p-3 text-sm"
               >
-                <div>
-                  <p className="font-bold">{player?.name ?? score.playerId}</p>
-                  <p className="text-xs text-slate-500">
-                    {round?.title ?? score.roundId}
-                  </p>
+                <div className="flex items-center gap-2.5">
+                  <PlayerAvatar
+                    avatarId={player?.avatarId}
+                    emoji={player?.avatarEmoji}
+                    name={player?.name ?? score.playerId}
+                    size={32}
+                  />
+                  <div>
+                    <p className="font-bold">{player?.name ?? score.playerId}</p>
+                    <p className="text-xs text-slate-500">
+                      {round?.title ?? score.roundId}
+                    </p>
+                  </div>
                 </div>
                 <div className="text-right">
                   <p className="font-black">Final {score.grossScore ?? "-"}</p>

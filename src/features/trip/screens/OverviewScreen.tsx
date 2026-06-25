@@ -269,7 +269,13 @@ export function OverviewScreen({
           {!isGroupedRound && hot ? (
             <div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm">
               <p className="font-black">🔥 Hot Right Now</p>
-              <p className="mt-1 text-slate-600">
+              <p className="mt-1 flex items-center gap-1.5 text-slate-600">
+                <PlayerAvatar
+                  avatarId={hot.player.avatarId}
+                  emoji={hot.player.avatarEmoji}
+                  name={hot.player.name}
+                  size={20}
+                />
                 {hot.player.name} — front net {hot.frontNet?.toFixed(1)} through
                 9.
               </p>
@@ -456,9 +462,19 @@ export function OverviewScreen({
         <div className="grid grid-cols-2 gap-3">
           <Card className="p-3 text-center">
             <p className="text-xs font-bold text-slate-500">⛳ Best Net Round</p>
-            <p className="mt-1 text-sm font-black">
-              {bestNet ? bestNet.player.name : "—"}
-            </p>
+            <div className="mt-1 flex flex-col items-center gap-1">
+              {bestNet ? (
+                <PlayerAvatar
+                  avatarId={bestNet.player.avatarId}
+                  emoji={bestNet.player.avatarEmoji}
+                  name={bestNet.player.name}
+                  size={28}
+                />
+              ) : null}
+              <p className="text-sm font-black">
+                {bestNet ? bestNet.player.name : "—"}
+              </p>
+            </div>
             <p className="mt-0.5 text-xs text-slate-500">
               {bestNet
                 ? `${bestNet.label} · ${bestNet.round.title}`
@@ -468,9 +484,19 @@ export function OverviewScreen({
 
           <Card className="p-3 text-center">
             <p className="text-xs font-bold text-slate-500">🚀 Biggest Mover</p>
-            <p className="mt-1 text-sm font-black">
-              {biggestMover ? biggestMover.player.name : "—"}
-            </p>
+            <div className="mt-1 flex flex-col items-center gap-1">
+              {biggestMover ? (
+                <PlayerAvatar
+                  avatarId={biggestMover.player.avatarId}
+                  emoji={biggestMover.player.avatarEmoji}
+                  name={biggestMover.player.name}
+                  size={28}
+                />
+              ) : null}
+              <p className="text-sm font-black">
+                {biggestMover ? biggestMover.player.name : "—"}
+              </p>
+            </div>
             <p className="mt-0.5 text-xs text-slate-500">
               {biggestMover ? biggestMover.label : "Needs 2+ rounds"}
             </p>

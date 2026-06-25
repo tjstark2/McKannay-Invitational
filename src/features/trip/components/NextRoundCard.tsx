@@ -1,3 +1,4 @@
+import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import { formatRoundFormat } from "@/lib/format";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import type { RoundStatus } from "@/lib/scoring";
@@ -88,7 +89,7 @@ export function NextRoundCard({
                   Format
                 </p>
                 <p className="mt-0.5 font-black">
-                  {formatRoundFormat(round.format)}
+                  {formatRoundFormat(round.format, round.groupSize)}
                 </p>
               </div>
               <div className="rounded-xl bg-fairway-900/45 p-2.5">
@@ -115,9 +116,22 @@ export function NextRoundCard({
                   Tee {index + 1}
                 </p>
                 <p className="mt-1 text-sm font-semibold">{tee.time || "—"}</p>
-                <p className="mt-2 text-xs leading-5 text-slate-600">
-                  {tee.players.map(getPlayerName).join(", ")}
-                </p>
+                <div className="mt-2 flex flex-col gap-1 text-xs text-slate-600">
+                  {tee.players.map((pid) => {
+                    const p = players.find((x) => x.id === pid);
+                    return (
+                      <span key={pid} className="flex items-center gap-1.5">
+                        <PlayerAvatar
+                          avatarId={p?.avatarId}
+                          emoji={p?.avatarEmoji}
+                          name={p?.name ?? pid}
+                          size={18}
+                        />
+                        <span className="truncate">{p?.name ?? pid}</span>
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
             ))}
           </div>

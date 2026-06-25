@@ -161,7 +161,7 @@ export function MatchDetailScreen({
                 {round.title} · {course.name}
               </p>
               <p className="mt-1 text-sm text-slate-500">
-                {formatRoundFormat(round.format)}
+                {formatRoundFormat(round.format, round.groupSize)}
               </p>
             </div>
 
