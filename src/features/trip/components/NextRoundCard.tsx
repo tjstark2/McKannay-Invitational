@@ -62,6 +62,19 @@ export function NextRoundCard({
             />
           ) : null}
           <div className="absolute inset-0 bg-gradient-to-t from-fairway-900/95 via-fairway-900/55 to-fairway-900/15" />
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 400 220"
+            preserveAspectRatio="none"
+            className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.13]"
+          >
+            <g fill="none" stroke="#ffffff" strokeWidth="1.3">
+              <path d="M-20,55 C70,20 150,80 250,50 C330,26 400,60 420,52" />
+              <path d="M-20,100 C70,65 150,125 250,95 C330,71 400,105 420,97" />
+              <path d="M-20,145 C70,110 150,170 250,140 C330,116 400,150 420,142" />
+              <path d="M-20,190 C70,155 150,215 250,185 C330,161 400,195 420,187" />
+            </g>
+          </svg>
           <div className="relative p-4 text-white">
             <span className="absolute right-4 top-3 text-2xl drop-shadow">⛳</span>
             <p className="text-xs font-bold text-fairway-100">

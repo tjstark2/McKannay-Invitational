@@ -170,6 +170,19 @@ export function OverviewScreen({
     projA > projB ? teamAName : projB > projA ? teamBName : null;
   const momentumMargin = Math.abs(projA - projB);
 
+  // Overall projected race → momentum bar fill + golf-ball marker position.
+  const projTotalA = race.projectedTotalPoints.A;
+  const projTotalB = race.projectedTotalPoints.B;
+  const projTotal = projTotalA + projTotalB;
+  const aPct = projTotal > 0 ? (projTotalA / projTotal) * 100 : 50;
+  const ballPct = Math.min(94, Math.max(6, aPct));
+  const momentumNote =
+    projTotalA > projTotalB
+      ? `${teamAName} ahead in the projected race`
+      : projTotalB > projTotalA
+      ? `${teamBName} ahead in the projected race`
+      : "Dead even in the projected race";
+
   // Grouped rounds (Scramble / Best Ball 2v2-4v4) record one combined score
   // per SIDE, not per player — so progress, status, and leaders come from
   // group_scores, not per-player score entries.
@@ -478,6 +491,38 @@ export function OverviewScreen({
               </p>
             </div>
           </div>
+
+          {/* fairway momentum bar */}
+          <div className="mt-4">
+            <div className="flex items-center justify-between text-xs font-extrabold">
+              <span className="text-team-north">{teamAName}</span>
+              <span className="text-team-south">{teamBName}</span>
+            </div>
+            <div className="relative mt-2 h-4">
+              <div className="absolute inset-0 overflow-hidden rounded-full border border-line bg-slate-100">
+                <div
+                  className="absolute inset-y-0 left-0 bg-team-north"
+                  style={{ width: `${aPct}%` }}
+                />
+                <div
+                  className="absolute inset-y-0 right-0 bg-team-south"
+                  style={{ left: `${aPct}%` }}
+                />
+              </div>
+              <span
+                className="absolute top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-300 bg-white shadow-[0_3px_6px_-2px_rgba(0,0,0,0.5)]"
+                style={{
+                  left: `${ballPct}%`,
+                  backgroundImage:
+                    "radial-gradient(#cdd3cd 1px, transparent 1.4px)",
+                  backgroundSize: "5px 5px",
+                }}
+              />
+            </div>
+            <p className="mt-2 text-center text-xs font-semibold text-slate-500">
+              {momentumNote}
+            </p>
+          </div>
         </Card>
       </section>
 
@@ -485,47 +530,59 @@ export function OverviewScreen({
       <section>
         <h2 className="mb-3 flex items-center gap-2 text-xl font-black text-fairway-900"><span className="h-[18px] w-2 rounded-[3px] bg-accent" />Highlights</h2>
         <div className="grid grid-cols-2 gap-3">
-          <Card className="p-3 text-center">
-            <p className="text-xs font-bold text-slate-500">⛳ Best Net Round</p>
-            <div className="mt-1 flex flex-col items-center gap-1">
-              {bestNet ? (
-                <PlayerAvatar
-                  avatarId={bestNet.player.avatarId}
-                  emoji={bestNet.player.avatarEmoji}
-                  name={bestNet.player.name}
-                  size={28}
-                />
-              ) : null}
-              <p className="text-sm font-black">
-                {bestNet ? bestNet.player.name : "—"}
+          <div className="flex items-center gap-2.5 rounded-[18px] border border-line bg-white p-3 shadow-[0_10px_24px_-20px_rgba(14,76,48,0.5)]">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e7f7ef] text-lg">
+              ⛳
+            </span>
+            <div className="min-w-0">
+              <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400">
+                Best Net Round
+              </p>
+              <div className="flex items-center gap-1.5">
+                {bestNet ? (
+                  <PlayerAvatar
+                    avatarId={bestNet.player.avatarId}
+                    emoji={bestNet.player.avatarEmoji}
+                    name={bestNet.player.name}
+                    size={18}
+                  />
+                ) : null}
+                <p className="truncate text-sm font-extrabold">
+                  {bestNet ? bestNet.player.name : "—"}
+                </p>
+              </div>
+              <p className="truncate text-[11px] text-slate-500">
+                {bestNet ? bestNet.label : "No finals yet"}
               </p>
             </div>
-            <p className="mt-0.5 text-xs text-slate-500">
-              {bestNet
-                ? `${bestNet.label} · ${bestNet.round.title}`
-                : "No finals yet"}
-            </p>
-          </Card>
+          </div>
 
-          <Card className="p-3 text-center">
-            <p className="text-xs font-bold text-slate-500">🚀 Biggest Mover</p>
-            <div className="mt-1 flex flex-col items-center gap-1">
-              {biggestMover ? (
-                <PlayerAvatar
-                  avatarId={biggestMover.player.avatarId}
-                  emoji={biggestMover.player.avatarEmoji}
-                  name={biggestMover.player.name}
-                  size={28}
-                />
-              ) : null}
-              <p className="text-sm font-black">
-                {biggestMover ? biggestMover.player.name : "—"}
+          <div className="flex items-center gap-2.5 rounded-[18px] border border-line bg-white p-3 shadow-[0_10px_24px_-20px_rgba(14,76,48,0.5)]">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#eef0ff] text-lg">
+              🚀
+            </span>
+            <div className="min-w-0">
+              <p className="text-[10px] font-extrabold uppercase tracking-wide text-slate-400">
+                Biggest Mover
+              </p>
+              <div className="flex items-center gap-1.5">
+                {biggestMover ? (
+                  <PlayerAvatar
+                    avatarId={biggestMover.player.avatarId}
+                    emoji={biggestMover.player.avatarEmoji}
+                    name={biggestMover.player.name}
+                    size={18}
+                  />
+                ) : null}
+                <p className="truncate text-sm font-extrabold">
+                  {biggestMover ? biggestMover.player.name : "—"}
+                </p>
+              </div>
+              <p className="truncate text-[11px] text-slate-500">
+                {biggestMover ? biggestMover.label : "Needs 2+ rounds"}
               </p>
             </div>
-            <p className="mt-0.5 text-xs text-slate-500">
-              {biggestMover ? biggestMover.label : "Needs 2+ rounds"}
-            </p>
-          </Card>
+          </div>
         </div>
       </section>
 
