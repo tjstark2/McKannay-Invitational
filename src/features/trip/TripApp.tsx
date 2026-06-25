@@ -115,11 +115,11 @@ function TripAppInner() {
           {showTournamentShell ? (
             <div className="space-y-4">
               <div>
-                <h2 className="text-2xl font-black text-slate-900">
-                  Tournament
+                <h2 className="font-anton text-3xl tracking-tight text-ink">
+                  Pecking Order
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Scoreboard, matches, schedule, leaderboard, teams, and players.
+                  Scores, matches, schedule, leaders, teams, and players.
                 </p>
               </div>
 
@@ -135,10 +135,10 @@ function TripAppInner() {
                   <button
                     key={tab.id}
                     onClick={() => setTournamentTab(tab.id as TournamentTab)}
-                    className={`rounded-xl px-3 py-2 text-sm font-black ${
+                    className={`rounded-xl px-3 py-2 text-sm font-extrabold transition ${
                       tournamentTab === tab.id
-                        ? "bg-fairway-900 text-white"
-                        : "bg-slate-100 text-slate-600"
+                        ? "bg-fairway-900 text-white shadow-[0_8px_16px_-10px_rgba(19,100,63,0.8)]"
+                        : "border border-line bg-white text-slate-600"
                     }`}
                   >
                     {tab.label}
