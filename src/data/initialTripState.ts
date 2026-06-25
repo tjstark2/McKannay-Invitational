@@ -97,6 +97,7 @@ export const initialRounds: Round[] = [
     dateLabel: "Sept 10",
     courseId: "atlantic-dunes",
     format: "best_ball",
+    groupSize: null,
     pointsAvailable: 6,
     arrivalTime: "7:15 AM",
     teeTimes: [
@@ -112,6 +113,7 @@ export const initialRounds: Round[] = [
     dateLabel: "Sept 11",
     courseId: "harbour-town",
     format: "match_play",
+    groupSize: null,
     pointsAvailable: 6,
     arrivalTime: "7:15 AM",
     teeTimes: [
@@ -127,6 +129,7 @@ export const initialRounds: Round[] = [
     dateLabel: "Sept 12",
     courseId: "heron-point",
     format: "net_score",
+    groupSize: null,
     pointsAvailable: 6,
     arrivalTime: "7:15 AM",
     teeTimes: [

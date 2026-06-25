@@ -19,7 +19,12 @@ export type Screen =
   | "more"
   | "courseDetail";
 
-export type RoundFormat = "best_ball" | "match_play" | "net_score" | "casual";
+export type RoundFormat =
+  | "best_ball"
+  | "match_play"
+  | "net_score"
+  | "casual"
+  | "scramble";
 
 export type Trip = {
   id: string;
@@ -80,6 +85,7 @@ export type Round = {
   dateLabel: string;
   courseId: string;
   format: RoundFormat;
+  groupSize: number | null;
   pointsAvailable: number;
   arrivalTime: string;
   teeTimes: TeeTime[];

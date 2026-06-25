@@ -558,6 +558,7 @@ export async function insertRound(
     dateLabel: string;
     courseId: string;
     format: Round["format"];
+    groupSize?: number | null;
     pointsAvailable: number;
     arrivalTime: string;
   }
@@ -571,6 +572,7 @@ export async function insertRound(
       title: round.title,
       date_label: round.dateLabel,
       format: round.format,
+      group_size: round.groupSize ?? null,
       points_available: round.pointsAvailable,
       arrival_time: round.arrivalTime,
       sort_order: round.roundNumber,

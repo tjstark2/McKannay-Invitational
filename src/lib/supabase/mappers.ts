@@ -102,6 +102,7 @@ export type RoundRow = {
   title: string | null;
   date_label: string | null;
   format: string;
+  group_size: number | null;
   points_available: number | null;
   arrival_time: string | null;
   sort_order: number | null;
@@ -211,6 +212,7 @@ export function mapRound(row: RoundRow): Round {
     dateLabel: row.date_label ?? "",
     courseId: row.course_id ?? "",
     format: row.format as Round["format"],
+    groupSize: row.group_size ?? null,
     pointsAvailable: Number(row.points_available ?? 0),
     arrivalTime: row.arrival_time ?? "",
     teeTimes,
