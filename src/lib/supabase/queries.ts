@@ -70,6 +70,7 @@ export type MyTripSummary = {
   playerCount: number;
   roundCount: number;
   status: TripStatus;
+  isPro: boolean;
 };
 
 // Trips the user owns OR is a member of, de-duplicated (owner wins).
@@ -81,7 +82,7 @@ export async function loadMyTrips(
 
   const owned = await supabase
     .from("trips")
-    .select("id,name,join_code,location,dates")
+    .select("id,name,join_code,location,dates,is_pro")
     .eq("owner_id", userId);
   for (const t of (owned.data ?? []) as Record<string, unknown>[]) {
     map.set(t.id as string, {
@@ -94,12 +95,13 @@ export async function loadMyTrips(
       playerCount: 0,
       roundCount: 0,
       status: "not_started",
+      isPro: Boolean(t.is_pro),
     });
   }
 
   const member = await supabase
     .from("trip_members")
-    .select("role, trips(id,name,join_code,location,dates)")
+    .select("role, trips(id,name,join_code,location,dates,is_pro)")
     .eq("user_id", userId)
     .eq("status", "active");
   for (const row of (member.data ?? []) as Record<string, unknown>[]) {
@@ -118,6 +120,7 @@ export async function loadMyTrips(
       playerCount: 0,
       roundCount: 0,
       status: "not_started",
+      isPro: Boolean(t.is_pro),
     });
   }
 

@@ -55,6 +55,11 @@ export function TopHero({
           <p className="text-xs font-bold uppercase tracking-[0.22em] opacity-90">
             {trip.location}
           </p>
+          {trip.isPro ? (
+            <span className="mt-2 inline-flex items-center rounded-full bg-accent px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wide text-ink shadow">
+              Pro
+            </span>
+          ) : null}
           <h1 className="mt-2 text-2xl font-black tracking-tight drop-shadow">
             {trip.name}
           </h1>

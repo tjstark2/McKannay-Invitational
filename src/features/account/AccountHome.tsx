@@ -305,7 +305,11 @@ export function AccountHome() {
             {visibleTrips.map((t) => (
               <div
                 key={t.id}
-                className="rounded-2xl border border-sand-100 bg-white p-5 shadow-sm"
+                className={`rounded-2xl border p-5 shadow-sm ${
+                  t.isPro
+                    ? "border-accent/40 bg-accent/10"
+                    : "border-slate-200 bg-slate-50"
+                }`}
               >
                 <button
                   onClick={() => router.push(`/t/${t.joinCode}`)}
@@ -322,6 +326,11 @@ export function AccountHome() {
                       <span className="shrink-0 rounded-full bg-sand-50 px-2 py-0.5 text-[11px] font-black uppercase tracking-wide text-slate-400">
                         {t.role}
                       </span>
+                      {t.isPro ? (
+                        <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[11px] font-black uppercase tracking-wide text-ink">
+                          Pro
+                        </span>
+                      ) : null}
                     </div>
                     <span className="shrink-0 text-xs font-bold text-slate-400">
                       {t.joinCode}
