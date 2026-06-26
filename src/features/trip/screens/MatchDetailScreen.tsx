@@ -155,12 +155,20 @@ export function MatchDetailScreen({
 
   return (
     <div className="space-y-4">
-      <button
-        onClick={() => setActiveScreen("matchCenter")}
-        className="text-sm font-bold text-fairway-900"
-      >
-        ← Back to Match Center
-      </button>
+      <div className="flex items-start justify-between gap-3">
+        <button
+          onClick={() => setActiveScreen("matchCenter")}
+          className="text-sm font-bold text-fairway-900"
+        >
+          ← Back to Match Center
+        </button>
+        <img
+          src="/brand/match-detail-birdy.png"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none -mt-3 h-24 w-auto shrink-0 drop-shadow-[0_10px_14px_rgba(11,36,24,0.35)]"
+        />
+      </div>
 
       <Card className="overflow-hidden">
         <img

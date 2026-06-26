@@ -28,10 +28,18 @@ export function TeamsScreen({
 
   return (
     <div className="space-y-4">
-      <SectionHeader
-        title="Teams"
-        subtitle="Rosters, points, handicaps, and match wins."
-      />
+      <div className="flex items-start justify-between gap-3">
+        <SectionHeader
+          title="Teams"
+          subtitle="Rosters, points, handicaps, and match wins."
+        />
+        <img
+          src="/brand/teams-birdy.png"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none -mt-1 h-24 w-auto shrink-0 drop-shadow-[0_10px_14px_rgba(11,36,24,0.35)]"
+        />
+      </div>
 
       {summaries.map((summary) => (
         <button

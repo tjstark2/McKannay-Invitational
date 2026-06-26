@@ -39,12 +39,20 @@ export function TeamDetailScreen({
 
   return (
     <div className="space-y-4">
-      <button
-        onClick={() => setActiveScreen("teams")}
-        className="text-sm font-bold text-fairway-900"
-      >
-        ← Back to Teams
-      </button>
+      <div className="flex items-start justify-between gap-3">
+        <button
+          onClick={() => setActiveScreen("teams")}
+          className="text-sm font-bold text-fairway-900"
+        >
+          ← Back to Teams
+        </button>
+        <img
+          src="/brand/team-detail-birdy.png"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none -mt-3 h-24 w-auto shrink-0 drop-shadow-[0_10px_14px_rgba(11,36,24,0.35)]"
+        />
+      </div>
 
       <Card className="p-5">
         <div className="flex items-start justify-between">
