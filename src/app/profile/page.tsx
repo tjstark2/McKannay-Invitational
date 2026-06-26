@@ -19,7 +19,6 @@ type Profile = {
   email: string | null;
   phone: string | null;
   marketing_opt_in: boolean | null;
-  tournament_updates_opt_in: boolean | null;
   avatar_id: string | null;
 };
 
@@ -41,7 +40,7 @@ export default function ProfilePage() {
       const p = await supabase
         .from("profiles")
         .select(
-          "first_name,last_name,username,city,state,email,phone,marketing_opt_in,tournament_updates_opt_in,avatar_id"
+          "first_name,last_name,username,city,state,email,phone,marketing_opt_in,avatar_id"
         )
         .eq("id", user.id)
         .maybeSingle();
@@ -61,6 +60,13 @@ export default function ProfilePage() {
     .join(" ");
   const location =
     [profile?.city, profile?.state].filter(Boolean).join(", ") || null;
+
+  const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+  const tournamentUpdatesOn = meta.tournament_updates_opt_in !== false;
+  const marketingOn =
+    profile?.marketing_opt_in ??
+    (meta.marketing_opt_in as boolean | undefined) ??
+    false;
 
   return (
     <div className="min-h-screen bg-[#f7f6f1]">
@@ -142,12 +148,12 @@ export default function ProfilePage() {
             <Row
               label="Tournament updates"
               hint="Tee times, scores, results"
-              value={profile?.tournament_updates_opt_in === false ? "Off" : "On"}
+              value={tournamentUpdatesOn ? "On" : "Off"}
             />
             <Row
               label="News & offers"
               hint="Tips, features, deals"
-              value={profile?.marketing_opt_in ? "On" : "Off"}
+              value={marketingOn ? "On" : "Off"}
             />
           </div>
           <p className="mt-2 px-1 text-xs text-slate-400">
