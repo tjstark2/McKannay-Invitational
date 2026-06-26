@@ -3,7 +3,6 @@ import { ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { FlairCard } from "@/components/ui/FlairCard";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import type { Screen } from "@/types";
 
@@ -21,8 +20,15 @@ export function PlayersScreen({
 
   return (
     <div className="space-y-4">
-      <SectionHeader title="Players" subtitle="Teams and handicap indexes." />
-      <FlairCard img="/brand/birdie-family.png" />
+      <div className="relative pr-28">
+        <SectionHeader title="Players" subtitle="Teams and handicap indexes." />
+        <img
+          src="/brand/birdie-family.png"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-4 right-0 h-28 w-auto drop-shadow-[0_10px_14px_rgba(11,36,24,0.35)]"
+        />
+      </div>
 
       {players.map((player) => (
         <button
