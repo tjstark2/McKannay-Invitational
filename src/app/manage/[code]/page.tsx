@@ -137,7 +137,7 @@ export default function ManagePage() {
   if (!authorized) {
     return (
       <Shell>
-        <h1 className="text-2xl font-black text-ink">Not Your Tournament</h1>
+        <h1 className="font-anton text-3xl tracking-tight text-ink">Not Your Tournament</h1>
         <p className="mt-2 text-slate-500">
           Only the organizer can manage members for this tournament.
         </p>
@@ -154,7 +154,7 @@ export default function ManagePage() {
   if (!trip) {
     return (
       <Shell>
-        <h1 className="text-2xl font-black text-ink">Tournament Not Found</h1>
+        <h1 className="font-anton text-3xl tracking-tight text-ink">Tournament Not Found</h1>
         <button
           onClick={() => router.push("/home")}
           className="mt-6 rounded-2xl bg-fairway-900 px-5 py-3 font-black text-white"
@@ -403,7 +403,7 @@ export default function ManagePage() {
       <p className="text-xs font-extrabold uppercase tracking-wide text-accent-dark">
         Manage tournament
       </p>
-      <h1 className="mt-1 text-3xl font-black text-ink">{trip.name}</h1>
+      <h1 className="mt-1 font-anton text-4xl tracking-tight text-ink">{trip.name}</h1>
       <p className="mt-1 text-slate-500">
         Share code <b className="text-fairway-900">{trip.joinCode}</b> · approve
         who gets in.
@@ -411,7 +411,7 @@ export default function ManagePage() {
 
       {/* invite by username */}
       <section className="mt-7">
-        <h2 className="text-xl font-black text-fairway-900">Invite a Player</h2>
+        <h2 className="font-anton text-2xl tracking-tight text-ink">Invite a Player</h2>
         <div className="relative mt-3">
           <div className="flex items-center gap-2 rounded-2xl border border-sand-100 bg-white px-3 py-2">
             <span className="pl-1 text-slate-400">@</span>
@@ -498,7 +498,7 @@ export default function ManagePage() {
 
       {/* requests */}
       <section className="mt-8">
-        <h2 className="flex items-center gap-2 text-xl font-black text-fairway-900">
+        <h2 className="flex items-center gap-2 font-anton text-2xl tracking-tight text-ink">
           Join Requests
           {requests.length > 0 ? (
             <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-black text-ink">
@@ -536,7 +536,7 @@ export default function ManagePage() {
       <section className="mt-9">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <h2 className="text-xl font-black text-fairway-900">Roster</h2>
+            <h2 className="font-anton text-2xl tracking-tight text-ink">Roster</h2>
             <p className="mt-1 text-sm text-slate-500">
               {filledSpots} of {trip.rosterSize} spots filled · assign each
               player to a team.
@@ -613,7 +613,7 @@ export default function ManagePage() {
 
       {/* team names */}
       <section className="mt-9">
-        <h2 className="text-xl font-black text-fairway-900">Team Names</h2>
+        <h2 className="font-anton text-2xl tracking-tight text-ink">Team Names</h2>
         <div className="mt-3 space-y-2">
           {teams.map((t) => (
             <TeamNameRow key={t.dbId} team={t} onSave={renameTeam} />

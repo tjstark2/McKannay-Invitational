@@ -4,6 +4,7 @@ import { formatPlusMinus } from "@/lib/format";
 import { frontNineNetScore, netScore, playerNetToPar } from "@/lib/scoring";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useViewer } from "@/features/trip/state/ViewerContext";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -255,8 +256,9 @@ export function AddScoreScreen() {
 
   return (
     <div className="space-y-4">
-      <SectionHeader
-        title="Log Round"
+      <ScreenHeader
+        img="/brand/tee-it-up.png"
+        title="Tee It Up"
         subtitle={
           canManage
             ? "Enter front 9 progress first, then final gross score after 18."

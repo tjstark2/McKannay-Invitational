@@ -287,7 +287,7 @@ function PersonRow({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="flex items-center gap-2 text-xl font-black text-fairway-900">
+    <h2 className="flex items-center gap-2 font-anton text-2xl tracking-tight text-ink">
       {children}
     </h2>
   );

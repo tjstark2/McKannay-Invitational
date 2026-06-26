@@ -218,7 +218,7 @@ export function AccountHome() {
 
         {/* my tournaments */}
         <div className="mt-9 flex items-center gap-2">
-          <span className="h-[18px] w-2 rounded-[3px] bg-accent" />
+          <span className="h-5 w-2 rounded-[3px] bg-mint" />
           <h2 className="font-anton text-2xl tracking-tight text-ink">My Tournaments</h2>
         </div>
 

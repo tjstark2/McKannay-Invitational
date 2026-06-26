@@ -40,3 +40,13 @@ h4 {
   0%, 100% { transform: translateX(0); }
   50% { transform: translateX(16px); }
 }
+
+/* loading mascot */
+@keyframes tb-walk {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+  50% { transform: translateY(-8px) rotate(1.5deg); }
+}
+@keyframes tb-dot {
+  0%, 100% { opacity: 0.25; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
+}

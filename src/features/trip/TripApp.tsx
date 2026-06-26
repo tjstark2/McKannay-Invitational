@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AddScoreScreen } from "@/features/trip/screens/AddScoreScreen";
 import { AdminScreen } from "@/features/trip/screens/AdminScreen";
 import { BottomNav } from "@/features/trip/components/BottomNav";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { CourseDetailScreen } from "@/features/trip/screens/CourseDetailScreen";
 import { LeaderboardScreen } from "@/features/trip/screens/LeaderboardScreen";
 import { MatchCenterScreen } from "@/features/trip/screens/MatchCenterScreen";
@@ -53,10 +54,21 @@ function TripAppInner() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-200 text-slate-900">
-        <div className="text-center">
-          <p className="text-3xl">⛳</p>
-          <p className="mt-3 font-black">Loading tournament…</p>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-white px-6 text-center text-slate-900">
+        <img
+          src="/brand/loading-birdie.png"
+          alt=""
+          aria-hidden="true"
+          className="h-44 w-auto animate-[tb-walk_0.7s_ease-in-out_infinite]"
+        />
+        <p className="font-anton text-2xl tracking-tight text-ink">
+          Teeing things up…
+        </p>
+        <div className="flex gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-fairway-900 animate-[tb-dot_0.9s_ease-in-out_infinite]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-fairway-900 animate-[tb-dot_0.9s_ease-in-out_0.15s_infinite]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-fairway-900 animate-[tb-dot_0.9s_ease-in-out_0.3s_infinite]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-fairway-900/40 animate-[tb-dot_0.9s_ease-in-out_0.45s_infinite]" />
         </div>
       </div>
     );
@@ -64,7 +76,7 @@ function TripAppInner() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-200 px-5 text-slate-900">
+      <div className="flex min-h-screen items-center justify-center bg-[#f7f6f1] px-5 text-slate-900">
         <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-phone">
           <p className="text-3xl">⚠️</p>
           <p className="mt-3 font-black">Couldn&apos;t load the tournament</p>
@@ -114,14 +126,11 @@ function TripAppInner() {
 
           {showTournamentShell ? (
             <div className="space-y-4">
-              <div>
-                <h2 className="font-anton text-3xl tracking-tight text-ink">
-                  Pecking Order
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Scores, matches, schedule, leaders, teams, and players.
-                </p>
-              </div>
+              <ScreenHeader
+                img="/brand/pecking-order.png"
+                title="Pecking Order"
+                subtitle="Scores, matches, schedule, leaders, teams, and players."
+              />
 
               <div className="grid grid-cols-3 gap-2">
                 {[
