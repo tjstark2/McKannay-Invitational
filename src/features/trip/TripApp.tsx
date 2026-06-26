@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AddScoreScreen } from "@/features/trip/screens/AddScoreScreen";
 import { AdminScreen } from "@/features/trip/screens/AdminScreen";
 import { BottomNav } from "@/features/trip/components/BottomNav";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { CourseDetailScreen } from "@/features/trip/screens/CourseDetailScreen";
 import { ClubhouseScreen } from "@/features/trip/screens/ClubhouseScreen";
+import type { ClubhouseTab } from "@/features/trip/screens/ClubhouseScreen";
 import { LeaderboardScreen } from "@/features/trip/screens/LeaderboardScreen";
 import { MatchCenterScreen } from "@/features/trip/screens/MatchCenterScreen";
 import { MatchDetailScreen } from "@/features/trip/screens/MatchDetailScreen";
@@ -30,6 +31,12 @@ import {
   ViewerProvider,
   useViewer,
 } from "@/features/trip/state/ViewerContext";
+import { useAuth } from "@/features/auth/AuthContext";
+import { getSupabaseClient } from "@/lib/supabase/client";
+import {
+  loadUnreadCounts,
+  type ClubhouseUnread,
+} from "@/lib/supabase/clubhouse";
 import type { Screen, TeamId } from "@/types";
 
 type TournamentTab =
@@ -44,6 +51,7 @@ function TripAppInner() {
   const { trip, players, courses, matches, loading, error, resetState } =
     useTripState();
   const { canManage } = useViewer();
+  const { user } = useAuth();
 
   const [activeScreen, setActiveScreen] = useState<Screen>("overview");
   const [selectedPlayerId, setSelectedPlayerId] = useState(players[0]?.id ?? "");
@@ -52,6 +60,77 @@ function TripAppInner() {
   const [selectedMatchId, setSelectedMatchId] = useState(matches[0]?.id ?? "");
   const [tournamentTab, setTournamentTab] =
     useState<TournamentTab>("scoreboard");
+  const [clubhouseTab, setClubhouseTab] = useState<ClubhouseTab>("photos");
+  const [unread, setUnread] = useState<ClubhouseUnread>({ photos: 0, chat: 0 });
+
+  // Keep the latest screen/tab visible to the realtime closure without
+  // re-subscribing on every change.
+  const activeScreenRef = useRef(activeScreen);
+  const clubhouseTabRef = useRef(clubhouseTab);
+  useEffect(() => {
+    activeScreenRef.current = activeScreen;
+  }, [activeScreen]);
+  useEffect(() => {
+    clubhouseTabRef.current = clubhouseTab;
+  }, [clubhouseTab]);
+
+  const tripId = trip?.id;
+  const userId = user?.id;
+
+  // Initial unread counts + a trip-level subscription that keeps the
+  // Clubhouse badge live as photos and messages arrive from other people.
+  useEffect(() => {
+    if (!tripId || !userId) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    let active = true;
+
+    loadUnreadCounts(supabase, tripId, userId)
+      .then((counts) => {
+        if (active) setUnread(counts);
+      })
+      .catch(() => {});
+
+    const viewing = (tab: ClubhouseTab) =>
+      activeScreenRef.current === "clubhouse" && clubhouseTabRef.current === tab;
+
+    const bump = (tab: ClubhouseTab, fromUser: string) => {
+      if (fromUser === userId) return; // don't count your own
+      if (viewing(tab)) return; // they're looking at it; the tab marks it read
+      setUnread((u) => ({ ...u, [tab]: u[tab] + 1 }));
+    };
+
+    const channel = supabase
+      .channel(`trip-clubhouse-unread-${tripId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "trip_photos",
+          filter: `trip_id=eq.${tripId}`,
+        },
+        (payload) =>
+          bump("photos", (payload.new as { user_id: string }).user_id)
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "trip_messages",
+          filter: `trip_id=eq.${tripId}`,
+        },
+        (payload) =>
+          bump("chat", (payload.new as { user_id: string }).user_id)
+      )
+      .subscribe();
+
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
+  }, [tripId, userId]);
 
   if (loading) {
     return (
@@ -236,7 +315,14 @@ function TripAppInner() {
             <MoreScreen setActiveScreen={goToScreen} />
           ) : null}
 
-          {activeScreen === "clubhouse" ? <ClubhouseScreen /> : null}
+          {activeScreen === "clubhouse" ? (
+            <ClubhouseScreen
+              tab={clubhouseTab}
+              onTabChange={setClubhouseTab}
+              unread={unread}
+              onRead={(t) => setUnread((u) => ({ ...u, [t]: 0 }))}
+            />
+          ) : null}
 
           {activeScreen === "courseDetail" ? (
             <CourseDetailScreen
@@ -246,7 +332,11 @@ function TripAppInner() {
           ) : null}
         </main>
 
-        <BottomNav activeScreen={activeScreen} setActiveScreen={goToScreen} />
+        <BottomNav
+          activeScreen={activeScreen}
+          setActiveScreen={goToScreen}
+          clubhouseUnread={unread.photos + unread.chat}
+        />
       </div>
     </div>
   );

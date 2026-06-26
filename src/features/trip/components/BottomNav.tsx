@@ -3,9 +3,11 @@ import type { Screen } from "@/types";
 export function BottomNav({
   activeScreen,
   setActiveScreen,
+  clubhouseUnread = 0,
 }: {
   activeScreen: Screen;
   setActiveScreen: (screen: Screen) => void;
+  clubhouseUnread?: number;
 }) {
   const items: { id: Screen; label: string; img: string }[] = [
     { id: "overview", label: "The Nest", img: "/brand/the-nest.png" },
@@ -45,18 +47,25 @@ export function BottomNav({
                 active ? "text-fairway-900" : "text-slate-400"
               }`}
             >
-              <span
-                className={`-mt-7 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-white ring-4 ring-[#f7f6f1] transition ${
-                  active
-                    ? "scale-[1.18] -translate-y-1.5 border-[3px] border-fairway-900 shadow-[0_18px_28px_-8px_rgba(19,100,63,0.65)]"
-                    : "border border-line shadow-[0_10px_20px_-8px_rgba(11,36,24,0.4)]"
-                }`}
-              >
-                <img
-                  src={item.img}
-                  alt={item.label}
-                  className="h-full w-full object-contain"
-                />
+              <span className="relative -mt-7 inline-flex">
+                <span
+                  className={`flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-white ring-4 ring-[#f7f6f1] transition ${
+                    active
+                      ? "scale-[1.18] -translate-y-1.5 border-[3px] border-fairway-900 shadow-[0_18px_28px_-8px_rgba(19,100,63,0.65)]"
+                      : "border border-line shadow-[0_10px_20px_-8px_rgba(11,36,24,0.4)]"
+                  }`}
+                >
+                  <img
+                    src={item.img}
+                    alt={item.label}
+                    className="h-full w-full object-contain"
+                  />
+                </span>
+                {item.id === "clubhouse" && clubhouseUnread > 0 ? (
+                  <span className="absolute -right-1 -top-1 z-10 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-team-north px-1 text-[10px] font-black text-white ring-2 ring-white">
+                    {clubhouseUnread > 99 ? "99+" : clubhouseUnread}
+                  </span>
+                ) : null}
               </span>
               {item.label}
             </button>

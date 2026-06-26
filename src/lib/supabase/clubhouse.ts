@@ -241,3 +241,73 @@ export async function toggleReaction(
   if (error) throw new Error(`Couldn't add reaction: ${error.message}`);
   return "added";
 }
+
+// ---- Unread tracking (Phase 3) --------------------------------------------
+
+const EPOCH = "1970-01-01T00:00:00Z";
+
+export type ClubhouseUnread = { photos: number; chat: number };
+
+export type ReadState = { photosReadAt: string; chatReadAt: string };
+
+/** The current user's last-read marks for a trip (epoch if never opened). */
+export async function loadReadState(
+  supabase: SupabaseClient,
+  tripId: string,
+  userId: string
+): Promise<ReadState> {
+  const { data } = await supabase
+    .from("trip_reads")
+    .select("photos_read_at,chat_read_at")
+    .eq("trip_id", tripId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const row = data as { photos_read_at?: string; chat_read_at?: string } | null;
+  return {
+    photosReadAt: row?.photos_read_at ?? EPOCH,
+    chatReadAt: row?.chat_read_at ?? EPOCH,
+  };
+}
+
+/** Counts of photos / messages from OTHERS newer than the user's read marks. */
+export async function loadUnreadCounts(
+  supabase: SupabaseClient,
+  tripId: string,
+  userId: string
+): Promise<ClubhouseUnread> {
+  const read = await loadReadState(supabase, tripId, userId);
+  const [photos, chat] = await Promise.all([
+    supabase
+      .from("trip_photos")
+      .select("id", { count: "exact", head: true })
+      .eq("trip_id", tripId)
+      .neq("user_id", userId)
+      .gt("created_at", read.photosReadAt),
+    supabase
+      .from("trip_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("trip_id", tripId)
+      .neq("user_id", userId)
+      .gt("created_at", read.chatReadAt),
+  ]);
+  return { photos: photos.count ?? 0, chat: chat.count ?? 0 };
+}
+
+/** Mark one tab read up to "now" for the current user. Best-effort. */
+export async function markRead(
+  supabase: SupabaseClient,
+  tripId: string,
+  userId: string,
+  tab: "photos" | "chat"
+): Promise<void> {
+  const now = new Date().toISOString();
+  const patch =
+    tab === "photos" ? { photos_read_at: now } : { chat_read_at: now };
+  await supabase
+    .from("trip_reads")
+    .upsert(
+      { trip_id: tripId, user_id: userId, ...patch },
+      { onConflict: "trip_id,user_id" }
+    );
+}

@@ -1,14 +1,27 @@
 "use client";
 
-import { useState } from "react";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { PhotosTab } from "@/features/trip/screens/clubhouse/PhotosTab";
 import { ChatTab } from "@/features/trip/screens/clubhouse/ChatTab";
+import type { ClubhouseUnread } from "@/lib/supabase/clubhouse";
 
-type ClubhouseTab = "photos" | "chat";
+export type ClubhouseTab = "photos" | "chat";
 
-export function ClubhouseScreen() {
-  const [tab, setTab] = useState<ClubhouseTab>("photos");
+export function ClubhouseScreen({
+  tab,
+  onTabChange,
+  unread,
+  onRead,
+}: {
+  tab: ClubhouseTab;
+  onTabChange: (tab: ClubhouseTab) => void;
+  unread: ClubhouseUnread;
+  onRead: (tab: ClubhouseTab) => void;
+}) {
+  const tabs: { id: ClubhouseTab; label: string; count: number }[] = [
+    { id: "photos", label: "Photos", count: unread.photos },
+    { id: "chat", label: "Chat", count: unread.chat },
+  ];
 
   return (
     <div className="space-y-4">
@@ -18,29 +31,36 @@ export function ClubhouseScreen() {
         subtitle="Photos from the round and trash talk from the crew."
       />
 
-      {/* Segmented toggle: Photos | Chat */}
       <div className="grid grid-cols-2 gap-2 rounded-2xl border border-line bg-white p-1">
-        {[
-          { id: "photos" as const, label: "Photos" },
-          { id: "chat" as const, label: "Chat" },
-        ].map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`rounded-xl px-3 py-2 text-sm font-extrabold transition ${
-              tab === t.id
-                ? "bg-fairway-900 text-white shadow-[0_8px_16px_-10px_rgba(19,100,63,0.8)]"
-                : "text-slate-500"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+        {tabs.map((t) => {
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => onTabChange(t.id)}
+              className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-extrabold transition ${
+                active
+                  ? "bg-fairway-900 text-white shadow-[0_8px_16px_-10px_rgba(19,100,63,0.8)]"
+                  : "text-slate-500"
+              }`}
+            >
+              {t.label}
+              {t.count > 0 ? (
+                <span
+                  className={`flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[11px] font-black ${
+                    active ? "bg-white text-fairway-900" : "bg-team-north text-white"
+                  }`}
+                >
+                  {t.count > 99 ? "99+" : t.count}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
       </div>
 
-      {tab === "photos" ? <PhotosTab /> : null}
-
-      {tab === "chat" ? <ChatTab /> : null}
+      {tab === "photos" ? <PhotosTab onRead={() => onRead("photos")} /> : null}
+      {tab === "chat" ? <ChatTab onRead={() => onRead("chat")} /> : null}
     </div>
   );
 }

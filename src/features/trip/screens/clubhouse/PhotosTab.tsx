@@ -11,6 +11,7 @@ import {
   signedUrlFor,
   uploadPhoto,
   deletePhoto,
+  markRead,
 } from "@/lib/supabase/clubhouse";
 import type { Player, TripPhoto } from "@/types";
 
@@ -97,7 +98,7 @@ type Composer = { previewUrl: string; file: File; caption: string };
 
 // ---- component -------------------------------------------------------------
 
-export function PhotosTab() {
+export function PhotosTab({ onRead }: { onRead?: () => void }) {
   const { trip, players } = useTripState();
   const { user } = useAuth();
 
@@ -144,6 +145,10 @@ export function PhotosTab() {
         setPhotos(list);
         setError(null);
         void ensureUrls(list);
+        if (user) {
+          void markRead(supabase, trip.id, user.id, "photos");
+          onRead?.();
+        }
       })
       .catch((e: unknown) => {
         if (!active) return;

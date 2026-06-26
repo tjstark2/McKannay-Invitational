@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SmilePlus, Send } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import { useTripState } from "@/features/trip/state/TripStateContext";
@@ -11,10 +12,13 @@ import {
   loadReactions,
   sendMessage,
   toggleReaction,
+  loadReadState,
+  markRead,
 } from "@/lib/supabase/clubhouse";
 import type { Player, TripMessage, TripMessageReaction } from "@/types";
 
 const REACTIONS = ["👍", "😂", "🔥", "⛳", "💪", "😮"];
+const EPOCH = "1970-01-01T00:00:00Z";
 
 function clockTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, {
@@ -23,7 +27,7 @@ function clockTime(iso: string): string {
   });
 }
 
-export function ChatTab() {
+export function ChatTab({ onRead }: { onRead?: () => void }) {
   const { trip, players } = useTripState();
   const { user } = useAuth();
 
@@ -34,9 +38,17 @@ export function ChatTab() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [pickerFor, setPickerFor] = useState<string | null>(null);
+  const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const unreadRef = useRef<HTMLDivElement | null>(null);
   const messageIdsRef = useRef<Set<string>>(new Set());
+  const onReadRef = useRef(onRead);
+  useEffect(() => {
+    onReadRef.current = onRead;
+  }, [onRead]);
+
+  const userId = user?.id;
 
   const playerByAccount = useCallback(
     (userId: string): Player | undefined =>
@@ -57,6 +69,13 @@ export function ChatTab() {
     });
   }, []);
 
+  // Keep this tab's read mark current (so unread stays at 0 while viewing).
+  const touchRead = useCallback(() => {
+    const supabase = getSupabaseClient();
+    if (supabase && userId) void markRead(supabase, trip.id, userId, "chat");
+    onReadRef.current?.();
+  }, [trip.id, userId]);
+
   // Initial load + realtime subscription.
   useEffect(() => {
     let active = true;
@@ -70,9 +89,21 @@ export function ChatTab() {
     setLoading(true);
     (async () => {
       try {
+        // Capture the read baseline BEFORE marking the tab read, so we can
+        // find where the user left off.
+        const baseline = userId
+          ? (await loadReadState(supabase, trip.id, userId)).chatReadAt
+          : EPOCH;
+
         const msgs = await loadMessages(supabase, trip.id);
         if (!active) return;
         setMessages(msgs);
+
+        const firstUnread = msgs.find(
+          (m) => (!userId || m.userId !== userId) && m.createdAt > baseline
+        );
+        setFirstUnreadId(firstUnread?.id ?? null);
+
         const rx = await loadReactions(
           supabase,
           msgs.map((m) => m.id)
@@ -80,7 +111,17 @@ export function ChatTab() {
         if (!active) return;
         setReactions(rx);
         setError(null);
-        scrollToBottom(false);
+
+        // Land on the first unread message, or the bottom if all caught up.
+        requestAnimationFrame(() => {
+          if (firstUnread && unreadRef.current) {
+            unreadRef.current.scrollIntoView({ block: "center" });
+          } else {
+            scrollToBottom(false);
+          }
+        });
+
+        touchRead();
       } catch (e: unknown) {
         if (active)
           setError(e instanceof Error ? e.message : "Couldn't load chat.");
@@ -121,6 +162,8 @@ export function ChatTab() {
             ];
           });
           scrollToBottom(true);
+          // We're looking at the thread, so keep it marked read.
+          if (!userId || row.user_id !== userId) touchRead();
         }
       )
       .on(
@@ -143,11 +186,7 @@ export function ChatTab() {
               ? prev
               : [
                   ...prev,
-                  {
-                    messageId: r.message_id,
-                    userId: r.user_id,
-                    emoji: r.emoji,
-                  },
+                  { messageId: r.message_id, userId: r.user_id, emoji: r.emoji },
                 ]
           );
         }
@@ -180,7 +219,7 @@ export function ChatTab() {
       active = false;
       supabase.removeChannel(channel);
     };
-  }, [trip.id, scrollToBottom]);
+  }, [trip.id, scrollToBottom, touchRead, userId]);
 
   async function send() {
     const body = input.trim();
@@ -218,7 +257,6 @@ export function ChatTab() {
       (r) =>
         r.messageId === messageId && r.userId === user.id && r.emoji === emoji
     );
-    // Optimistic update; realtime echo is de-duplicated.
     setReactions((prev) =>
       isOn
         ? prev.filter(
@@ -234,14 +272,8 @@ export function ChatTab() {
     const supabase = getSupabaseClient();
     if (!supabase) return;
     try {
-      await toggleReaction(supabase, {
-        messageId,
-        userId: user.id,
-        emoji,
-        isOn,
-      });
+      await toggleReaction(supabase, { messageId, userId: user.id, emoji, isOn });
     } catch (e: unknown) {
-      // Revert on failure.
       setReactions((prev) =>
         isOn
           ? [...prev, { messageId, userId: user.id, emoji }]
@@ -258,7 +290,6 @@ export function ChatTab() {
     }
   }
 
-  // Group consecutive messages from the same sender for a cleaner thread.
   const groups = useMemo(() => {
     const out: { userId: string; items: TripMessage[] }[] = [];
     for (const m of messages) {
@@ -279,6 +310,76 @@ export function ChatTab() {
       counts[r.emoji] = entry;
     }
     return Object.entries(counts);
+  }
+
+  function renderMessage(m: TripMessage, isMine: boolean) {
+    const rx = reactionsForMessage(m.id);
+    const showDivider = m.id === firstUnreadId;
+    return (
+      <div key={m.id}>
+        {showDivider ? (
+          <div
+            ref={unreadRef}
+            className="my-3 flex items-center gap-2 text-[11px] font-black uppercase tracking-wide text-team-north"
+          >
+            <span className="h-px flex-1 bg-team-north/30" />
+            New messages
+            <span className="h-px flex-1 bg-team-north/30" />
+          </div>
+        ) : null}
+        <div className="flex items-end gap-1.5">
+          <p
+            className={`inline-block max-w-full whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm font-medium ${
+              isMine
+                ? "bg-fairway-50 text-ink"
+                : "border border-line bg-white text-ink"
+            }`}
+          >
+            {m.body}
+          </p>
+          <button
+            onClick={() => setPickerFor((id) => (id === m.id ? null : m.id))}
+            aria-label="Add reaction"
+            className="mb-1 shrink-0 rounded-full p-1 text-slate-300 transition hover:bg-sand-50 hover:text-fairway-900"
+          >
+            <SmilePlus size={18} />
+          </button>
+        </div>
+
+        {pickerFor === m.id ? (
+          <div className="mt-1 inline-flex flex-wrap gap-1 rounded-2xl border border-line bg-white p-1.5 shadow-[0_8px_18px_-12px_rgba(14,76,48,.5)]">
+            {REACTIONS.map((e) => (
+              <button
+                key={e}
+                onClick={() => react(m.id, e)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-2xl leading-none transition hover:bg-sand-50 active:scale-90"
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {rx.length > 0 ? (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {rx.map(([emoji, info]) => (
+              <button
+                key={emoji}
+                onClick={() => react(m.id, emoji)}
+                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-bold transition ${
+                  info.mine
+                    ? "border-fairway-900 bg-fairway-50 text-fairway-900"
+                    : "border-line bg-white text-slate-500"
+                }`}
+              >
+                <span className="text-sm leading-none">{emoji}</span>
+                {info.count}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
   }
 
   return (
@@ -309,7 +410,7 @@ export function ChatTab() {
       ) : null}
 
       {!loading && messages.length > 0 ? (
-        <div className="space-y-4 pb-24">
+        <div className="space-y-4 pb-28">
           {groups.map((group, gi) => {
             const poster = playerByAccount(group.userId);
             const isMine = !!user && group.userId === user.id;
@@ -334,68 +435,7 @@ export function ChatTab() {
                     </span>
                   </div>
                   <div className="mt-1 space-y-1.5">
-                    {group.items.map((m) => {
-                      const rx = reactionsForMessage(m.id);
-                      return (
-                        <div key={m.id} className="group/msg">
-                          <div className="flex items-end gap-1.5">
-                            <p
-                              className={`inline-block max-w-full whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm font-medium ${
-                                isMine
-                                  ? "bg-fairway-50 text-ink"
-                                  : "bg-white text-ink border border-line"
-                              }`}
-                            >
-                              {m.body}
-                            </p>
-                            <button
-                              onClick={() =>
-                                setPickerFor((id) => (id === m.id ? null : m.id))
-                              }
-                              aria-label="Add reaction"
-                              className="mb-1 rounded-full px-1.5 py-0.5 text-slate-300 transition hover:text-fairway-900"
-                            >
-                              ☺
-                            </button>
-                          </div>
-
-                          {pickerFor === m.id ? (
-                            <div className="mt-1 inline-flex gap-1 rounded-full border border-line bg-white px-2 py-1 shadow-[0_8px_18px_-12px_rgba(14,76,48,.5)]">
-                              {REACTIONS.map((e) => (
-                                <button
-                                  key={e}
-                                  onClick={() => react(m.id, e)}
-                                  className="rounded-full px-1 text-lg leading-none transition hover:scale-125"
-                                >
-                                  {e}
-                                </button>
-                              ))}
-                            </div>
-                          ) : null}
-
-                          {rx.length > 0 ? (
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {rx.map(([emoji, info]) => (
-                                <button
-                                  key={emoji}
-                                  onClick={() => react(m.id, emoji)}
-                                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-bold transition ${
-                                    info.mine
-                                      ? "border-fairway-900 bg-fairway-50 text-fairway-900"
-                                      : "border-line bg-white text-slate-500"
-                                  }`}
-                                >
-                                  <span className="text-sm leading-none">
-                                    {emoji}
-                                  </span>
-                                  {info.count}
-                                </button>
-                              ))}
-                            </div>
-                          ) : null}
-                        </div>
-                      );
-                    })}
+                    {group.items.map((m) => renderMessage(m, isMine))}
                   </div>
                 </div>
               </div>
@@ -405,9 +445,8 @@ export function ChatTab() {
         </div>
       ) : null}
 
-      {/* Composer pinned above the bottom nav */}
-      <div className="sticky bottom-24 z-30 -mx-1">
-        <div className="flex items-center gap-2 rounded-2xl border border-line bg-white p-1.5 shadow-[0_12px_28px_-18px_rgba(11,36,24,.5)]">
+      <div className="sticky bottom-24 z-30">
+        <div className="flex items-center gap-2 rounded-2xl border border-line bg-white p-2 shadow-[0_12px_28px_-18px_rgba(11,36,24,.5)]">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -419,14 +458,16 @@ export function ChatTab() {
             }}
             maxLength={1000}
             placeholder="Talk some trash…"
-            className="min-w-0 flex-1 rounded-xl bg-sand-50 px-3 py-2.5 text-sm font-medium text-ink outline-none placeholder:text-slate-400"
+            className="min-w-0 flex-1 rounded-xl bg-sand-50 px-3 py-3 text-[16px] font-medium text-ink outline-none placeholder:text-slate-400"
           />
           <button
             onClick={() => void send()}
             disabled={sending || input.trim().length === 0}
-            className="shrink-0 rounded-xl bg-fairway-900 px-4 py-2.5 text-sm font-extrabold text-white transition active:scale-95 disabled:opacity-50"
+            aria-label="Send message"
+            className="flex shrink-0 items-center gap-1.5 rounded-xl bg-fairway-900 px-4 py-3 text-sm font-extrabold text-white transition active:scale-95 disabled:opacity-50"
           >
-            {sending ? "…" : "Send"}
+            <Send size={16} />
+            Send
           </button>
         </div>
       </div>
