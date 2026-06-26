@@ -40,7 +40,14 @@ export function TopHero({
         <CourseBackground value={bg} alt={trip.name} />
         <div className="absolute inset-0 bg-gradient-to-t from-fairway-900/95 via-fairway-900/45 to-fairway-900/10" />
 
-        <BrandBox className="absolute left-4 top-4" />
+        <div className="absolute left-4 top-4 flex flex-col items-start gap-1.5">
+          <BrandBox />
+          {trip.isPro ? (
+            <span className="inline-flex items-center rounded-full bg-accent px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wide text-ink shadow">
+              Pro Version
+            </span>
+          ) : null}
+        </div>
 
         {canManage ? (
           <button
@@ -55,11 +62,6 @@ export function TopHero({
           <p className="text-xs font-bold uppercase tracking-[0.22em] opacity-90">
             {trip.location}
           </p>
-          {trip.isPro ? (
-            <span className="mt-2 inline-flex items-center rounded-full bg-accent px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wide text-ink shadow">
-              Pro
-            </span>
-          ) : null}
           <h1 className="mt-2 text-2xl font-black tracking-tight drop-shadow">
             {trip.name}
           </h1>

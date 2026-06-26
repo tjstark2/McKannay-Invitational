@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { BackgroundsAdmin } from "@/features/trip/screens/admin/BackgroundsAdmin";
+import { ProUpgradeAdmin } from "@/features/trip/screens/admin/ProUpgradeAdmin";
 import type { Round, TeamId, Winner } from "@/types";
 
 type AdminTab = "setup" | "rounds" | "scoring";
@@ -289,6 +290,7 @@ export function AdminScreen() {
       {/* ===================== SETUP ===================== */}
       {activeTab === "setup" ? (
         <>
+          <ProUpgradeAdmin />
           <BackgroundsAdmin />
           <Card className="p-4">
             <h2 className="font-black">Trip Setup</h2>

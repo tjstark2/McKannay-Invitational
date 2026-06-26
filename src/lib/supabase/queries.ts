@@ -437,6 +437,10 @@ export async function persistTripUpdates(
     row.retain_number = updates.retainNumber;
   if (updates.defendingTeam !== undefined)
     row.defending_team = updates.defendingTeam;
+  if (updates.isPro !== undefined) {
+    row.is_pro = updates.isPro;
+    if (updates.isPro) row.pro_since = new Date().toISOString();
+  }
 
   if (Object.keys(row).length === 0) return;
   const { error } = await supabase.from("trips").update(row).eq("id", tripId);
