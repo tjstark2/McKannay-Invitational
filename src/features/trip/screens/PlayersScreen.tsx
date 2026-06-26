@@ -20,13 +20,13 @@ export function PlayersScreen({
 
   return (
     <div className="space-y-4">
-      <div className="relative pr-28">
+      <div className="flex items-start justify-between gap-3">
         <SectionHeader title="Players" subtitle="Teams and handicap indexes." />
         <img
           src="/brand/birdie-family.png"
           alt=""
           aria-hidden="true"
-          className="pointer-events-none absolute -top-4 right-0 h-28 w-auto drop-shadow-[0_10px_14px_rgba(11,36,24,0.35)]"
+          className="pointer-events-none -mt-1 h-24 w-auto shrink-0 drop-shadow-[0_10px_14px_rgba(11,36,24,0.35)]"
         />
       </div>
 
