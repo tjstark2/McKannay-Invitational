@@ -8,6 +8,7 @@ import {
   backgroundThumb,
 } from "@/lib/backgrounds";
 import { CourseBackground } from "@/features/trip/components/CourseBackground";
+import { BackgroundCropper } from "@/features/trip/components/BackgroundCropper";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import {
   loadTripBackgrounds,
@@ -16,43 +17,6 @@ import {
   MAX_CUSTOM_BACKGROUNDS,
   type TripBackground,
 } from "@/lib/supabase/backgrounds";
-
-async function compress(file: File, maxEdge = 1920, quality = 0.82): Promise<Blob> {
-  const bmp = await createImageBitmap(file).catch(() => null);
-  let src: CanvasImageSource, w: number, h: number;
-  if (bmp) {
-    src = bmp;
-    w = bmp.width;
-    h = bmp.height;
-  } else {
-    const url = URL.createObjectURL(file);
-    const img = await new Promise<HTMLImageElement>((res, rej) => {
-      const el = new Image();
-      el.onload = () => res(el);
-      el.onerror = () => rej(new Error("Couldn't read that image."));
-      el.src = url;
-    });
-    URL.revokeObjectURL(url);
-    src = img;
-    w = img.naturalWidth;
-    h = img.naturalHeight;
-  }
-  const scale = Math.min(1, maxEdge / Math.max(w, h));
-  const cw = Math.max(1, Math.round(w * scale));
-  const ch = Math.max(1, Math.round(h * scale));
-  const canvas = document.createElement("canvas");
-  canvas.width = cw;
-  canvas.height = ch;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Couldn't process that image.");
-  ctx.drawImage(src, 0, 0, cw, ch);
-  if (bmp) bmp.close();
-  const blob = await new Promise<Blob | null>((r) =>
-    canvas.toBlob((b) => r(b), "image/jpeg", quality)
-  );
-  if (!blob) throw new Error("Couldn't process that image.");
-  return blob;
-}
 
 export function BackgroundPicker({
   open,
@@ -74,6 +38,7 @@ export function BackgroundPicker({
   subtitle?: string;
 }) {
   const [pending, setPending] = useState<string | null>(value ?? null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const [pool, setPool] = useState<TripBackground[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -118,12 +83,17 @@ export function BackgroundPicker({
       setError(`You can upload up to ${MAX_CUSTOM_BACKGROUNDS} images.`);
       return;
     }
+    setError(null);
+    setCropFile(file); // frame it before uploading
+  }
+
+  async function uploadBlob(blob: Blob) {
+    if (!tripId) return;
     const supabase = getSupabaseClient();
     if (!supabase) return;
     setBusy(true);
     setError(null);
     try {
-      const blob = await compress(file);
       const bg = await uploadTripBackground(supabase, { tripId, blob });
       setPool((p) => [bg, ...p]);
       setPending(bg.url); // preview it; not saved until "Save"
@@ -309,6 +279,17 @@ export function BackgroundPicker({
           </button>
         </div>
       </div>
+
+      {cropFile ? (
+        <BackgroundCropper
+          file={cropFile}
+          onCancel={() => setCropFile(null)}
+          onDone={(blob) => {
+            setCropFile(null);
+            void uploadBlob(blob);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

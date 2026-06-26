@@ -10,6 +10,7 @@ import { AuthShell } from "@/features/auth/AuthShell";
 import { ImagePlus } from "lucide-react";
 import { BackgroundPicker } from "@/features/trip/components/BackgroundPicker";
 import { STOCK_BACKGROUNDS } from "@/lib/backgrounds";
+import { setHeaderBackground } from "@/lib/supabase/backgrounds";
 
 type FmtOpt = {
   id: string;
@@ -47,6 +48,8 @@ export default function CreatePage() {
   const [createdTripId, setCreatedTripId] = useState<string | null>(null);
   const [upgrading, setUpgrading] = useState(false);
   const [bgPickerIdx, setBgPickerIdx] = useState<number | null>(null);
+  const [headerBg, setHeaderBg] = useState<string | null>(null);
+  const [headerPicking, setHeaderPicking] = useState(false);
   const [checkingCode, setCheckingCode] = useState(false);
 
   async function goFromBasics() {
@@ -142,6 +145,14 @@ export default function CreatePage() {
         return;
       }
       const tripId = created.tripId;
+
+      if (headerBg) {
+        try {
+          await setHeaderBackground(supabase, tripId, headerBg);
+        } catch {
+          /* non-fatal */
+        }
+      }
 
       const courseIds: string[] = [];
       for (const c of realCourses) {
@@ -259,7 +270,24 @@ export default function CreatePage() {
           <div>
             <StepHead n="3" title="Courses" />
             <p className="mt-1 text-sm text-slate-500">Add the course(s) you&apos;re playing - just a name and par for now. Every round links to a course.</p>
-            <div className="mt-4 space-y-3">
+
+            <div className="mt-4 rounded-2xl border-[1.5px] border-sand-200 bg-white p-3">
+              <p className="text-sm font-bold text-ink">Tournament banner</p>
+              <p className="text-xs text-slate-500">The big image at the top of every screen.</p>
+              <button
+                type="button"
+                onClick={() => setHeaderPicking(true)}
+                className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-fairway-900"
+              >
+                <ImagePlus size={13} />
+                {headerBg
+                  ? STOCK_BACKGROUNDS.find((b) => b.id === headerBg)?.title ??
+                    "Custom banner"
+                  : "Choose a banner background (optional)"}
+              </button>
+            </div>
+
+            <div className="mt-3 space-y-3">
               {courses.map((c, i) => (
                 <div key={i} className="rounded-2xl border-[1.5px] border-sand-200 bg-white p-3">
                   <div className="flex items-center gap-2">
@@ -284,6 +312,11 @@ export default function CreatePage() {
                 </div>
               ))}
               <button onClick={() => setCourses((p) => [...p, { name: "", par: "72", bg: null }])} className="w-full rounded-2xl border-[1.5px] border-dashed border-sand-200 py-3 text-sm font-bold text-slate-500">+ Add another course</button>
+              <p className="text-xs text-slate-400">
+                Pick a background per course now from our scene library. Pro
+                tournaments (coming soon) will let you upload your own course
+                photos.
+              </p>
               {realCourses.length === 0 ? <p className="text-sm text-slate-400">You can skip this and add courses later in Admin, but you&apos;ll need at least one before setting up rounds.</p> : null}
             </div>
             <NavRow onBack={() => setStep(1)} onNext={() => setStep(3)} />
@@ -363,6 +396,15 @@ export default function CreatePage() {
           )
         }
         title="Course background"
+      />
+
+      <BackgroundPicker
+        open={headerPicking}
+        onClose={() => setHeaderPicking(false)}
+        value={headerBg}
+        onSelect={(v) => setHeaderBg(v)}
+        title="Tournament banner"
+        subtitle="The big image at the top of every screen."
       />
     </AuthShell>
   );
