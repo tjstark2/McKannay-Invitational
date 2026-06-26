@@ -300,6 +300,7 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
                   },
                 ]
           );
+          if (!userId || c.user_id !== userId) touchRead();
         }
       )
       .on(
@@ -449,7 +450,12 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
     if (!supabase) return;
     setDrafts((d) => ({ ...d, [photoId]: "" }));
     try {
-      const c = await addPhotoComment(supabase, { photoId, userId, body });
+      const c = await addPhotoComment(supabase, {
+        tripId: trip.id,
+        photoId,
+        userId,
+        body,
+      });
       setComments((prev) =>
         prev.some((x) => x.id === c.id) ? prev : [...prev, c]
       );

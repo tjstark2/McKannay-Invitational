@@ -62,9 +62,9 @@ function TripAppInner() {
     useState<TournamentTab>("scoreboard");
   const [clubhouseTab, setClubhouseTab] = useState<ClubhouseTab>("photos");
   const [unread, setUnread] = useState<ClubhouseUnread>({ photos: 0, chat: 0 });
-  const [activityBanner, setActivityBanner] = useState<ClubhouseTab | null>(
-    null
-  );
+  const [activityBanner, setActivityBanner] = useState<
+    "photo" | "message" | "comment" | null
+  >(null);
   const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Keep the latest screen/tab visible to the realtime closure without
@@ -101,12 +101,16 @@ function TripAppInner() {
     const viewing = (tab: ClubhouseTab) =>
       activeScreenRef.current === "clubhouse" && clubhouseTabRef.current === tab;
 
-    const bump = (tab: ClubhouseTab, fromUser: string) => {
+    const bump = (
+      tab: ClubhouseTab,
+      fromUser: string,
+      kind: "photo" | "message" | "comment"
+    ) => {
       if (fromUser === userId) return; // don't count your own
       if (viewing(tab)) return; // they're looking at it; the tab marks it read
       setUnread((u) => ({ ...u, [tab]: u[tab] + 1 }));
       if (activeScreenRef.current !== "clubhouse") {
-        setActivityBanner(tab);
+        setActivityBanner(kind);
         if (bannerTimeoutRef.current) clearTimeout(bannerTimeoutRef.current);
         bannerTimeoutRef.current = setTimeout(
           () => setActivityBanner(null),
@@ -126,7 +130,7 @@ function TripAppInner() {
           filter: `trip_id=eq.${tripId}`,
         },
         (payload) =>
-          bump("photos", (payload.new as { user_id: string }).user_id)
+          bump("photos", (payload.new as { user_id: string }).user_id, "photo")
       )
       .on(
         "postgres_changes",
@@ -137,7 +141,22 @@ function TripAppInner() {
           filter: `trip_id=eq.${tripId}`,
         },
         (payload) =>
-          bump("chat", (payload.new as { user_id: string }).user_id)
+          bump("chat", (payload.new as { user_id: string }).user_id, "message")
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "trip_photo_comments",
+          filter: `trip_id=eq.${tripId}`,
+        },
+        (payload) =>
+          bump(
+            "photos",
+            (payload.new as { user_id: string }).user_id,
+            "comment"
+          )
       )
       .subscribe();
 
@@ -350,7 +369,7 @@ function TripAppInner() {
         {activityBanner ? (
           <button
             onClick={() => {
-              setClubhouseTab(activityBanner);
+              setClubhouseTab(activityBanner === "message" ? "chat" : "photos");
               goToScreen("clubhouse");
             }}
             className="fixed inset-x-0 bottom-[104px] z-40 mx-auto flex w-fit max-w-[92%] items-center gap-2 rounded-full border border-line bg-white px-4 py-2.5 text-sm font-extrabold text-ink shadow-[0_16px_34px_-16px_rgba(11,36,24,.7)]"
@@ -362,9 +381,11 @@ function TripAppInner() {
                 className="h-full w-full object-contain"
               />
             </span>
-            {activityBanner === "photos"
+            {activityBanner === "photo"
               ? "New photo in the Clubhouse"
-              : "New message in the Clubhouse"}
+              : activityBanner === "comment"
+                ? "New comment in the Clubhouse"
+                : "New message in the Clubhouse"}
             <span className="ml-1 rounded-full bg-fairway-900 px-2 py-0.5 text-xs font-black text-white">
               View
             </span>

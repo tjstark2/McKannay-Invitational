@@ -283,9 +283,15 @@ export async function loadUnreadCounts(
   userId: string
 ): Promise<ClubhouseUnread> {
   const read = await loadReadState(supabase, tripId, userId);
-  const [photos, chat] = await Promise.all([
+  const [photos, comments, chat] = await Promise.all([
     supabase
       .from("trip_photos")
+      .select("id", { count: "exact", head: true })
+      .eq("trip_id", tripId)
+      .neq("user_id", userId)
+      .gt("created_at", read.photosReadAt),
+    supabase
+      .from("trip_photo_comments")
       .select("id", { count: "exact", head: true })
       .eq("trip_id", tripId)
       .neq("user_id", userId)
@@ -297,7 +303,10 @@ export async function loadUnreadCounts(
       .neq("user_id", userId)
       .gt("created_at", read.chatReadAt),
   ]);
-  return { photos: photos.count ?? 0, chat: chat.count ?? 0 };
+  return {
+    photos: (photos.count ?? 0) + (comments.count ?? 0),
+    chat: chat.count ?? 0,
+  };
 }
 
 /** Mark one tab read up to "now" for the current user. Best-effort. */
@@ -388,13 +397,18 @@ export async function loadPhotoComments(
 
 export async function addPhotoComment(
   supabase: SupabaseClient,
-  args: { photoId: string; userId: string; body: string }
+  args: { tripId: string; photoId: string; userId: string; body: string }
 ): Promise<PhotoComment> {
   const body = args.body.trim();
   if (!body) throw new Error("Comment is empty.");
   const { data, error } = await supabase
     .from("trip_photo_comments")
-    .insert({ photo_id: args.photoId, user_id: args.userId, body })
+    .insert({
+      trip_id: args.tripId,
+      photo_id: args.photoId,
+      user_id: args.userId,
+      body,
+    })
     .select("*")
     .single();
   if (error) throw new Error(`Couldn't add comment: ${error.message}`);
