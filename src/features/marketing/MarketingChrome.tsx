@@ -27,23 +27,24 @@ export function MarketingNav() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
         <a href="/" className="flex items-center gap-2.5">
           <IconTile className="h-10 w-10 rounded-xl shadow-sm" />
-          <Wordmark className="text-xl" />
+          <Wordmark className="text-lg sm:text-xl" />
         </a>
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-3 sm:gap-5">
           <a href="/#how" className="hidden text-sm font-bold text-fairway-900 sm:block">
             How it works
           </a>
           <a href="/#features" className="hidden text-sm font-bold text-fairway-900 sm:block">
             Features
           </a>
-          <a href="/signin" className="text-sm font-extrabold text-fairway-900">
+          <a href="/signin" className="whitespace-nowrap text-sm font-extrabold text-fairway-900">
             Sign in
           </a>
           <a
             href="/signup"
-            className="rounded-xl bg-fairway-900 px-5 py-2.5 text-sm font-extrabold text-white"
+            className="whitespace-nowrap rounded-xl bg-fairway-900 px-4 py-2.5 text-sm font-extrabold text-white sm:px-5"
           >
-            Create account
+            <span className="sm:hidden">Sign up</span>
+            <span className="hidden sm:inline">Create account</span>
           </a>
         </div>
       </div>

@@ -2,54 +2,125 @@ import { MarketingPage } from "@/features/marketing/MarketingPage";
 
 export default function TermsPage() {
   return (
-    <MarketingPage title="Terms of Service" subtitle="Last updated: June 2026">
-      <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
-        This is a plain-English starter template provided for convenience. It is
-        not legal advice. Please have a qualified professional review and adapt
-        it before relying on it.
+    <MarketingPage title="Terms of Service" subtitle="Last Updated: June 25, 2026">
+      <p>Welcome to TourneyBirdie.</p>
+      <p>
+        These Terms of Service govern your access to and use of the TourneyBirdie
+        platform, website, and related services. By creating an account, joining
+        a tournament, or using TourneyBirdie, you agree to these terms.
+      </p>
+
+      <h2>Using TourneyBirdie</h2>
+      <p>
+        TourneyBirdie is designed to help golfers organize tournaments, track
+        scores, manage teams, and follow standings.
       </p>
       <p>
-        These terms govern your use of TourneyBirdie. By creating an account or
-        using the service, you agree to them.
+        You may use TourneyBirdie only in compliance with these Terms and all
+        applicable laws.
       </p>
-      <h2>Your account</h2>
+
+      <h2>Your Account</h2>
       <p>
-        You&apos;re responsible for the information you provide and for keeping
-        your login and any tournament admin codes secure. You&apos;re
-        responsible for activity that happens under your account.
+        You are responsible for maintaining the security of your account,
+        password, tournament administration privileges, and join codes.
       </p>
-      <h2>Acceptable use</h2>
+      <p>You are responsible for all activity that occurs under your account.</p>
+      <p>
+        Please notify us promptly if you believe your account has been
+        compromised.
+      </p>
+
+      <h2>Acceptable Use</h2>
+      <p>When using TourneyBirdie, you agree not to:</p>
       <ul>
-        <li>Don&apos;t misuse the service or try to disrupt it.</li>
-        <li>Don&apos;t upload unlawful, harmful, or infringing content.</li>
-        <li>Don&apos;t access data or tournaments you aren&apos;t authorized to.</li>
+        <li>Attempt to disrupt, damage, or interfere with the service</li>
+        <li>
+          Access tournaments, accounts, or information you are not authorized to
+          access
+        </li>
+        <li>Upload unlawful, fraudulent, harmful, or infringing content</li>
+        <li>
+          Reverse engineer, scrape, or attempt to extract source code or data
+          from the platform
+        </li>
+        <li>
+          Use TourneyBirdie in a way that violates applicable laws or regulations
+        </li>
       </ul>
-      <h2>Your content</h2>
       <p>
-        You keep ownership of the tournament information you add. You grant us
-        the permission needed to store and display it so the service can work.
+        We reserve the right to suspend or terminate accounts that violate these
+        terms.
       </p>
-      <h2>Service availability</h2>
+
+      <h2>Tournament Content</h2>
       <p>
-        TourneyBirdie is provided on an &quot;as is&quot; and &quot;as
-        available&quot; basis. We&apos;re actively developing it, so features
-        may change and occasional downtime can happen.
+        You retain ownership of the information and content you submit to
+        TourneyBirdie, including tournament names, scores, teams, player
+        information, and other tournament-related content.
       </p>
-      <h2>Limitation of liability</h2>
       <p>
-        To the extent permitted by law, TourneyBirdie is not liable for indirect
-        or incidental damages arising from your use of the service.
+        By submitting content, you grant TourneyBirdie the limited rights
+        necessary to store, process, display, and distribute that content solely
+        for the purpose of operating and improving the service.
       </p>
-      <h2>Changes</h2>
+
+      <h2>Service Availability</h2>
       <p>
-        We may update these terms. We&apos;ll post the new version here and
-        update the date above. Continued use means you accept the changes.
+        We work hard to keep TourneyBirdie available and reliable, but we cannot
+        guarantee uninterrupted service.
       </p>
-      <h2>Contact</h2>
       <p>
-        Questions? Email{" "}
-        <a href="mailto:hello@tourneybirdie.com">hello@tourneybirdie.com</a>.
+        TourneyBirdie is provided on an “as is” and “as available” basis.
+        Features may be added, modified, or removed as the platform evolves.
       </p>
+      <p>Occasional maintenance, updates, or service interruptions may occur.</p>
+
+      <h2>Intellectual Property</h2>
+      <p>
+        The TourneyBirdie platform, branding, software, design, and related
+        materials are owned by TourneyBirdie and protected by applicable
+        intellectual property laws.
+      </p>
+      <p>
+        These Terms do not grant you ownership of any TourneyBirdie intellectual
+        property.
+      </p>
+
+      <h2>Limitation of Liability</h2>
+      <p>
+        To the fullest extent permitted by law, TourneyBirdie and its owners,
+        operators, employees, and affiliates will not be liable for any indirect,
+        incidental, consequential, special, or punitive damages arising from your
+        use of the service.
+      </p>
+      <p>Your use of TourneyBirdie is at your own risk.</p>
+
+      <h2>Termination</h2>
+      <p>You may stop using TourneyBirdie at any time.</p>
+      <p>
+        We may suspend or terminate access to the service if these Terms are
+        violated or if necessary to protect the security and integrity of the
+        platform.
+      </p>
+
+      <h2>Changes to These Terms</h2>
+      <p>
+        As TourneyBirdie grows and evolves, we may update these Terms from time to
+        time. When changes are made, we will update the “Last Updated” date above
+        and post the revised version on this page.
+      </p>
+      <p>
+        Continued use of TourneyBirdie after changes become effective constitutes
+        acceptance of the updated Terms.
+      </p>
+
+      <h2>Contact Us</h2>
+      <p>Questions about these Terms?</p>
+      <p>
+        Email: <a href="mailto:hello@tourneybirdie.com">hello@tourneybirdie.com</a>
+      </p>
+      <p>We’re happy to help.</p>
     </MarketingPage>
   );
 }

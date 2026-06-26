@@ -3,24 +3,29 @@ import { MarketingPage } from "@/features/marketing/MarketingPage";
 export default function ContactPage() {
   return (
     <MarketingPage
-      title="Contact us"
-      subtitle="Questions, ideas, or running into trouble? We'd love to hear from you."
+      title="Contact Us"
+      subtitle="Have a question? An idea? Found a birdie we missed?"
     >
       <p>
-        The best way to reach us is by email. We read everything and try to
-        reply quickly.
+        We’re building TourneyBirdie to be the best way to run a golf trip, and
+        we’d love your help getting there.
       </p>
+      <p>
+        Whether you need support, want to suggest a feature, or just have
+        feedback from your latest tournament, send us a note.
+      </p>
+
       <h2>Email</h2>
       <p>
         <a href="mailto:hello@tourneybirdie.com">hello@tourneybirdie.com</a>
       </p>
       <p>
-        For help with a specific tournament, include the tournament name and
-        your join code so we can find it fast.
+        For tournament-specific questions, include the tournament name and join
+        code so we can get you back on the course as quickly as possible.
       </p>
-      <p className="text-sm text-slate-400">
-        Note: this contact address is a placeholder for now — update it to your
-        real support inbox before launch.
+
+      <p className="font-bold text-ink">
+        Every feature starts with a conversation. We’d love to hear from you.
       </p>
     </MarketingPage>
   );

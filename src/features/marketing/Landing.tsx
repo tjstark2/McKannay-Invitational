@@ -132,7 +132,7 @@ export function Landing() {
             ["5+", "Scoring Formats"],
             ["Live", "Standings & Momentum"],
             ["Net", "Handicap Scoring Built In"],
-            ["Year / year", "History & Champions"],
+            ["30", "Birdie Avatars"],
           ].map(([v, k]) => (
             <div key={k}>
               <div className="font-display text-3xl font-black text-accent">{v}</div>
@@ -313,9 +313,11 @@ export function Landing() {
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
               ["\u26F3", "Net & Handicap Scoring", "Handicaps and allowances are built in, so net results stay fair and tally automatically."],
+              ["\uD83D\uDC26", "Birdie Avatars", "Everyone picks a Birdie avatar that follows them across leaderboards, matches, and pairings."],
+              ["\uD83C\uDFC6", "Awards & Highlights", "Automatic MVP, hot rounds, biggest movers, and a podium when it's all over."],
               ["\uD83D\uDD52", "Schedule & Tee Times", "Lay out each round's course, date, and tee-time groups in one place."],
-              ["\uD83C\uDFC6", "Awards & Highlights", "Automatic MVP, hot rounds, biggest movers, and round highlights."],
-              ["\uD83D\uDD17", "Shareable Links", "Every tournament gets its own link — text it and your group is in."],
+              ["\uD83D\uDCC8", "Player Profiles", "Tap any golfer for their rounds, results, and how they're trending across the trip."],
+              ["\uD83D\uDD17", "Shareable Links", "Every tournament gets its own join code — text it and your group is in."],
               ["\uD83D\uDCCA", "Confirmed vs Projected", "See locked-in points and what's still in play, at a glance."],
               ["\u2699\uFE0F", "Admin Controls", "Run the show: set the active round, manage rosters, and tune scoring."],
             ].map(([icon, title, body]) => (

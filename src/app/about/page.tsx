@@ -4,34 +4,58 @@ export default function AboutPage() {
   return (
     <MarketingPage
       title="About TourneyBirdie"
-      subtitle="Golf tournaments made easy — for trips and group outings."
+      subtitle="The home for golf trips, tournaments, and friendly competition."
     >
+      <p>TourneyBirdie started during a golf trip with friends.</p>
+      <p>Every round seemed to end with the same questions:</p>
+      <ul>
+        <li>“Who do I play next?”</li>
+        <li>“How many points do we have?”</li>
+        <li>“What’s the leaderboard look like?”</li>
+        <li>“Who actually has a chance to win this thing?”</li>
+      </ul>
+      <p>The golf was great. The organization was not.</p>
       <p>
-        TourneyBirdie started with a simple problem: a great golf trip with
-        friends deserves to feel like a real tournament — teams, matches, a
-        running scoreboard, and a champion at the end — but pulling that off
-        with spreadsheets and group texts is a pain.
+        Scores lived in one place, matchups in another, standings in a
+        spreadsheet, and updates were buried in group texts. Keeping everyone
+        informed became almost as much work as playing the tournament itself.
       </p>
+      <p>So we built TourneyBirdie.</p>
       <p>
-        So we built a place to run the whole thing. Set up your tournament,
-        invite your group with a code, build your teams, schedule your rounds,
-        and log scores as you play. Standings update live, handicaps and net
-        scoring are handled for you, and everyone can follow along in real time.
+        TourneyBirdie brings everything together in one place. Create your
+        tournament, invite players, build teams, schedule rounds, track scores,
+        and follow the competition in real time. Whether you’re running a Ryder
+        Cup-style golf trip, a member-guest weekend, a charity scramble, or an
+        annual buddies trip, TourneyBirdie handles the logistics so your group
+        can focus on the golf.
       </p>
-      <h2>Who it&apos;s for</h2>
+
+      <h2>Built for golfers who love competition</h2>
       <p>
-        Buddies&apos; trips, member-guest weekends, family outings, charity
-        scrambles — any time a group of golfers wants a little friendly
-        competition with a proper scoreboard behind it.
+        Create custom tournaments, manage teams and pairings, track live
+        standings, and crown a champion when it’s all over. From gross and net
+        scoring to side games and bragging rights, TourneyBirdie is designed to
+        make every round feel meaningful.
       </p>
-      <h2>Where we&apos;re headed</h2>
+
+      <h2>More than a scoreboard</h2>
       <p>
-        We&apos;re actively building TourneyBirdie. Year-over-year history,
-        richer stats, and more scoring formats are on the way. If there&apos;s
-        something your trip needs, we&apos;d love to hear it — reach out from the{" "}
+        TourneyBirdie turns a golf trip into an experience. Players choose a
+        Birdie avatar, follow the action on live leaderboards, track their
+        performance, and compete for the stories that get told long after the
+        final putt drops.
       </p>
+
+      <h2>We’re just getting started</h2>
       <p>
-        <a href="/contact">Contact page</a>.
+        We’re actively building new features including richer statistics,
+        historical records, additional tournament formats, season-long rankings,
+        and more ways to bring golf groups together.
+      </p>
+
+      <p className="font-bold text-ink">
+        Because every great golf trip deserves more than a spreadsheet. It
+        deserves a tournament.
       </p>
     </MarketingPage>
   );
