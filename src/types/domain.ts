@@ -190,3 +190,17 @@ export type TripMessageReaction = {
   userId: string;
   emoji: string;
 };
+
+export type PhotoReaction = {
+  photoId: string;
+  userId: string;
+  emoji: string;
+};
+
+export type PhotoComment = {
+  id: string;
+  photoId: string;
+  userId: string;
+  body: string;
+  createdAt: string;
+};

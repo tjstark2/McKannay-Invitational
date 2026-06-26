@@ -4,6 +4,8 @@ export type {
   LeaderboardRow,
   Match,
   MatchResult,
+  PhotoComment,
+  PhotoReaction,
   Player,
   Round,
   RoundFormat,

@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { SmilePlus, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
+import { ReactionControls } from "@/features/trip/screens/clubhouse/ReactionControls";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -17,7 +18,6 @@ import {
 } from "@/lib/supabase/clubhouse";
 import type { Player, TripMessage, TripMessageReaction } from "@/types";
 
-const REACTIONS = ["👍", "😂", "🔥", "⛳", "💪", "😮"];
 const EPOCH = "1970-01-01T00:00:00Z";
 
 function clockTime(iso: string): string {
@@ -37,7 +37,6 @@ export function ChatTab({ onRead }: { onRead?: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const [pickerFor, setPickerFor] = useState<string | null>(null);
   const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -252,7 +251,6 @@ export function ChatTab({ onRead }: { onRead?: () => void }) {
 
   async function react(messageId: string, emoji: string) {
     if (!user) return;
-    setPickerFor(null);
     const isOn = reactions.some(
       (r) =>
         r.messageId === messageId && r.userId === user.id && r.emoji === emoji
@@ -337,47 +335,9 @@ export function ChatTab({ onRead }: { onRead?: () => void }) {
           >
             {m.body}
           </p>
-          <button
-            onClick={() => setPickerFor((id) => (id === m.id ? null : m.id))}
-            aria-label="Add reaction"
-            className="mb-1 shrink-0 rounded-full p-1 text-slate-300 transition hover:bg-sand-50 hover:text-fairway-900"
-          >
-            <SmilePlus size={18} />
-          </button>
         </div>
 
-        {pickerFor === m.id ? (
-          <div className="mt-1 inline-flex flex-wrap gap-1 rounded-2xl border border-line bg-white p-1.5 shadow-[0_8px_18px_-12px_rgba(14,76,48,.5)]">
-            {REACTIONS.map((e) => (
-              <button
-                key={e}
-                onClick={() => react(m.id, e)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl text-2xl leading-none transition hover:bg-sand-50 active:scale-90"
-              >
-                {e}
-              </button>
-            ))}
-          </div>
-        ) : null}
-
-        {rx.length > 0 ? (
-          <div className="mt-1 flex flex-wrap gap-1">
-            {rx.map(([emoji, info]) => (
-              <button
-                key={emoji}
-                onClick={() => react(m.id, emoji)}
-                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-bold transition ${
-                  info.mine
-                    ? "border-fairway-900 bg-fairway-50 text-fairway-900"
-                    : "border-line bg-white text-slate-500"
-                }`}
-              >
-                <span className="text-sm leading-none">{emoji}</span>
-                {info.count}
-              </button>
-            ))}
-          </div>
-        ) : null}
+        <ReactionControls summary={rx} onToggle={(e) => react(m.id, e)} />
       </div>
     );
   }

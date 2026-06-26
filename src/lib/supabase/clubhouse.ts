@@ -3,7 +3,13 @@
 // (from getSupabaseClient()) and these functions throw on error.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { TripMessage, TripMessageReaction, TripPhoto } from "@/types";
+import type {
+  PhotoComment,
+  PhotoReaction,
+  TripMessage,
+  TripMessageReaction,
+  TripPhoto,
+} from "@/types";
 
 const BUCKET = "trip-photos";
 const SIGNED_URL_TTL = 60 * 60; // 1 hour
@@ -310,4 +316,111 @@ export async function markRead(
       { trip_id: tripId, user_id: userId, ...patch },
       { onConflict: "trip_id,user_id" }
     );
+}
+
+// ---- Photo reactions & comments (Phase 4) ---------------------------------
+
+export async function loadPhotoReactions(
+  supabase: SupabaseClient,
+  photoIds: string[]
+): Promise<PhotoReaction[]> {
+  if (photoIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("trip_photo_reactions")
+    .select("photo_id,user_id,emoji")
+    .in("photo_id", photoIds);
+  if (error) throw new Error(`Couldn't load reactions: ${error.message}`);
+  return ((data ?? []) as { photo_id: string; user_id: string; emoji: string }[]).map(
+    (r) => ({ photoId: r.photo_id, userId: r.user_id, emoji: r.emoji })
+  );
+}
+
+export async function togglePhotoReaction(
+  supabase: SupabaseClient,
+  args: { photoId: string; userId: string; emoji: string; isOn: boolean }
+): Promise<"added" | "removed"> {
+  if (args.isOn) {
+    const { error } = await supabase
+      .from("trip_photo_reactions")
+      .delete()
+      .eq("photo_id", args.photoId)
+      .eq("user_id", args.userId)
+      .eq("emoji", args.emoji);
+    if (error) throw new Error(`Couldn't remove reaction: ${error.message}`);
+    return "removed";
+  }
+  const { error } = await supabase
+    .from("trip_photo_reactions")
+    .insert({
+      photo_id: args.photoId,
+      user_id: args.userId,
+      emoji: args.emoji,
+    });
+  if (error) throw new Error(`Couldn't add reaction: ${error.message}`);
+  return "added";
+}
+
+export async function loadPhotoComments(
+  supabase: SupabaseClient,
+  photoIds: string[]
+): Promise<PhotoComment[]> {
+  if (photoIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("trip_photo_comments")
+    .select("*")
+    .in("photo_id", photoIds)
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(`Couldn't load comments: ${error.message}`);
+  return ((data ?? []) as {
+    id: string;
+    photo_id: string;
+    user_id: string;
+    body: string;
+    created_at: string;
+  }[]).map((c) => ({
+    id: c.id,
+    photoId: c.photo_id,
+    userId: c.user_id,
+    body: c.body,
+    createdAt: c.created_at,
+  }));
+}
+
+export async function addPhotoComment(
+  supabase: SupabaseClient,
+  args: { photoId: string; userId: string; body: string }
+): Promise<PhotoComment> {
+  const body = args.body.trim();
+  if (!body) throw new Error("Comment is empty.");
+  const { data, error } = await supabase
+    .from("trip_photo_comments")
+    .insert({ photo_id: args.photoId, user_id: args.userId, body })
+    .select("*")
+    .single();
+  if (error) throw new Error(`Couldn't add comment: ${error.message}`);
+  const c = data as {
+    id: string;
+    photo_id: string;
+    user_id: string;
+    body: string;
+    created_at: string;
+  };
+  return {
+    id: c.id,
+    photoId: c.photo_id,
+    userId: c.user_id,
+    body: c.body,
+    createdAt: c.created_at,
+  };
+}
+
+export async function deletePhotoComment(
+  supabase: SupabaseClient,
+  id: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("trip_photo_comments")
+    .delete()
+    .eq("id", id);
+  if (error) throw new Error(`Couldn't delete comment: ${error.message}`);
 }

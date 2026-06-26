@@ -62,6 +62,10 @@ function TripAppInner() {
     useState<TournamentTab>("scoreboard");
   const [clubhouseTab, setClubhouseTab] = useState<ClubhouseTab>("photos");
   const [unread, setUnread] = useState<ClubhouseUnread>({ photos: 0, chat: 0 });
+  const [activityBanner, setActivityBanner] = useState<ClubhouseTab | null>(
+    null
+  );
+  const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Keep the latest screen/tab visible to the realtime closure without
   // re-subscribing on every change.
@@ -73,6 +77,9 @@ function TripAppInner() {
   useEffect(() => {
     clubhouseTabRef.current = clubhouseTab;
   }, [clubhouseTab]);
+  useEffect(() => {
+    if (activeScreen === "clubhouse") setActivityBanner(null);
+  }, [activeScreen]);
 
   const tripId = trip?.id;
   const userId = user?.id;
@@ -98,6 +105,14 @@ function TripAppInner() {
       if (fromUser === userId) return; // don't count your own
       if (viewing(tab)) return; // they're looking at it; the tab marks it read
       setUnread((u) => ({ ...u, [tab]: u[tab] + 1 }));
+      if (activeScreenRef.current !== "clubhouse") {
+        setActivityBanner(tab);
+        if (bannerTimeoutRef.current) clearTimeout(bannerTimeoutRef.current);
+        bannerTimeoutRef.current = setTimeout(
+          () => setActivityBanner(null),
+          5000
+        );
+      }
     };
 
     const channel = supabase
@@ -331,6 +346,30 @@ function TripAppInner() {
             />
           ) : null}
         </main>
+
+        {activityBanner ? (
+          <button
+            onClick={() => {
+              setClubhouseTab(activityBanner);
+              goToScreen("clubhouse");
+            }}
+            className="fixed inset-x-0 bottom-[104px] z-40 mx-auto flex w-fit max-w-[92%] items-center gap-2 rounded-full border border-line bg-white px-4 py-2.5 text-sm font-extrabold text-ink shadow-[0_16px_34px_-16px_rgba(11,36,24,.7)]"
+          >
+            <span className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full">
+              <img
+                src="/brand/clubhouse.png"
+                alt=""
+                className="h-full w-full object-contain"
+              />
+            </span>
+            {activityBanner === "photos"
+              ? "New photo in the Clubhouse"
+              : "New message in the Clubhouse"}
+            <span className="ml-1 rounded-full bg-fairway-900 px-2 py-0.5 text-xs font-black text-white">
+              View
+            </span>
+          </button>
+        ) : null}
 
         <BottomNav
           activeScreen={activeScreen}

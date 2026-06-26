@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Trash2 } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
+import { ReactionControls } from "@/features/trip/screens/clubhouse/ReactionControls";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -12,10 +14,18 @@ import {
   uploadPhoto,
   deletePhoto,
   markRead,
+  loadPhotoReactions,
+  togglePhotoReaction,
+  loadPhotoComments,
+  addPhotoComment,
+  deletePhotoComment,
 } from "@/lib/supabase/clubhouse";
-import type { Player, TripPhoto } from "@/types";
-
-// ---- helpers ---------------------------------------------------------------
+import type {
+  Player,
+  PhotoComment,
+  PhotoReaction,
+  TripPhoto,
+} from "@/types";
 
 function relativeTime(iso: string): string {
   const then = new Date(iso).getTime();
@@ -40,7 +50,6 @@ async function compressImage(
   maxEdge = 1600,
   quality = 0.8
 ): Promise<{ blob: Blob; width: number; height: number }> {
-  // createImageBitmap honors EXIF orientation on modern browsers (phones).
   let bitmap: ImageBitmap | null = null;
   try {
     bitmap = await createImageBitmap(file, {
@@ -96,14 +105,16 @@ async function compressImage(
 
 type Composer = { previewUrl: string; file: File; caption: string };
 
-// ---- component -------------------------------------------------------------
-
 export function PhotosTab({ onRead }: { onRead?: () => void }) {
   const { trip, players } = useTripState();
   const { user } = useAuth();
+  const userId = user?.id;
 
   const [photos, setPhotos] = useState<TripPhoto[]>([]);
   const [urls, setUrls] = useState<Record<string, string>>({});
+  const [reactions, setReactions] = useState<PhotoReaction[]>([]);
+  const [comments, setComments] = useState<PhotoComment[]>([]);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -112,13 +123,21 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const photoIdsRef = useRef<Set<string>>(new Set());
+  const onReadRef = useRef(onRead);
+  useEffect(() => {
+    onReadRef.current = onRead;
+  }, [onRead]);
+  useEffect(() => {
+    photoIdsRef.current = new Set(photos.map((p) => p.id));
+  }, [photos]);
+
   const playerByAccount = useCallback(
-    (userId: string): Player | undefined =>
-      players.find((p) => p.accountId === userId),
+    (uid: string): Player | undefined =>
+      players.find((p) => p.accountId === uid),
     [players]
   );
 
-  // Resolve a signed URL for any photo we don't have one for yet.
   const ensureUrls = useCallback(async (list: TripPhoto[]) => {
     const supabase = getSupabaseClient();
     if (!supabase) return;
@@ -130,6 +149,13 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
     );
   }, []);
 
+  const touchRead = useCallback(() => {
+    const supabase = getSupabaseClient();
+    if (supabase && userId) void markRead(supabase, trip.id, userId, "photos");
+    onReadRef.current?.();
+  }, [trip.id, userId]);
+
+  // Load + live subscription.
   useEffect(() => {
     let active = true;
     const supabase = getSupabaseClient();
@@ -139,28 +165,159 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
       return;
     }
     setLoading(true);
-    loadPhotos(supabase, trip.id)
-      .then((list) => {
+    (async () => {
+      try {
+        const list = await loadPhotos(supabase, trip.id);
         if (!active) return;
         setPhotos(list);
         setError(null);
         void ensureUrls(list);
-        if (user) {
-          void markRead(supabase, trip.id, user.id, "photos");
-          onRead?.();
-        }
-      })
-      .catch((e: unknown) => {
+        const ids = list.map((p) => p.id);
+        const [rx, cm] = await Promise.all([
+          loadPhotoReactions(supabase, ids),
+          loadPhotoComments(supabase, ids),
+        ]);
         if (!active) return;
-        setError(e instanceof Error ? e.message : "Couldn't load photos.");
-      })
-      .finally(() => {
+        setReactions(rx);
+        setComments(cm);
+        touchRead();
+      } catch (e: unknown) {
+        if (active)
+          setError(e instanceof Error ? e.message : "Couldn't load photos.");
+      } finally {
         if (active) setLoading(false);
-      });
+      }
+    })();
+
+    const channel = supabase
+      .channel(`trip-photos-${trip.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "trip_photos",
+          filter: `trip_id=eq.${trip.id}`,
+        },
+        (payload) => {
+          const row = payload.new as {
+            id: string;
+            trip_id: string;
+            user_id: string;
+            storage_path: string;
+            caption: string | null;
+            width: number | null;
+            height: number | null;
+            created_at: string;
+          };
+          const photo: TripPhoto = {
+            id: row.id,
+            tripId: row.trip_id,
+            userId: row.user_id,
+            storagePath: row.storage_path,
+            caption: row.caption,
+            width: row.width,
+            height: row.height,
+            createdAt: row.created_at,
+          };
+          setPhotos((prev) =>
+            prev.some((p) => p.id === photo.id) ? prev : [photo, ...prev]
+          );
+          void ensureUrls([photo]);
+          if (!userId || row.user_id !== userId) touchRead();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "trip_photo_reactions" },
+        (payload) => {
+          const r = payload.new as {
+            photo_id: string;
+            user_id: string;
+            emoji: string;
+          };
+          if (!photoIdsRef.current.has(r.photo_id)) return;
+          setReactions((prev) =>
+            prev.some(
+              (x) =>
+                x.photoId === r.photo_id &&
+                x.userId === r.user_id &&
+                x.emoji === r.emoji
+            )
+              ? prev
+              : [
+                  ...prev,
+                  { photoId: r.photo_id, userId: r.user_id, emoji: r.emoji },
+                ]
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "trip_photo_reactions" },
+        (payload) => {
+          const r = payload.old as {
+            photo_id?: string;
+            user_id?: string;
+            emoji?: string;
+          };
+          if (!r.photo_id) return;
+          setReactions((prev) =>
+            prev.filter(
+              (x) =>
+                !(
+                  x.photoId === r.photo_id &&
+                  x.userId === r.user_id &&
+                  x.emoji === r.emoji
+                )
+            )
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "trip_photo_comments" },
+        (payload) => {
+          const c = payload.new as {
+            id: string;
+            photo_id: string;
+            user_id: string;
+            body: string;
+            created_at: string;
+          };
+          if (!photoIdsRef.current.has(c.photo_id)) return;
+          setComments((prev) =>
+            prev.some((x) => x.id === c.id)
+              ? prev
+              : [
+                  ...prev,
+                  {
+                    id: c.id,
+                    photoId: c.photo_id,
+                    userId: c.user_id,
+                    body: c.body,
+                    createdAt: c.created_at,
+                  },
+                ]
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "trip_photo_comments" },
+        (payload) => {
+          const c = payload.old as { id?: string };
+          if (!c.id) return;
+          setComments((prev) => prev.filter((x) => x.id !== c.id));
+        }
+      )
+      .subscribe();
+
     return () => {
       active = false;
+      supabase.removeChannel(channel);
     };
-  }, [trip.id, ensureUrls]);
+  }, [trip.id, ensureUrls, touchRead, userId]);
 
   function openPicker() {
     fileInputRef.current?.click();
@@ -168,7 +325,7 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
 
   function onFileChosen(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    e.target.value = ""; // allow re-picking the same file later
+    e.target.value = "";
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       setError("That doesn't look like a photo.");
@@ -203,7 +360,9 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
         height,
         caption: composer.caption,
       });
-      setPhotos((prev) => [photo, ...prev]);
+      setPhotos((prev) =>
+        prev.some((p) => p.id === photo.id) ? prev : [photo, ...prev]
+      );
       void ensureUrls([photo]);
       cancelComposer();
     } catch (e: unknown) {
@@ -231,6 +390,87 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
     }
   }
 
+  function reactionsForPhoto(
+    photoId: string
+  ): [string, { count: number; mine: boolean }][] {
+    const counts: Record<string, { count: number; mine: boolean }> = {};
+    for (const r of reactions) {
+      if (r.photoId !== photoId) continue;
+      const entry = counts[r.emoji] ?? { count: 0, mine: false };
+      entry.count += 1;
+      if (userId && r.userId === userId) entry.mine = true;
+      counts[r.emoji] = entry;
+    }
+    return Object.entries(counts);
+  }
+
+  async function reactPhoto(photoId: string, emoji: string) {
+    if (!userId) return;
+    const isOn = reactions.some(
+      (r) => r.photoId === photoId && r.userId === userId && r.emoji === emoji
+    );
+    setReactions((prev) =>
+      isOn
+        ? prev.filter(
+            (r) =>
+              !(
+                r.photoId === photoId &&
+                r.userId === userId &&
+                r.emoji === emoji
+              )
+          )
+        : [...prev, { photoId, userId, emoji }]
+    );
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    try {
+      await togglePhotoReaction(supabase, { photoId, userId, emoji, isOn });
+    } catch (e: unknown) {
+      setReactions((prev) =>
+        isOn
+          ? [...prev, { photoId, userId, emoji }]
+          : prev.filter(
+              (r) =>
+                !(
+                  r.photoId === photoId &&
+                  r.userId === userId &&
+                  r.emoji === emoji
+                )
+            )
+      );
+      setError(e instanceof Error ? e.message : "Couldn't update reaction.");
+    }
+  }
+
+  async function postComment(photoId: string) {
+    const body = (drafts[photoId] ?? "").trim();
+    if (!body || !userId) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    setDrafts((d) => ({ ...d, [photoId]: "" }));
+    try {
+      const c = await addPhotoComment(supabase, { photoId, userId, body });
+      setComments((prev) =>
+        prev.some((x) => x.id === c.id) ? prev : [...prev, c]
+      );
+    } catch (e: unknown) {
+      setDrafts((d) => ({ ...d, [photoId]: body }));
+      setError(e instanceof Error ? e.message : "Couldn't add comment.");
+    }
+  }
+
+  async function removeComment(comment: PhotoComment) {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    setComments((prev) => prev.filter((x) => x.id !== comment.id));
+    try {
+      await deletePhotoComment(supabase, comment.id);
+    } catch (e: unknown) {
+      setComments((prev) => [...prev, comment]);
+      setError(e instanceof Error ? e.message : "Couldn't delete comment.");
+    }
+  }
+
   const AddButton = (
     <button
       onClick={openPicker}
@@ -250,7 +490,6 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
         className="hidden"
       />
 
-      {/* Top bar: count + add */}
       {!loading && photos.length > 0 ? (
         <div className="flex items-center justify-between">
           <p className="text-sm font-extrabold text-slate-500">
@@ -266,7 +505,6 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
         </div>
       ) : null}
 
-      {/* Composer */}
       {composer ? (
         <div className="overflow-hidden rounded-[20px] border border-line bg-white shadow-[0_14px_30px_-22px_rgba(14,76,48,0.4)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -279,13 +517,11 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
             <input
               value={composer.caption}
               onChange={(ev) =>
-                setComposer((c) =>
-                  c ? { ...c, caption: ev.target.value } : c
-                )
+                setComposer((c) => (c ? { ...c, caption: ev.target.value } : c))
               }
               maxLength={140}
               placeholder="Add a caption (optional)…"
-              className="w-full rounded-xl border border-line bg-sand-50 px-3 py-2.5 text-sm font-semibold text-ink outline-none placeholder:text-slate-400 focus:border-fairway-900"
+              className="w-full rounded-xl border border-line bg-sand-50 px-3 py-2.5 text-[16px] font-semibold text-ink outline-none placeholder:text-slate-400 focus:border-fairway-900"
             />
             <div className="flex gap-2">
               <button
@@ -307,7 +543,6 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
         </div>
       ) : null}
 
-      {/* Loading */}
       {loading ? (
         <div className="space-y-4">
           {[0, 1].map((i) => (
@@ -321,7 +556,6 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
         </div>
       ) : null}
 
-      {/* Empty state */}
       {!loading && photos.length === 0 && !composer ? (
         <EmptyState
           img="/brand/clubhouse-birdy.png"
@@ -332,18 +566,20 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
         </EmptyState>
       ) : null}
 
-      {/* Feed */}
       {!loading && photos.length > 0 ? (
         <div className="space-y-4">
           {photos.map((photo) => {
             const poster = playerByAccount(photo.userId);
-            const isMine = !!user && photo.userId === user.id;
+            const isMine = !!userId && photo.userId === userId;
             const name = poster?.name ?? (isMine ? "You" : "Member");
             const url = urls[photo.id];
             const ratio =
               photo.width && photo.height
                 ? `${photo.width} / ${photo.height}`
                 : "4 / 3";
+            const photoComments = comments.filter(
+              (c) => c.photoId === photo.id
+            );
 
             return (
               <div
@@ -370,9 +606,9 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
                       onClick={() => remove(photo)}
                       disabled={deletingId === photo.id}
                       aria-label="Delete photo"
-                      className="rounded-lg px-2 py-1 text-slate-300 transition hover:text-team-north disabled:opacity-50"
+                      className="rounded-lg p-1.5 text-slate-300 transition hover:text-team-north disabled:opacity-50"
                     >
-                      {deletingId === photo.id ? "…" : "🗑"}
+                      <Trash2 size={18} />
                     </button>
                   ) : null}
                 </div>
@@ -394,13 +630,86 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
                   )}
                 </div>
 
-                {photo.caption ? (
-                  <p className="px-4 py-3 text-sm font-semibold text-slate-600">
-                    {photo.caption}
-                  </p>
-                ) : (
-                  <div className="pb-2" />
-                )}
+                <div className="px-4 pb-3 pt-3">
+                  {photo.caption ? (
+                    <p className="text-sm font-semibold text-slate-600">
+                      {photo.caption}
+                    </p>
+                  ) : null}
+
+                  <ReactionControls
+                    summary={reactionsForPhoto(photo.id)}
+                    onToggle={(e) => reactPhoto(photo.id, e)}
+                  />
+
+                  {photoComments.length > 0 ? (
+                    <div className="mt-3 space-y-2 border-t border-line pt-3">
+                      {photoComments.map((c) => {
+                        const cp = playerByAccount(c.userId);
+                        const cMine = !!userId && c.userId === userId;
+                        const cName =
+                          cp?.name ?? (cMine ? "You" : "Member");
+                        return (
+                          <div key={c.id} className="flex items-start gap-2">
+                            <div className="pt-0.5">
+                              <PlayerAvatar
+                                avatarId={cp?.avatarId}
+                                emoji={cp?.avatarEmoji}
+                                name={cName}
+                                size={24}
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm text-ink">
+                                <span className="font-extrabold">{cName}</span>{" "}
+                                <span className="font-medium text-slate-600">
+                                  {c.body}
+                                </span>
+                              </p>
+                              <p className="text-[11px] font-semibold text-slate-400">
+                                {relativeTime(c.createdAt)}
+                              </p>
+                            </div>
+                            {cMine ? (
+                              <button
+                                onClick={() => removeComment(c)}
+                                aria-label="Delete comment"
+                                className="shrink-0 p-1 text-slate-300 transition hover:text-team-north"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+
+                  <div className="mt-3 flex items-center gap-2">
+                    <input
+                      value={drafts[photo.id] ?? ""}
+                      onChange={(e) =>
+                        setDrafts((d) => ({ ...d, [photo.id]: e.target.value }))
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          void postComment(photo.id);
+                        }
+                      }}
+                      maxLength={500}
+                      placeholder="Add a comment…"
+                      className="min-w-0 flex-1 rounded-xl bg-sand-50 px-3 py-2 text-[16px] font-medium text-ink outline-none placeholder:text-slate-400"
+                    />
+                    <button
+                      onClick={() => void postComment(photo.id)}
+                      disabled={(drafts[photo.id] ?? "").trim().length === 0}
+                      className="shrink-0 rounded-xl bg-fairway-900 px-3 py-2 text-sm font-extrabold text-white transition active:scale-95 disabled:opacity-50"
+                    >
+                      Post
+                    </button>
+                  </div>
+                </div>
               </div>
             );
           })}
