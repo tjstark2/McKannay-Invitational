@@ -106,18 +106,20 @@ export function Landing() {
               <div className="rounded-xl border border-sand-100 bg-white p-3">
                 <div className="flex items-center justify-around text-center">
                   <div>
-                    <div className="text-[10px] font-extrabold text-fairway-900">Team North</div>
-                    <div className="font-display text-3xl font-black text-fairway-900">8</div>
+                    <img src="/brand/team-red.png" alt="" className="mx-auto h-7 w-7 object-contain" />
+                    <div className="mt-0.5 text-[10px] font-extrabold text-team-north">Team North</div>
+                    <div className="font-display text-3xl font-black text-team-north">8</div>
                   </div>
-                  <div className="text-lg">🏆</div>
+                  <div className="font-display text-sm font-black text-slate-400">VS</div>
                   <div>
-                    <div className="text-[10px] font-extrabold text-green">Team South</div>
-                    <div className="font-display text-3xl font-black text-green">4</div>
+                    <img src="/brand/team-blue.png" alt="" className="mx-auto h-7 w-7 object-contain" />
+                    <div className="mt-0.5 text-[10px] font-extrabold text-team-south">Team South</div>
+                    <div className="font-display text-3xl font-black text-team-south">4</div>
                   </div>
                 </div>
                 <div className="mt-2.5 flex h-2 overflow-hidden rounded-full bg-sand-100">
-                  <span className="bg-fairway-900" style={{ width: "44%" }} />
-                  <span className="bg-green" style={{ width: "23%" }} />
+                  <span className="bg-team-north" style={{ width: "44%" }} />
+                  <span className="bg-team-south" style={{ width: "23%" }} />
                 </div>
               </div>
             </div>
