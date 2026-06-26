@@ -25,11 +25,23 @@ export function ClubhouseScreen({
 
   return (
     <div className="space-y-4">
-      <ScreenHeader
-        img="/brand/clubhouse.png"
-        title="Clubhouse"
-        subtitle="Photos from the round and trash talk from the crew."
-      />
+      <div className="flex items-start justify-between gap-3">
+        <ScreenHeader
+          img="/brand/clubhouse.png"
+          title="Clubhouse"
+          subtitle="Photos from the round and trash talk from the crew."
+        />
+        <img
+          src={
+            tab === "photos"
+              ? "/brand/clubhouse-photos-birdy.png"
+              : "/brand/clubhouse-chat-birdy.png"
+          }
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none -mt-1 h-24 w-auto shrink-0 drop-shadow-[0_10px_14px_rgba(11,36,24,0.35)]"
+        />
+      </div>
 
       <div className="grid grid-cols-2 gap-2 rounded-2xl border border-line bg-white p-1">
         {tabs.map((t) => {
