@@ -7,6 +7,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import type { Screen } from "@/types";
+import { CourseBackground } from "@/features/trip/components/CourseBackground";
 
 export function ScheduleScreen({
   setActiveScreen,
@@ -53,7 +54,9 @@ export function ScheduleScreen({
               className="block w-full text-left"
             >
               <div className="relative">
-                <img src={course.imageUrl} alt={course.name} className="h-36 w-full object-cover" />
+                <div className="h-36 w-full overflow-hidden">
+                  <CourseBackground value={course.imageUrl} alt={course.name} />
+                </div>
                 <div className="absolute right-3 top-3 rounded-full bg-white/90 p-2 shadow-sm">
                   <ChevronRight className="h-5 w-5 text-slate-600" />
                 </div>

@@ -1,8 +1,15 @@
 "use client";
 
+import { useState } from "react";
+import { ImagePlus } from "lucide-react";
 import type { Screen } from "@/types";
 import { useTripState } from "@/features/trip/state/TripStateContext";
+import { useViewer } from "@/features/trip/state/ViewerContext";
 import { BrandBox } from "@/features/trip/components/Brand";
+import { CourseBackground } from "@/features/trip/components/CourseBackground";
+import { BackgroundPicker } from "@/features/trip/components/BackgroundPicker";
+import { getSupabaseClient } from "@/lib/supabase/client";
+import { setHeaderBackground } from "@/lib/supabase/backgrounds";
 
 export function TopHero({
   activeScreen,
@@ -11,18 +18,38 @@ export function TopHero({
   setActiveScreen: (screen: Screen) => void;
 }) {
   const { trip } = useTripState();
+  const { canManage } = useViewer();
+  const [bg, setBg] = useState<string | null>(trip.headerBackground);
+  const [picking, setPicking] = useState(false);
+
+  async function choose(value: string | null) {
+    setBg(value);
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        await setHeaderBackground(supabase, trip.id, value);
+      } catch {
+        /* keep optimistic UI; will reconcile on next load */
+      }
+    }
+  }
 
   return (
     <div className="overflow-hidden rounded-b-[2rem] bg-sand-50 shadow-sm">
       <div className="relative h-56 bg-gradient-to-br from-fairway-900 via-fairway-700 to-moss">
-        <img
-          src="/images/header.jpg"
-          alt={trip.name}
-          className="h-full w-full object-cover"
-        />
+        <CourseBackground value={bg} alt={trip.name} />
         <div className="absolute inset-0 bg-gradient-to-t from-fairway-900/95 via-fairway-900/45 to-fairway-900/10" />
 
         <BrandBox className="absolute left-4 top-4" />
+
+        {canManage ? (
+          <button
+            onClick={() => setPicking(true)}
+            className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-extrabold text-fairway-900 shadow backdrop-blur"
+          >
+            <ImagePlus size={14} /> Background
+          </button>
+        ) : null}
 
         <div className="absolute bottom-5 left-5 right-5 text-center text-white">
           <p className="text-xs font-bold uppercase tracking-[0.22em] opacity-90">
@@ -34,6 +61,16 @@ export function TopHero({
           <p className="mt-1 text-sm font-medium opacity-90">{trip.dates}</p>
         </div>
       </div>
+
+      <BackgroundPicker
+        open={picking}
+        onClose={() => setPicking(false)}
+        value={bg}
+        onSelect={choose}
+        tripId={trip.id}
+        canUpload={trip.isPro}
+        title="Tournament header"
+      />
     </div>
   );
 }

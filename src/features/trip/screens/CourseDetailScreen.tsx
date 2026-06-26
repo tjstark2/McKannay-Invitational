@@ -1,7 +1,14 @@
+import { useEffect, useState } from "react";
+import { ImagePlus } from "lucide-react";
 import { formatRoundFormat } from "@/lib/format";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { useTripState } from "@/features/trip/state/TripStateContext";
+import { useViewer } from "@/features/trip/state/ViewerContext";
+import { CourseBackground } from "@/features/trip/components/CourseBackground";
+import { BackgroundPicker } from "@/features/trip/components/BackgroundPicker";
+import { getSupabaseClient } from "@/lib/supabase/client";
+import { setCourseBackground } from "@/lib/supabase/backgrounds";
 import type { Screen } from "@/types";
 
 export function CourseDetailScreen({
@@ -11,9 +18,28 @@ export function CourseDetailScreen({
   courseId: string;
   setActiveScreen: (screen: Screen) => void;
 }) {
-  const { courses, rounds } = useTripState();
+  const { courses, rounds, trip } = useTripState();
+  const { canManage } = useViewer();
   const course = courses.find((item) => item.id === courseId) ?? courses[0];
   const courseRounds = rounds.filter((round) => round.courseId === course.id);
+
+  const [bg, setBg] = useState<string | null>(course.imageUrl || null);
+  const [picking, setPicking] = useState(false);
+  useEffect(() => {
+    setBg(course.imageUrl || null);
+  }, [course.id, course.imageUrl]);
+
+  async function choose(value: string | null) {
+    setBg(value);
+    const supabase = getSupabaseClient();
+    if (supabase) {
+      try {
+        await setCourseBackground(supabase, course.id, value);
+      } catch {
+        /* keep optimistic UI */
+      }
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -30,7 +56,17 @@ export function CourseDetailScreen({
       </div>
 
       <Card className="overflow-hidden">
-        <img src={course.imageUrl} alt={course.name} className="h-48 w-full object-cover" />
+        <div className="relative h-48 w-full overflow-hidden">
+          <CourseBackground value={bg} alt={course.name} />
+          {canManage ? (
+            <button
+              onClick={() => setPicking(true)}
+              className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-extrabold text-fairway-900 shadow backdrop-blur"
+            >
+              <ImagePlus size={14} /> Background
+            </button>
+          ) : null}
+        </div>
         <div className="p-5">
           <h1 className="text-2xl font-black">{course.name}</h1>
           <p className="mt-1 text-sm text-slate-500">{course.location}</p>
@@ -77,6 +113,16 @@ export function CourseDetailScreen({
           ))}
         </div>
       </Card>
+
+      <BackgroundPicker
+        open={picking}
+        onClose={() => setPicking(false)}
+        value={bg}
+        onSelect={choose}
+        tripId={trip.id}
+        canUpload={trip.isPro}
+        title={`Background - ${course.name}`}
+      />
     </div>
   );
 }

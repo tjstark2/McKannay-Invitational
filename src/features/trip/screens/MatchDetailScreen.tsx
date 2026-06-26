@@ -1,4 +1,5 @@
 import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
+import { CourseBackground } from "@/features/trip/components/CourseBackground";
 import {
   allowedCourseHandicap,
   frontNineNetScore,
@@ -171,11 +172,9 @@ export function MatchDetailScreen({
       </div>
 
       <Card className="overflow-hidden">
-        <img
-          src={course.imageUrl}
-          alt={course.name}
-          className="h-36 w-full object-cover"
-        />
+        <div className="h-36 w-full overflow-hidden">
+          <CourseBackground value={course.imageUrl} alt={course.name} />
+        </div>
 
         <div className="p-5">
           <div className="flex items-start justify-between gap-3">

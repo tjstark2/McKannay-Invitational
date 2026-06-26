@@ -42,6 +42,8 @@ export type Trip = {
   defendingTeam: TeamId | null;
   defaultFormat: string | null;
   rosterSize: number;
+  isPro: boolean;
+  headerBackground: string | null;
 };
 
 export type Team = {

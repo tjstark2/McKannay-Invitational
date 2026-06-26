@@ -7,6 +7,9 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { createTrip, insertCourse, insertRound, insertTeeTime } from "@/lib/supabase/queries";
 import { AuthShell } from "@/features/auth/AuthShell";
+import { ImagePlus } from "lucide-react";
+import { BackgroundPicker } from "@/features/trip/components/BackgroundPicker";
+import { STOCK_BACKGROUNDS } from "@/lib/backgrounds";
 
 type FmtOpt = {
   id: string;
@@ -28,7 +31,7 @@ const FORMATS: FmtOpt[] = [
   { id: "net_score", label: "Net Stroke Play", format: "net_score", groupSize: null, teePer: 4, increment: 1, desc: "Individual net leaderboard." },
 ];
 
-type CourseDraft = { name: string; par: string };
+type CourseDraft = { name: string; par: string; bg?: string | null };
 type RoundDraft = { presetId: string; courseIdx: number; arrival: string; teeTimes: string[] };
 
 function teeCountFor(roster: number, teePer: number) {
@@ -43,6 +46,7 @@ export default function CreatePage() {
   const [createdCode, setCreatedCode] = useState<string | null>(null);
   const [createdTripId, setCreatedTripId] = useState<string | null>(null);
   const [upgrading, setUpgrading] = useState(false);
+  const [bgPickerIdx, setBgPickerIdx] = useState<number | null>(null);
   const [name, setName] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [location, setLocation] = useState("");
@@ -50,7 +54,7 @@ export default function CreatePage() {
   const [teamAName, setTeamAName] = useState("Team A");
   const [teamBName, setTeamBName] = useState("Team B");
   const [rosterSize, setRosterSize] = useState("12");
-  const [courses, setCourses] = useState<CourseDraft[]>([{ name: "", par: "72" }]);
+  const [courses, setCourses] = useState<CourseDraft[]>([{ name: "", par: "72", bg: null }]);
   const [setRoundsNow, setSetRoundsNow] = useState<boolean | null>(null);
   const [rounds, setRounds] = useState<RoundDraft[]>([]);
   const [busy, setBusy] = useState(false);
@@ -120,7 +124,7 @@ export default function CreatePage() {
 
       const courseIds: string[] = [];
       for (const c of realCourses) {
-        const id = await insertCourse(supabase, tripId, { name: c.name.trim(), par: Number(c.par) || 72, rating: 72, slope: 113 });
+        const id = await insertCourse(supabase, tripId, { name: c.name.trim(), par: Number(c.par) || 72, rating: 72, slope: 113, imageUrl: c.bg ?? undefined });
         courseIds.push(id);
       }
 
@@ -242,9 +246,20 @@ export default function CreatePage() {
                     </div>
                     {courses.length > 1 ? <button onClick={() => setCourses((p) => p.filter((_, j) => j !== i))} className="rounded-lg px-2 py-1 text-sm font-bold text-slate-400">✕</button> : null}
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setBgPickerIdx(i)}
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-fairway-900"
+                  >
+                    <ImagePlus size={13} />
+                    {c.bg
+                      ? STOCK_BACKGROUNDS.find((b) => b.id === c.bg)?.title ??
+                        "Custom background"
+                      : "Add background (optional)"}
+                  </button>
                 </div>
               ))}
-              <button onClick={() => setCourses((p) => [...p, { name: "", par: "72" }])} className="w-full rounded-2xl border-[1.5px] border-dashed border-sand-200 py-3 text-sm font-bold text-slate-500">+ Add another course</button>
+              <button onClick={() => setCourses((p) => [...p, { name: "", par: "72", bg: null }])} className="w-full rounded-2xl border-[1.5px] border-dashed border-sand-200 py-3 text-sm font-bold text-slate-500">+ Add another course</button>
               {realCourses.length === 0 ? <p className="text-sm text-slate-400">You can skip this and add courses later in Admin, but you&apos;ll need at least one before setting up rounds.</p> : null}
             </div>
             <NavRow onBack={() => setStep(1)} onNext={() => setStep(3)} />
@@ -313,6 +328,18 @@ export default function CreatePage() {
           </div>
         ) : null}
       </div>
+
+      <BackgroundPicker
+        open={bgPickerIdx !== null}
+        onClose={() => setBgPickerIdx(null)}
+        value={bgPickerIdx !== null ? courses[bgPickerIdx]?.bg ?? null : null}
+        onSelect={(v) =>
+          setCourses((p) =>
+            p.map((x, j) => (j === bgPickerIdx ? { ...x, bg: v } : x))
+          )
+        }
+        title="Course background"
+      />
     </AuthShell>
   );
 }

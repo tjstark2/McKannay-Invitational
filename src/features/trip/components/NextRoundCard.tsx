@@ -1,4 +1,5 @@
 import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
+import { CourseBackground } from "@/features/trip/components/CourseBackground";
 import { formatRoundFormat } from "@/lib/format";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import type { RoundStatus } from "@/lib/scoring";
@@ -55,11 +56,9 @@ export function NextRoundCard({
         {/* photo hero with forest overlay */}
         <div className="relative min-h-[218px] bg-gradient-to-br from-fairway-700 to-fairway-900">
           {course?.imageUrl ? (
-            <img
-              src={course.imageUrl}
-              alt={course.name}
-              className="absolute inset-0 h-full w-full object-cover"
-            />
+            <div className="absolute inset-0">
+              <CourseBackground value={course.imageUrl} alt={course.name} />
+            </div>
           ) : null}
           <div className="absolute inset-0 bg-gradient-to-t from-fairway-900/95 via-fairway-900/55 to-fairway-900/15" />
           <svg
