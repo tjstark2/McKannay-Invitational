@@ -8,6 +8,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import {
   loadMyTrips,
   type MyTripSummary,
+  type TripStatus,
 } from "@/lib/supabase/queries";
 import {
   resolveTrip,
@@ -23,6 +24,18 @@ import { BrandHeaderMark } from "@/features/trip/components/Brand";
 import { AccountMenu } from "@/features/account/AccountMenu";
 import { EmptyState } from "@/components/ui/EmptyState";
 
+const STATUS_META: Record<TripStatus, { label: string; cls: string; dot: string }> = {
+  in_progress: { label: "In Progress", cls: "bg-mint/15 text-fairway-900", dot: "bg-mint" },
+  not_started: { label: "Not Started", cls: "bg-sand-50 text-slate-500", dot: "bg-slate-300" },
+  finished: { label: "Finished", cls: "bg-[#f3b50a]/15 text-[#8a6a00]", dot: "bg-[#f3b50a]" },
+};
+// In Progress first, then upcoming, then done.
+const STATUS_ORDER: Record<TripStatus, number> = {
+  in_progress: 0,
+  not_started: 1,
+  finished: 2,
+};
+
 export function AccountHome() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -35,6 +48,7 @@ export function AccountHome() {
   const [joinBusy, setJoinBusy] = useState(false);
   const [joinErr, setJoinErr] = useState<string | null>(null);
   const [joinMsg, setJoinMsg] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"all" | TripStatus>("all");
 
   useEffect(() => {
     if (loading) return;
@@ -119,6 +133,21 @@ export function AccountHome() {
     setTrips(await loadMyTrips(supabase, user.id));
     setInvitations(await loadInvitations(supabase, user.id));
   }
+
+  const allTrips = trips ?? [];
+  const statusCounts = {
+    all: allTrips.length,
+    in_progress: allTrips.filter((t) => t.status === "in_progress").length,
+    not_started: allTrips.filter((t) => t.status === "not_started").length,
+    finished: allTrips.filter((t) => t.status === "finished").length,
+  };
+  const visibleTrips = allTrips
+    .filter((t) => statusFilter === "all" || t.status === statusFilter)
+    .sort(
+      (a, b) =>
+        STATUS_ORDER[a.status] - STATUS_ORDER[b.status] ||
+        a.name.localeCompare(b.name)
+    );
 
   return (
     <div className="min-h-screen bg-[#f7f6f1]">
@@ -221,6 +250,42 @@ export function AccountHome() {
           <h2 className="font-anton text-2xl tracking-tight text-ink">My Tournaments</h2>
         </div>
 
+        {trips !== null && trips.length > 0 ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {(
+              [
+                ["all", "All"],
+                ["in_progress", "In Progress"],
+                ["not_started", "Not Started"],
+                ["finished", "Finished"],
+              ] as const
+            ).map(([key, label]) => {
+              const active = statusFilter === key;
+              const count = statusCounts[key];
+              return (
+                <button
+                  key={key}
+                  onClick={() => setStatusFilter(key)}
+                  className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-extrabold transition ${
+                    active
+                      ? "bg-fairway-900 text-white"
+                      : "border border-sand-100 bg-white text-slate-500"
+                  }`}
+                >
+                  {label}
+                  <span
+                    className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-black ${
+                      active ? "bg-white/20 text-white" : "bg-sand-50 text-slate-400"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
         {trips === null ? (
           <p className="mt-4 text-slate-400">Loading…</p>
         ) : trips.length === 0 ? (
@@ -231,9 +296,13 @@ export function AccountHome() {
               message="Create your first tournament or join one with a code."
             />
           </div>
+        ) : visibleTrips.length === 0 ? (
+          <p className="mt-6 text-center text-sm font-semibold text-slate-400">
+            No {STATUS_META[statusFilter as TripStatus].label.toLowerCase()} tournaments.
+          </p>
         ) : (
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {trips.map((t) => (
+            {visibleTrips.map((t) => (
               <div
                 key={t.id}
                 className="rounded-2xl border border-sand-100 bg-white p-5 shadow-sm"
@@ -242,17 +311,29 @@ export function AccountHome() {
                   onClick={() => router.push(`/t/${t.joinCode}`)}
                   className="block w-full text-left"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="rounded-full bg-sand-50 px-2 py-0.5 text-[11px] font-black uppercase tracking-wide text-slate-500">
-                      {t.role}
-                    </span>
-                    <span className="text-xs font-bold text-slate-400">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <span
+                        className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-black ${STATUS_META[t.status].cls}`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${STATUS_META[t.status].dot}`} />
+                        {STATUS_META[t.status].label}
+                      </span>
+                      <span className="shrink-0 rounded-full bg-sand-50 px-2 py-0.5 text-[11px] font-black uppercase tracking-wide text-slate-400">
+                        {t.role}
+                      </span>
+                    </div>
+                    <span className="shrink-0 text-xs font-bold text-slate-400">
                       {t.joinCode}
                     </span>
                   </div>
                   <h3 className="mt-3 text-lg font-black text-ink">{t.name}</h3>
                   <p className="mt-1 text-sm text-slate-500">
                     {[t.location, t.dates].filter(Boolean).join(" · ") || "—"}
+                  </p>
+                  <p className="mt-2 text-xs font-bold text-slate-400">
+                    {t.playerCount} {t.playerCount === 1 ? "player" : "players"} ·{" "}
+                    {t.roundCount} {t.roundCount === 1 ? "round" : "rounds"}
                   </p>
                   <p className="mt-3 text-sm font-black text-fairway-900">
                     Open ›

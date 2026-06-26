@@ -58,6 +58,8 @@ export async function tripExists(
   return Boolean(data && (data as unknown[]).length > 0);
 }
 
+export type TripStatus = "not_started" | "in_progress" | "finished";
+
 export type MyTripSummary = {
   id: string;
   name: string;
@@ -65,6 +67,9 @@ export type MyTripSummary = {
   location: string | null;
   dates: string | null;
   role: "owner" | "admin" | "member";
+  playerCount: number;
+  roundCount: number;
+  status: TripStatus;
 };
 
 // Trips the user owns OR is a member of, de-duplicated (owner wins).
@@ -86,6 +91,9 @@ export async function loadMyTrips(
       location: (t.location as string) ?? null,
       dates: (t.dates as string) ?? null,
       role: "owner",
+      playerCount: 0,
+      roundCount: 0,
+      status: "not_started",
     });
   }
 
@@ -107,10 +115,87 @@ export async function loadMyTrips(
       location: (t.location as string) ?? null,
       dates: (t.dates as string) ?? null,
       role: row.role === "owner" ? "owner" : row.role === "admin" ? "admin" : "member",
+      playerCount: 0,
+      roundCount: 0,
+      status: "not_started",
     });
   }
 
+  await attachTripStats(supabase, map);
   return [...map.values()];
+}
+
+// Enriches each trip summary with player/round counts and a derived status.
+// Status is heuristic (counts only, no per-round roster math) so it stays cheap
+// for the lobby: not_started = nothing scored yet; finished = every player has a
+// final (gross) score in every round; in_progress = anything in between.
+async function attachTripStats(
+  supabase: SupabaseClient,
+  map: Map<string, MyTripSummary>
+) {
+  const ids = [...map.keys()];
+  if (ids.length === 0) return;
+
+  const [pl, rd] = await Promise.all([
+    supabase.from("players").select("trip_id").in("trip_id", ids),
+    supabase.from("rounds").select("id,trip_id").in("trip_id", ids),
+  ]);
+
+  const playerCount = new Map<string, number>();
+  for (const r of (pl.data ?? []) as { trip_id: string }[]) {
+    playerCount.set(r.trip_id, (playerCount.get(r.trip_id) ?? 0) + 1);
+  }
+
+  const roundCount = new Map<string, number>();
+  const roundToTrip = new Map<string, string>();
+  for (const r of (rd.data ?? []) as { id: string; trip_id: string }[]) {
+    roundCount.set(r.trip_id, (roundCount.get(r.trip_id) ?? 0) + 1);
+    roundToTrip.set(r.id, r.trip_id);
+  }
+
+  const finalByTrip = new Map<string, number>(); // # of final (gross) scores
+  const anyByTrip = new Set<string>(); // any scoring at all (front 9 / gross / group)
+  const roundIds = [...roundToTrip.keys()];
+  if (roundIds.length > 0) {
+    const [se, gs] = await Promise.all([
+      supabase
+        .from("score_entries")
+        .select("round_id,front_nine_score,gross_score")
+        .in("round_id", roundIds),
+      supabase.from("group_scores").select("round_id,gross_score").in("round_id", roundIds),
+    ]);
+    for (const s of (se.data ?? []) as {
+      round_id: string;
+      front_nine_score: number | null;
+      gross_score: number | null;
+    }[]) {
+      const tid = roundToTrip.get(s.round_id);
+      if (!tid) continue;
+      if (s.gross_score != null) finalByTrip.set(tid, (finalByTrip.get(tid) ?? 0) + 1);
+      if (s.gross_score != null || s.front_nine_score != null) anyByTrip.add(tid);
+    }
+    for (const g of (gs.data ?? []) as { round_id: string | null }[]) {
+      if (!g.round_id) continue;
+      const tid = roundToTrip.get(g.round_id);
+      if (tid) anyByTrip.add(tid);
+    }
+  }
+
+  for (const t of map.values()) {
+    const pc = playerCount.get(t.id) ?? 0;
+    const rc = roundCount.get(t.id) ?? 0;
+    const finals = finalByTrip.get(t.id) ?? 0;
+    const expected = pc * rc;
+    t.playerCount = pc;
+    t.roundCount = rc;
+    if (rc === 0 || (finals === 0 && !anyByTrip.has(t.id))) {
+      t.status = "not_started";
+    } else if (expected > 0 && finals >= expected) {
+      t.status = "finished";
+    } else {
+      t.status = "in_progress";
+    }
+  }
 }
 
 // Join a trip by its code: records membership, returns false if code unknown.
