@@ -78,9 +78,9 @@ export function RulesScreen() {
               </div>
 
               <div className="rounded-xl bg-[#f3efe6] p-3">
-                <p className="font-black">9–9 Tie</p>
+                <p className="font-black">9-9 Tie</p>
                 <p className="mt-1 text-sm text-slate-600">
-                  If the tournament ends tied 9–9, the defending champion
+                  If the tournament ends tied 9-9, the defending champion
                   retains the cup.
                 </p>
               </div>

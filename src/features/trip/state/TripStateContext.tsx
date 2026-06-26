@@ -160,7 +160,7 @@ export function TripStateProvider({
     const supabase = supabaseRef.current;
     if (!supabase) return;
     const code = activeCodeRef.current;
-    if (!code) return; // no trip chosen yet — nothing to load
+    if (!code) return; // no trip chosen yet - nothing to load
     try {
       const loaded = await loadTripState(supabase, code);
       teamDbIdsRef.current = loaded.teamDbIds;

@@ -30,7 +30,7 @@ function AwardTile({
     <Card className="p-3 text-center">
       <img src={img} alt={label} className="mx-auto h-14 w-14 object-contain" />
       <p className="mt-1 truncate text-sm font-black">
-        {award ? award.players.map((p) => p.name).join(" & ") : "—"}
+        {award ? award.players.map((p) => p.name).join(" & ") : "-"}
       </p>
       <p className="mt-0.5 text-[11px] text-slate-500">
         {award ? award.detail : "Not enough data"}
@@ -161,7 +161,7 @@ export function OverviewScreen({
       .filter((row) => row.frontNet !== null && !row.isFinal)
       .sort((a, b) => (a.frontNet ?? 999) - (b.frontNet ?? 999))[0] ?? null;
 
-  // Team momentum — who is projected to take the live round, and by how much.
+  // Team momentum - who is projected to take the live round, and by how much.
   const projA = race.currentProjectedPoints.A;
   const projB = race.currentProjectedPoints.B;
   const momentumLeader =
@@ -182,7 +182,7 @@ export function OverviewScreen({
       : "Dead even in the projected race";
 
   // Grouped rounds (Scramble / Best Ball 2v2-4v4) record one combined score
-  // per SIDE, not per player — so progress, status, and leaders come from
+  // per SIDE, not per player - so progress, status, and leaders come from
   // group_scores, not per-player score entries.
   const isGroupedRound = featuredRound.groupSize != null;
   const roundMatches = matches.filter((m) => m.roundId === featuredRound.id);
@@ -212,11 +212,11 @@ export function OverviewScreen({
     ids
       .map((id) => players.find((p) => p.id === id)?.name)
       .filter(Boolean)
-      .join(" & ") || "—";
+      .join(" & ") || "-";
 
   return (
     <div className="space-y-6">
-      {/* 0 — The Nest */}
+      {/* 0 - The Nest */}
       <div className="relative flex items-center gap-3 pr-28">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-white shadow-[0_8px_18px_-12px_rgba(14,76,48,0.5)]">
           <img
@@ -241,14 +241,14 @@ export function OverviewScreen({
         />
       </div>
 
-      {/* 1 — hero */}
+      {/* 1 - hero */}
       <NextRoundCard
         round={featuredRound}
         status={dispStatus}
         setActiveScreen={setActiveScreen}
       />
 
-      {/* 1.5 — team momentum */}
+      {/* 1.5 - team momentum */}
       <section>
         <h2 className="mb-3 flex items-center gap-2 font-anton text-2xl tracking-tight text-ink">
           <span className="h-5 w-2 rounded-[3px] bg-mint" />
@@ -286,10 +286,10 @@ export function OverviewScreen({
         </Card>
       </section>
 
-      {/* 2 — who's winning */}
+      {/* 2 - who's winning */}
       <StandingsCard />
 
-      {/* 3 — this round */}
+      {/* 3 - this round */}
       <section>
         <h2 className="mb-3 flex items-center gap-2 font-anton text-2xl tracking-tight text-ink"><span className="h-5 w-2 rounded-[3px] bg-mint" />This Round</h2>
         <Card className="p-5">
@@ -332,10 +332,10 @@ export function OverviewScreen({
               {momentumLeader
                 ? `${momentumLeader} projected to take this round by ${momentumMargin} ${
                     momentumMargin === 1 ? "point" : "points"
-                  } (${projA}–${projB}).`
+                  } (${projA}-${projB}).`
                 : dispStatus === "not_started"
-                ? "No scores in yet — momentum opens once play starts."
-                : `Dead even this round (${projA}–${projB}).`}
+                ? "No scores in yet - momentum opens once play starts."
+                : `Dead even this round (${projA}-${projB}).`}
             </p>
           </div>
 
@@ -350,7 +350,7 @@ export function OverviewScreen({
                   name={hot.player.name}
                   size={20}
                 />
-                {hot.player.name} — front net {hot.frontNet?.toFixed(1)} through
+                {hot.player.name} - front net {hot.frontNet?.toFixed(1)} through
                 9.
               </p>
             </div>
@@ -383,7 +383,7 @@ export function OverviewScreen({
                         ? String(s.grossScore)
                         : s?.frontNineScore != null
                         ? `${s.frontNineScore} (F9)`
-                        : "—";
+                        : "-";
                     return (
                       <div
                         key={m.id}
@@ -452,7 +452,7 @@ export function OverviewScreen({
                     <div className="text-right">
                       <p className="font-black">
                         {row.displayNet === null
-                          ? "—"
+                          ? "-"
                           : row.isFinal
                           ? row.displayNet
                           : row.displayNet.toFixed(1)}
@@ -462,7 +462,7 @@ export function OverviewScreen({
                           ? `Gross ${row.grossScore}`
                           : row.status === "through_9"
                           ? `Front ${row.frontNineScore}`
-                          : "—"}
+                          : "-"}
                       </p>
                     </div>
                   </div>
@@ -486,7 +486,7 @@ export function OverviewScreen({
         </Card>
       </section>
 
-      {/* 4 — tournament race */}
+      {/* 4 - tournament race */}
       <section>
         <h2 className="mb-3 flex items-center gap-2 font-anton text-2xl tracking-tight text-ink"><span className="h-5 w-2 rounded-[3px] bg-mint" />
           Tournament Race
@@ -495,7 +495,7 @@ export function OverviewScreen({
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="font-anton text-2xl">
-                Projected: {race.projectedTotalPoints.A} –{" "}
+                Projected: {race.projectedTotalPoints.A} -{" "}
                 {race.projectedTotalPoints.B}
               </h3>
               <p className="mt-1 text-sm text-slate-500">
@@ -531,7 +531,7 @@ export function OverviewScreen({
         </Card>
       </section>
 
-      {/* 5 — stat highlights */}
+      {/* 5 - stat highlights */}
       <section>
         <h2 className="mb-3 flex items-center gap-2 font-anton text-2xl tracking-tight text-ink"><span className="h-5 w-2 rounded-[3px] bg-mint" />Highlights</h2>
         <div className="grid grid-cols-2 gap-3">
@@ -553,7 +553,7 @@ export function OverviewScreen({
                   />
                 ) : null}
                 <p className="truncate text-sm font-extrabold">
-                  {bestNet ? bestNet.player.name : "—"}
+                  {bestNet ? bestNet.player.name : "-"}
                 </p>
               </div>
               <p className="truncate text-[11px] text-slate-500">
@@ -580,7 +580,7 @@ export function OverviewScreen({
                   />
                 ) : null}
                 <p className="truncate text-sm font-extrabold">
-                  {biggestMover ? biggestMover.player.name : "—"}
+                  {biggestMover ? biggestMover.player.name : "-"}
                 </p>
               </div>
               <p className="truncate text-[11px] text-slate-500">
@@ -591,7 +591,7 @@ export function OverviewScreen({
         </div>
       </section>
 
-      {/* 6 — awards */}
+      {/* 6 - awards */}
       <section>
         <h2 className="mb-3 flex items-center gap-2 font-anton text-2xl tracking-tight text-ink"><span className="h-5 w-2 rounded-[3px] bg-mint" />Awards</h2>
         <div className="grid grid-cols-3 gap-2">
@@ -601,7 +601,7 @@ export function OverviewScreen({
         </div>
       </section>
 
-      {/* 7 — progress */}
+      {/* 7 - progress */}
       <section>
         <h2 className="mb-3 flex items-center gap-2 font-anton text-2xl tracking-tight text-ink"><span className="h-5 w-2 rounded-[3px] bg-mint" />
           Official Progress

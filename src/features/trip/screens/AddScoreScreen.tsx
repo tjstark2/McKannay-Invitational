@@ -94,7 +94,7 @@ export function AddScoreScreen() {
         <div className="relative pr-28">
           <SectionHeader
             title="Log Round"
-            subtitle="Group round — one combined score per side, gross only."
+            subtitle="Group round - one combined score per side, gross only."
           />
           <img
             src="/brand/tee-it-up-birdy.png"
@@ -251,7 +251,7 @@ export function AddScoreScreen() {
     if (parts.length > 0) message = `You're about to ${parts.join(" and ")}. `;
     if (finalizing) {
       message +=
-        "Submitting your 18-hole score finalizes this round — after this, only an organizer can change it. ";
+        "Submitting your 18-hole score finalizes this round - after this, only an organizer can change it. ";
     }
     message += "Continue?";
 
@@ -271,7 +271,7 @@ export function AddScoreScreen() {
           subtitle={
             canManage
               ? "Enter front 9 progress first, then final gross score after 18."
-              : "Log your own round — front 9 after the turn, final gross after 18."
+              : "Log your own round - front 9 after the turn, final gross after 18."
           }
         />
         <img
@@ -410,7 +410,7 @@ export function AddScoreScreen() {
 
             {missingFrontForGross ? (
               <p className="mt-3 text-sm font-semibold text-amber-700">
-                Enter the front 9 score before submitting the final round — both
+                Enter the front 9 score before submitting the final round - both
                 are required.
               </p>
             ) : null}

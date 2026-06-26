@@ -41,7 +41,7 @@ export default function TripCodePage() {
     }
     const supabase = getSupabaseClient();
     if (!supabase) {
-      setGate({ kind: "view" }); // seed mode / no backend — let it render
+      setGate({ kind: "view" }); // seed mode / no backend - let it render
       return;
     }
     let active = true;
@@ -236,7 +236,7 @@ function HandicapSetup({
         </div>
 
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <p className="font-black">Heads up — this locks once you confirm.</p>
+          <p className="font-black">Heads up - this locks once you confirm.</p>
           <p className="mt-1">
             After you confirm, you won&apos;t be able to change your handicap.
             Only the tournament admin can adjust it.

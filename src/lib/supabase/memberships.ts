@@ -290,13 +290,13 @@ export async function inviteByUsername(
     if (s === "active") return { ok: false, error: `${shown} is already a member.` };
     if (s === "invited") return { ok: false, error: `${shown} has already been invited.` };
     if (s === "pending") {
-      // they'd requested — inviting is the same as approving them
+      // they'd requested - inviting is the same as approving them
       await supabase
         .from("trip_members")
         .update({ status: "active" })
         .eq("trip_id", tripId)
         .eq("user_id", otherId);
-      return { ok: true, name: shown, note: "They had requested — now approved." };
+      return { ok: true, name: shown, note: "They had requested - now approved." };
     }
   }
 

@@ -412,7 +412,7 @@ export function TripApp() {
   );
 }
 
-/** Trip app reached by a shareable URL like /t/MCK2026 — loads that code. */
+/** Trip app reached by a shareable URL like /t/MCK2026 - loads that code. */
 export function TripView({
   code,
   canManage = false,

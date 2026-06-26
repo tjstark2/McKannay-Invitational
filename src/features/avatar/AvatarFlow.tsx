@@ -103,7 +103,7 @@ export function AvatarFlow({
       showToast("That birdie is assigned to specific players.");
       return;
     }
-    if (!isUnlocked(b)) showToast("That bird’s locked — opening upgrade.");
+    if (!isUnlocked(b)) showToast("That bird’s locked - opening upgrade.");
     birdVoice(b.id);
     if (mode === "edit") {
       complete();
@@ -116,7 +116,7 @@ export function AvatarFlow({
     setBusy(true);
     const res = await onComplete(selected.id);
     if (!res.ok) {
-      showToast(res.error || "Couldn’t save your bird — please try again.");
+      showToast(res.error || "Couldn’t save your bird - please try again.");
       setBusy(false);
     }
     // on success the page navigates away and this component unmounts
@@ -169,7 +169,7 @@ export function AvatarFlow({
               Ready to Earn <span className={styles.pop}>Your Wings?</span>
             </h1>
             <p className={styles.lede}>
-              Your bird is your identity throughout your tournament — on
+              Your bird is your identity throughout your tournament - on
               leaderboards, scorecards, pairings, and beyond.
             </p>
             <button className={styles.cta} onClick={startChoose}>
@@ -221,15 +221,15 @@ export function AvatarFlow({
               </div>
             </div>
             <div className={styles.meta}>
-              <div className={styles.name}>{selected?.name ?? "—"}</div>
+              <div className={styles.name}>{selected?.name ?? "-"}</div>
               <div className={styles.klass}>
-                {selected ? `${selected.klass} · ${TIER_META[selected.tier].label}` : "—"}
+                {selected ? `${selected.klass} · ${TIER_META[selected.tier].label}` : "-"}
               </div>
               {!selUnlocked ? (
                 <div className={styles.lockmsg}>
                   {selSpecial
-                    ? "Special access — assigned to specific players. Only they can choose it."
-                    : "Locked — start playing, then upgrade anytime to switch to Premium & Legendary birdies."}
+                    ? "Special access - assigned to specific players. Only they can choose it."
+                    : "Locked - start playing, then upgrade anytime to switch to Premium & Legendary birdies."}
                 </div>
               ) : null}
             </div>
@@ -322,16 +322,16 @@ export function AvatarFlow({
               <div key={title} className={`${styles.perk} ${i === 0 ? styles.perkFirst : ""}`}>
                 <span className={styles.dot}>✦</span>
                 <div>
-                  <b>{title}</b> <span>— {desc}</span>
+                  <b>{title}</b> <span>- {desc}</span>
                 </div>
               </div>
             ))}
             <button
               className={styles.cta}
               style={{ marginTop: 18 }}
-              onClick={() => showToast("Payments coming soon — this is a placeholder.")}
+              onClick={() => showToast("Payments coming soon - this is a placeholder.")}
             >
-              Upgrade — $4.99/mo
+              Upgrade - $4.99/mo
             </button>
             <button
               className={`${styles.cta} ${styles.ghost}`}
@@ -341,7 +341,7 @@ export function AvatarFlow({
             >
               {busy ? "Setting your bird…" : "Maybe later"}
             </button>
-            <div className={styles.stub}>Placeholder — no real payment. First login only.</div>
+            <div className={styles.stub}>Placeholder - no real payment. First login only.</div>
           </div>
         </section>
 

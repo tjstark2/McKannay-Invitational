@@ -166,7 +166,7 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
     const supabase = getSupabaseClient();
     if (!supabase) {
       setLoading(false);
-      setError("Photos need a live connection — try again in a moment.");
+      setError("Photos need a live connection - try again in a moment.");
       return;
     }
     setLoading(true);
@@ -358,7 +358,7 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
     const supabase = getSupabaseClient();
     if (!supabase) {
       setUploading(false);
-      setError("Lost the connection — try again in a moment.");
+      setError("Lost the connection - try again in a moment.");
       return;
     }
     try {
@@ -575,8 +575,8 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
       {!loading && photos.length === 0 && !composer ? (
         <EmptyState
           img="/brand/clubhouse-birdy.png"
-          title="No photos yet"
-          message="Snap the first one — tee shots, trophies, and questionable swings welcome."
+          title="No Photos Yet"
+          message="Snap the first one - tee shots, trophies, and questionable swings welcome."
         >
           {AddButton}
         </EmptyState>

@@ -31,7 +31,7 @@ export function PasswordGate({
         setUnlocked(true);
       }
     } catch {
-      // sessionStorage unavailable — just show the prompt.
+      // sessionStorage unavailable - just show the prompt.
     }
     setReady(true);
   }, [storageKey]);

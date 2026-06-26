@@ -257,7 +257,7 @@ const V: Record<string, Recipe> = {
     for (let i = 0; i < 12; i++) tone(t + i * 0.05, { f: 3000 + Math.sin(i * 1.3) * 700, dur: 0.04, peak: 0.08, vib: 40, vibDepth: 200 });
   },
   crow: (t) => {
-    // "cha-ching" cash register — Crow the Hustler
+    // "cha-ching" cash register - Crow the Hustler
     tone(t, { f: 988, dur: 0.12, peak: 0.16, type: "triangle", harm: [1, 2, 3], harmGain: [1, 0.5, 0.25] });
     tone(t + 0.09, { f: 1319, dur: 0.2, peak: 0.16, type: "triangle", harm: [1, 2, 3], harmGain: [1, 0.5, 0.25] });
     for (let i = 0; i < 6; i++) tone(t + 0.2 + i * 0.028, { f: 2200 + Math.random() * 1100, dur: 0.05, peak: 0.05 });

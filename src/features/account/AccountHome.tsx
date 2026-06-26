@@ -123,7 +123,7 @@ export function AccountHome() {
     setPending(pend);
     setJoinBusy(false);
     setJoinCode("");
-    setJoinMsg(`Request sent to ${trip.name} — waiting for approval.`);
+    setJoinMsg(`Request sent to ${trip.name} - waiting for approval.`);
   }
 
   async function respondInvite(membershipId: string, accept: boolean) {
@@ -329,7 +329,7 @@ export function AccountHome() {
                   </div>
                   <h3 className="mt-3 text-lg font-black text-ink">{t.name}</h3>
                   <p className="mt-1 text-sm text-slate-500">
-                    {[t.location, t.dates].filter(Boolean).join(" · ") || "—"}
+                    {[t.location, t.dates].filter(Boolean).join(" · ") || "-"}
                   </p>
                   <p className="mt-2 text-xs font-bold text-slate-400">
                     {t.playerCount} {t.playerCount === 1 ? "player" : "players"} ·{" "}

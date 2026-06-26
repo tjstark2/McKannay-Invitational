@@ -16,7 +16,7 @@ export function Landing() {
             Run your golf trip like a <span className="text-green">real tournament.</span>
           </h1>
           <p className="mt-5 max-w-lg text-lg text-slate-600">
-            Teams, match play, net scoring, live standings — TourneyBirdie turns
+            Teams, match play, net scoring, live standings - TourneyBirdie turns
             your buddies&apos; trip into a proper competition everyone can follow
             in real time.
           </p>
@@ -78,7 +78,7 @@ export function Landing() {
         <div className="mt-12 grid gap-5 md:grid-cols-3">
           {[
             ["1", "Bring your crew", "Add your golf buddies as friends so building rosters takes seconds."],
-            ["2", "Build the tournament", "Set your teams, rounds, courses, and formats — done in minutes."],
+            ["2", "Build the tournament", "Set your teams, rounds, courses, and formats - done in minutes."],
             ["3", "Pick your Birdie", "Everyone chooses a Birdie avatar that follows them all trip long."],
           ].map(([n, t, d]) => (
             <div key={n} className="rounded-3xl border border-sand-100 bg-white p-7 text-center">
@@ -102,11 +102,11 @@ export function Landing() {
             Everything your trip needs, in one place
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-center text-lg text-slate-600">
-            From the first tee to the final putt — set it up, get everyone in,
+            From the first tee to the final putt - set it up, get everyone in,
             and let the competition tell its own story.
           </p>
 
-          {/* spotlight 1 — live leaderboard */}
+          {/* spotlight 1 - live leaderboard */}
           <div className="mt-16 grid items-center gap-10 md:grid-cols-2">
             <div>
               <span className="inline-block rounded-full bg-fairway-900/10 px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-fairway-900">
@@ -117,7 +117,7 @@ export function Landing() {
               </h3>
               <p className="mt-3 text-lg text-slate-600">
                 Net and gross handled automatically. Every score you log
-                re-ranks the field in real time — with a gold, silver, and
+                re-ranks the field in real time - with a gold, silver, and
                 bronze podium up top.
               </p>
             </div>
@@ -162,7 +162,7 @@ export function Landing() {
             </div>
           </div>
 
-          {/* spotlight 2 — team standings with crests */}
+          {/* spotlight 2 - team standings with crests */}
           <div className="mt-16 grid items-center gap-10 md:grid-cols-2">
             <div className="rounded-[22px] border border-line bg-white p-6 shadow-xl md:order-1">
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
@@ -194,14 +194,14 @@ export function Landing() {
                 Two teams. Every match that matters.
               </h3>
               <p className="mt-3 text-lg text-slate-600">
-                Singles, best ball, scramble — set your matchups and watch the
+                Singles, best ball, scramble - set your matchups and watch the
                 points swing hole by hole, with your team colors and crests
                 carried through the whole app.
               </p>
             </div>
           </div>
 
-          {/* spotlight 3 — live match */}
+          {/* spotlight 3 - live match */}
           <div className="mt-16 grid items-center gap-10 md:grid-cols-2">
             <div>
               <span className="inline-block rounded-full bg-fairway-900/10 px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-fairway-900">
@@ -212,7 +212,7 @@ export function Landing() {
               </h3>
               <p className="mt-3 text-lg text-slate-600">
                 A live match center shows who&apos;s up, who&apos;s dormie, and
-                which games are still alive — so the whole group can rail the
+                which games are still alive - so the whole group can rail the
                 action from the cart.
               </p>
             </div>
@@ -249,7 +249,7 @@ export function Landing() {
                   </span>
                   <span className="text-sm font-bold text-ink">Drew T.</span>
                 </div>
-                <span className="font-anton text-lg text-slate-400">—</span>
+                <span className="font-anton text-lg text-slate-400">-</span>
               </div>
             </div>
           </div>
@@ -260,7 +260,7 @@ export function Landing() {
               A story at the end of every trip
             </h3>
             <p className="mx-auto mt-2 max-w-xl text-center text-slate-600">
-              Automatic awards crown the standouts — and the cautionary tales.
+              Automatic awards crown the standouts - and the cautionary tales.
             </p>
             <div className="mt-7 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
               {[
@@ -292,7 +292,7 @@ export function Landing() {
                 ["Live Momentum", "A momentum bar and current-round race show who's surging in real time."],
                 ["Schedule & Tee Times", "Lay out each round's course, date, and tee-time groups in one place."],
                 ["Player Profiles", "Tap any golfer for their rounds, results, and how they're trending across the trip."],
-                ["Shareable Join Codes", "Every tournament gets a code — text it and your group is in."],
+                ["Shareable Join Codes", "Every tournament gets a code - text it and your group is in."],
                 ["Admin Controls", "Set the active round, manage rosters, and tune scoring on the fly."],
               ].map(([t, b]) => (
                 <div key={t} className="rounded-2xl border border-line bg-white p-6">
@@ -316,12 +316,12 @@ export function Landing() {
               Coming soon
             </span>
             <h2 className="mt-4 font-display text-3xl font-black tracking-tight md:text-4xl">
-              The Clubhouse — where the trip lives on
+              The Clubhouse - where the trip lives on
             </h2>
             <p className="mt-3 max-w-md text-lg text-[#cfe6d8]">
               Post your photos from the round, talk a little trash in the group
               chat, and turn every trip into a story you’ll be retelling for
-              years. The bets, the blow-ups, the hero shots — all in one place.
+              years. The bets, the blow-ups, the hero shots - all in one place.
             </p>
           </div>
           <div className="md:flex-1">

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { BrandLockup } from "@/features/trip/components/Brand";
 
-/* Brand-only login. The Access Code IS the trip's join code — entering a valid
+/* Brand-only login. The Access Code IS the trip's join code - entering a valid
    code loads that tournament. No trip name is shown here on purpose, so the same
    screen works when one code routes to different trips. */
 export function EntryGate({ children }: { children: React.ReactNode }) {

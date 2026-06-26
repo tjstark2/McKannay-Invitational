@@ -108,7 +108,7 @@ export default function EditProfilePage() {
     if (upErr) {
       setError(
         upErr.message.toLowerCase().includes("duplicate")
-          ? "That username was just taken — try another."
+          ? "That username was just taken - try another."
           : upErr.message
       );
       return;

@@ -1,5 +1,5 @@
 // Supabase reads/writes for the Clubhouse feature (Phase 1: photos).
-// Mirrors the conventions in queries.ts — callers pass in the shared client
+// Mirrors the conventions in queries.ts - callers pass in the shared client
 // (from getSupabaseClient()) and these functions throw on error.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -38,7 +38,7 @@ function mapPhoto(row: TripPhotoRow): TripPhoto {
   };
 }
 
-/** Newest-first list of a trip's photos (rows only — fetch signed URLs separately). */
+/** Newest-first list of a trip's photos (rows only - fetch signed URLs separately). */
 export async function loadPhotos(
   supabase: SupabaseClient,
   tripId: string

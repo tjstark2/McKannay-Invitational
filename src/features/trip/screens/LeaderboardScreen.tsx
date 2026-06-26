@@ -82,7 +82,7 @@ function AwardCard({
   return (
     <Card className="p-3 text-center">
       <img src={img} alt="" className="mx-auto h-14 w-14 object-contain" />
-      <p className="mt-1 truncate text-sm font-black">{name ?? "—"}</p>
+      <p className="mt-1 truncate text-sm font-black">{name ?? "-"}</p>
       <p className="text-[10px] font-semibold text-slate-500">{detail}</p>
     </Card>
   );

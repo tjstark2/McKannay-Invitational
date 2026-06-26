@@ -119,7 +119,7 @@ export default function ProfilePage() {
 
             <div className="mt-4 rounded-xl bg-sand-50 p-3.5">
               <p className="text-sm font-bold text-ink">
-                Go ad-free + unlock more birdies — coming soon.
+                Go ad-free + unlock more birdies - coming soon.
               </p>
               <p className="mt-0.5 text-sm text-slate-500">
                 A personal membership that removes ads and adds extra avatar
@@ -132,13 +132,13 @@ export default function ProfilePage() {
         {/* Account details */}
         <Section title="Account">
           <div className="divide-y divide-sand-100 overflow-hidden rounded-2xl border border-line bg-white">
-            <Row label="Email" value={profile?.email || user.email || "—"} />
-            <Row label="Phone" value={profile?.phone || "—"} />
+            <Row label="Email" value={profile?.email || user.email || "-"} />
+            <Row label="Phone" value={profile?.phone || "-"} />
             <Row
               label="Username"
-              value={profile?.username ? `@${profile.username}` : "—"}
+              value={profile?.username ? `@${profile.username}` : "-"}
             />
-            <Row label="Location" value={location || "—"} />
+            <Row label="Location" value={location || "-"} />
           </div>
         </Section>
 

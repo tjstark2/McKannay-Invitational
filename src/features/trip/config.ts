@@ -1,7 +1,7 @@
 // App-wide configuration knobs, kept in one place so they're easy to change.
 //
 // NOTE ON PASSWORDS: these are *soft gates*. They live in the browser bundle,
-// so anyone technical can read them — they keep casual users out, nothing more.
+// so anyone technical can read them - they keep casual users out, nothing more.
 // Real security would require Supabase auth (a future option). When we add
 // multiple trips, the admin password is the natural thing to move onto each
 // trip row so every commissioner controls their own.

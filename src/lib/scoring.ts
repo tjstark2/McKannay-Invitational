@@ -372,7 +372,7 @@ export function resolveMatch(
     aNet,
     bNet,
     label:
-      winner === "T" ? `Tie: ${aNet}` : `Team ${winner} Wins ${aNet}–${bNet}`,
+      winner === "T" ? `Tie: ${aNet}` : `Team ${winner} Wins ${aNet}-${bNet}`,
     waitingOn: [],
   };
 }
@@ -431,8 +431,8 @@ export function netScorePointCount(
 }
 
 // Confirmed (mathematically locked) net-score points. A finished player's point
-// is locked only if, even in the worst case — every still-unfinished player on
-// the OTHER team finishes at the top and pushes them down — they still land in
+// is locked only if, even in the worst case - every still-unfinished player on
+// the OTHER team finishes at the top and pushes them down - they still land in
 // the top N. Returns both team totals and the set of locked player IDs.
 export function netScoreConfirmed(
   players: Player[],
@@ -493,8 +493,8 @@ export function netScoreConfirmed(
   points.B = teamFloor("B");
 
   // Individual lock (for row badges): a finished player is only personally
-  // guaranteed a paying slot if no outstanding player on EITHER team — and no
-  // tie — could push them out of the top N.
+  // guaranteed a paying slot if no outstanding player on EITHER team - and no
+  // tie - could push them out of the top N.
   finished.forEach((row) => {
     const strictlyBetter = finished.filter((q) => q.net < row.net).length;
     const tiedOthers = finished.filter(
@@ -1043,7 +1043,7 @@ export function getOverviewAwards(
     scoringSettings
   );
 
-  // MVP — most points won; tiebreak best (lowest) average net.
+  // MVP - most points won; tiebreak best (lowest) average net.
   let mvp: AwardResult = null;
   if (leaderboard.length > 0) {
     const top = leaderboard[0];
@@ -1060,7 +1060,7 @@ export function getOverviewAwards(
     }
   }
 
-  // Coldest — worst (highest) average net to par among players who've played.
+  // Coldest - worst (highest) average net to par among players who've played.
   const coldRows = leaderboard.filter(
     (r) => r.roundsPlayed > 0 && r.averageNetToPar !== null
   );
@@ -1078,7 +1078,7 @@ export function getOverviewAwards(
     };
   }
 
-  // Clutch — most points won in close decided matches (singles within 1–2 net).
+  // Clutch - most points won in close decided matches (singles within 1-2 net).
   const clutchPoints = new Map<string, number>();
   matches.forEach((match) => {
     const round = getRound(rounds, match.roundId);
@@ -1151,7 +1151,7 @@ export function getBestNetRound(
   return best;
 }
 
-// Biggest mover — largest improvement in net-to-par from a player's first
+// Biggest mover - largest improvement in net-to-par from a player's first
 // logged round to their latest (needs at least two finished rounds).
 export function getBiggestMover(
   players: Player[],

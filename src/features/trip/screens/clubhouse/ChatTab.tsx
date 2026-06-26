@@ -83,7 +83,7 @@ export function ChatTab({ onRead }: { onRead?: () => void }) {
     const supabase = getSupabaseClient();
     if (!supabase) {
       setLoading(false);
-      setError("Chat needs a live connection — try again in a moment.");
+      setError("Chat needs a live connection - try again in a moment.");
       return;
     }
 
@@ -231,7 +231,7 @@ export function ChatTab({ onRead }: { onRead?: () => void }) {
     const supabase = getSupabaseClient();
     if (!supabase) {
       setSending(false);
-      setError("Lost the connection — try again in a moment.");
+      setError("Lost the connection - try again in a moment.");
       return;
     }
     try {
@@ -369,8 +369,8 @@ export function ChatTab({ onRead }: { onRead?: () => void }) {
       {!loading && messages.length === 0 ? (
         <EmptyState
           img="/brand/clubhouse-birdy.png"
-          title="No messages yet"
-          message="Start the trash talk — first one to chirp sets the tone."
+          title="No Messages Yet"
+          message="Start the trash talk - first one to chirp sets the tone."
         />
       ) : null}
 

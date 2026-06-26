@@ -62,7 +62,7 @@ export function MarketingFooter() {
             <span className="text-accent">BIRDIE</span>
           </span>
           <p className="mt-3 max-w-xs text-sm">
-            Create. Invite. Crown. Tournaments made easy — for golf trips and
+            Create. Invite. Crown. Tournaments made easy - for golf trips and
             group outings.
           </p>
         </div>

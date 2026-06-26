@@ -75,7 +75,7 @@ export default function CompleteProfilePage() {
     if (upErr) {
       setError(
         upErr.message.includes("duplicate")
-          ? "That username was just taken — try another."
+          ? "That username was just taken - try another."
           : upErr.message
       );
       return;

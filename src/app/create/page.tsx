@@ -19,7 +19,7 @@ type FmtOpt = {
 };
 
 const FORMATS: FmtOpt[] = [
-  { id: "casual", label: "Casual", format: "casual", groupSize: null, teePer: 4, increment: 1, desc: "Just track scores — no points or head-to-head." },
+  { id: "casual", label: "Casual", format: "casual", groupSize: null, teePer: 4, increment: 1, desc: "Just track scores - no points or head-to-head." },
   { id: "scramble_2", label: "Scramble · 2 v 2", format: "scramble", groupSize: 2, teePer: 4, increment: 4, desc: "Pairs play one ball; one combined score per pair." },
   { id: "scramble_4", label: "Scramble · 4 v 4", format: "scramble", groupSize: 4, teePer: 8, increment: 8, desc: "Foursomes play one ball; one combined score per group." },
   { id: "bestball_2", label: "Best Ball · 2 v 2", format: "best_ball", groupSize: 2, teePer: 4, increment: 4, desc: "Pairs; one combined score per pair." },
@@ -160,7 +160,7 @@ export default function CreatePage() {
     const supabase = getSupabaseClient();
     if (supabase && createdTripId) {
       setUpgrading(true);
-      // No billing yet — this just sets the structural Pro flag (free preview).
+      // No billing yet - this just sets the structural Pro flag (free preview).
       await supabase
         .from("trips")
         .update({ is_pro: true, pro_since: new Date().toISOString() })
@@ -200,7 +200,7 @@ export default function CreatePage() {
 
         {step === 1 ? (
           <div>
-            <StepHead n="2" title="The basics" />
+            <StepHead n="2" title="The Basics" />
             <div className="mt-4 space-y-4">
               <Field label="Tournament name">
                 <input className={inp} value={name} onChange={(e) => setName(e.target.value)} placeholder="3rd Annual McKannay Invitational" />
@@ -210,7 +210,7 @@ export default function CreatePage() {
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Location" hint="optional"><input className={inp} value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Hilton Head, SC" /></Field>
-                <Field label="Dates" hint="optional"><input className={inp} value={dates} onChange={(e) => setDates(e.target.value)} placeholder="Sept 10–13" /></Field>
+                <Field label="Dates" hint="optional"><input className={inp} value={dates} onChange={(e) => setDates(e.target.value)} placeholder="Sept 10-13" /></Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Team A name"><input className={inp} value={teamAName} onChange={(e) => setTeamAName(e.target.value)} /></Field>
@@ -230,7 +230,7 @@ export default function CreatePage() {
         {step === 2 ? (
           <div>
             <StepHead n="3" title="Courses" />
-            <p className="mt-1 text-sm text-slate-500">Add the course(s) you&apos;re playing — just a name and par for now. Every round links to a course.</p>
+            <p className="mt-1 text-sm text-slate-500">Add the course(s) you&apos;re playing - just a name and par for now. Every round links to a course.</p>
             <div className="mt-4 space-y-3">
               {courses.map((c, i) => (
                 <div key={i} className="rounded-2xl border-[1.5px] border-sand-200 bg-white p-3">
@@ -260,8 +260,8 @@ export default function CreatePage() {
               <button onClick={() => setSetRoundsNow(false)} className={`rounded-2xl border-[1.5px] p-3 text-sm font-black ${setRoundsNow === false ? "border-fairway-900 bg-fairway-900/5" : "border-sand-200 bg-white"}`}>Later in Admin</button>
             </div>
 
-            {setRoundsNow === false ? <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">No problem — add rounds anytime in Admin. We&apos;d still encourage setting up at least one now so your tournament is ready the moment everyone joins.</div> : null}
-            {setRoundsNow === true && realCourses.length === 0 ? <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Add at least one course first (Back) — every round needs a course so scores can be calculated.</div> : null}
+            {setRoundsNow === false ? <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">No problem - add rounds anytime in Admin. We&apos;d still encourage setting up at least one now so your tournament is ready the moment everyone joins.</div> : null}
+            {setRoundsNow === true && realCourses.length === 0 ? <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Add at least one course first (Back) - every round needs a course so scores can be calculated.</div> : null}
 
             {setRoundsNow === true && realCourses.length > 0 ? (
               <div className="mt-4 space-y-3">
@@ -301,7 +301,7 @@ export default function CreatePage() {
                   );
                 })}
                 <button onClick={() => setRounds((p) => [...p, newRound()])} className="w-full rounded-2xl border-[1.5px] border-dashed border-sand-200 py-3 text-sm font-bold text-slate-500">+ Add another round</button>
-                {rounds.some((r) => r.teeTimes.some((t) => !t.trim()) || !r.arrival.trim()) ? <p className="text-sm text-slate-400">Blank tee/arrival times will be defaulted for now — adjust anytime in Admin.</p> : null}
+                {rounds.some((r) => r.teeTimes.some((t) => !t.trim()) || !r.arrival.trim()) ? <p className="text-sm text-slate-400">Blank tee/arrival times will be defaulted for now - adjust anytime in Admin.</p> : null}
               </div>
             ) : null}
 
@@ -320,9 +320,9 @@ export default function CreatePage() {
 function Intro({ onNext, onCancel }: { onNext: () => void; onCancel: () => void }) {
   return (
     <div>
-      <StepHead n="1" title="How this works" />
+      <StepHead n="1" title="How This Works" />
       <div className="mt-4 space-y-3 text-sm text-slate-600">
-        <p>A tournament is made up of <strong>rounds</strong>, and each round can have its own <strong>format</strong> — so Day 1 could be a scramble, Day 2 best ball, and so on.</p>
+        <p>A tournament is made up of <strong>rounds</strong>, and each round can have its own <strong>format</strong> - so Day 1 could be a scramble, Day 2 best ball, and so on.</p>
         <div className="rounded-2xl border-[1.5px] border-sand-200 bg-white p-4"><p className="font-black text-ink">You&apos;ll set up now</p><p className="mt-1">The basics (name, teams, player count), your course(s), and optionally your rounds, formats, and tee times.</p></div>
         <div className="rounded-2xl border-[1.5px] border-sand-200 bg-white p-4"><p className="font-black text-ink">You&apos;ll handle later</p><p className="mt-1">Players are assigned to teams <strong>after</strong> they join and you approve them. Tee times, courses, and rounds can be adjusted anytime in Admin.</p></div>
         <p className="text-slate-500">Formats: Casual, Scramble (2v2 / 4v4), and Best Ball (2v2 / 4v4). Group formats turn in one combined score per group and award points to the winning team.</p>
@@ -386,7 +386,7 @@ function ProUpsell({
           Your tournament is ready!
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          One last thing — want to make it a Pro tournament?
+          One last thing - want to make it a Pro tournament?
         </p>
       </div>
 
@@ -401,15 +401,15 @@ function ProUpsell({
             </span>
           </div>
           <p className="mt-1 text-sm font-semibold text-[#cfe6d8]">
-            Upgrade once — <strong>everyone</strong> in this tournament gets it.
+            Upgrade once - <strong>everyone</strong> in this tournament gets it.
           </p>
         </div>
 
         <div className="space-y-2.5 p-5">
           {[
             "Pro features for the whole crew (placeholder)",
-            "More to come — coming soon",
-            "More to come — coming soon",
+            "More to come - coming soon",
+            "More to come - coming soon",
           ].map((b, i) => (
             <div key={i} className="flex items-start gap-2.5">
               <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-mint/20 text-[11px] font-black text-green">
@@ -421,7 +421,7 @@ function ProUpsell({
 
           <div className="mt-3 rounded-xl bg-sand-50 p-3 text-center">
             <p className="text-xs font-bold text-slate-500">
-              Free while in preview — no card required. Billing is coming later.
+              Free while in preview - no card required. Billing is coming later.
             </p>
           </div>
         </div>
@@ -440,7 +440,7 @@ function ProUpsell({
           disabled={upgrading}
           className="w-full rounded-2xl px-4 py-3 text-sm font-bold text-slate-500 disabled:opacity-50"
         >
-          Maybe later — continue to my tournament
+          Maybe later - continue to my tournament
         </button>
       </div>
     </div>

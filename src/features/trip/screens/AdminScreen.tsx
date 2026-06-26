@@ -126,7 +126,7 @@ export function AdminScreen() {
   const teamsUneven = teamACount !== teamBCount;
 
   // Grouped formats (2v2 / 4v4) are offered only when the EXPECTED roster
-  // divides evenly into them (2v2 -> multiple of 4, 4v4 -> multiple of 8) —
+  // divides evenly into them (2v2 -> multiple of 4, 4v4 -> multiple of 8) -
   // same rule as the create wizard. Falls back to assigned players for older
   // trips created before a roster size was recorded.
   const groupedFits = (gs: number) => {
@@ -957,7 +957,7 @@ export function AdminScreen() {
 
           {roundDraft ? (
             <Card className="p-4">
-              <h3 className="font-black text-ink">New round</h3>
+              <h3 className="font-black text-ink">New Round</h3>
               <p className="mt-0.5 text-xs text-slate-500">
                 Set the basics, then create it. You can fine-tune tee times and
                 matches after.
@@ -984,7 +984,7 @@ export function AdminScreen() {
                 className={inputClass}
               >
                 {courses.length === 0 ? (
-                  <option value="">No courses yet — add one first</option>
+                  <option value="">No courses yet - add one first</option>
                 ) : (
                   courses.map((course) => (
                     <option key={course.id} value={course.id}>
@@ -1037,7 +1037,7 @@ export function AdminScreen() {
               </button>
               <p className="text-xs leading-5 text-slate-500">
                 You&apos;ll pick the title, course, and format before it&apos;s
-                created — then set tee times and matches inside the round.
+                created - then set tee times and matches inside the round.
               </p>
             </>
           )}
@@ -1121,7 +1121,7 @@ export function AdminScreen() {
       ) : null}
 
       <p className="px-1 text-center text-xs text-slate-400">
-        Changes save automatically — look for the “Saved” confirmation.
+        Changes save automatically - look for the “Saved” confirmation.
       </p>
     </div>
   );

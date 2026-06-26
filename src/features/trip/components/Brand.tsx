@@ -1,4 +1,4 @@
-/* TourneyBirdie brand lockups — keep the logo + wordmark consistent everywhere.
+/* TourneyBirdie brand lockups - keep the logo + wordmark consistent everywhere.
    The icon is a transparent PNG, so it sits inside a white tile on light UIs. */
 
 export function BrandWordmark({
@@ -34,7 +34,7 @@ function IconTile({ className = "" }: { className?: string }) {
   );
 }
 
-/* White rounded box with the icon + wordmark — sits on top of photos. */
+/* White rounded box with the icon + wordmark - sits on top of photos. */
 export function BrandBox({ className = "" }: { className?: string }) {
   return (
     <div

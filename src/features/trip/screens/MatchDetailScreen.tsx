@@ -63,7 +63,7 @@ export function MatchDetailScreen({
       playerIds
         .map((id) => players.find((p) => p.id === id)?.name)
         .filter(Boolean)
-        .join(" & ") || "—";
+        .join(" & ") || "-";
     return (
       <div className="rounded-xl bg-[#f3efe6] p-3 text-sm">
         <div className="flex items-center justify-between">

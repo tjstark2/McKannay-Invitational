@@ -31,7 +31,7 @@ export function GroupedRoundEntry({ round }: { round: Round }) {
     const ps = ids
       .map((id) => players.find((p) => p.id === id))
       .filter(Boolean);
-    if (ps.length === 0) return "—";
+    if (ps.length === 0) return "-";
     return (
       <span className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
         {ps.map((p) => (
@@ -189,7 +189,7 @@ function SideRow({
     if (parts.length) msg = `You're about to ${parts.join(" and ")}. `;
     if (finalizing)
       msg +=
-        "Submitting the 18-hole score finalizes this group — after this, only an organizer can change it. ";
+        "Submitting the 18-hole score finalizes this group - after this, only an organizer can change it. ";
     msg += "Continue?";
     if (parts.length || finalizing) setPendingConfirm(msg.trim());
     else commit();
@@ -217,7 +217,7 @@ function SideRow({
         </div>
       ) : memberLocked ? (
         <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-sm text-amber-900">
-          Final score submitted — locked. Contact your organizer to adjust.
+          Final score submitted - locked. Contact your organizer to adjust.
         </div>
       ) : (
         <>
@@ -245,7 +245,7 @@ function SideRow({
           </div>
           {missingFrontForGross ? (
             <p className="mt-1.5 text-sm font-semibold text-amber-700">
-              Enter the front 9 before submitting the final — both are required.
+              Enter the front 9 before submitting the final - both are required.
             </p>
           ) : null}
           {pendingConfirm ? (

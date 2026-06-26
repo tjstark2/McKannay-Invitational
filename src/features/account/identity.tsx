@@ -180,7 +180,7 @@ export function UsernameHint({ status }: { status: UsernameStatus }) {
   const map: Record<UsernameStatus, { text: string; cls: string } | null> = {
     idle: null,
     invalid: {
-      text: "3–20 characters: letters, numbers, underscores",
+      text: "3-20 characters: letters, numbers, underscores",
       cls: "text-slate-400",
     },
     checking: { text: "Checking…", cls: "text-slate-400" },

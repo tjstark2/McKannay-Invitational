@@ -249,7 +249,7 @@ export default function ManagePage() {
       ok: true,
       text: res.note
         ? `${res.name} ${res.note}`
-        : `Invited ${res.name} — they'll see it on their dashboard.`,
+        : `Invited ${res.name} - they'll see it on their dashboard.`,
     });
     await refresh(trip);
   }
@@ -603,7 +603,7 @@ export default function ManagePage() {
             </p>
             <div className="mt-2">{memberCard(owner, true)}</div>
             <p className="mt-1 text-xs text-slate-400">
-              You only take a spot if you put yourself on a team — leave
+              You only take a spot if you put yourself on a team - leave
               yourself off if you&apos;re not playing.
             </p>
           </>
@@ -635,7 +635,7 @@ export default function ManagePage() {
         </button>
       </div>
 
-      {/* danger zone — owner only */}
+      {/* danger zone - owner only */}
       {isOwnerViewer ? (
         <DangerZone trip={trip} onDeleted={() => router.replace("/home")} />
       ) : null}
@@ -705,7 +705,7 @@ function DangerZone({
 
   return (
     <section className="mt-12 rounded-2xl border border-red-200 bg-red-50/50 p-5">
-      <h2 className="text-lg font-black text-red-700">Danger zone</h2>
+      <h2 className="text-lg font-black text-red-700">Danger Zone</h2>
       {!open ? (
         <button
           onClick={() => setOpen(true)}
@@ -855,7 +855,7 @@ function HandicapEditor({
       title="Set handicap (admin only)"
       className="inline-flex items-center gap-1 rounded-full bg-sand-50 px-2.5 py-1.5 text-xs font-black text-fairway-900"
     >
-      HCP {member.handicap != null ? member.handicap : "—"}
+      HCP {member.handicap != null ? member.handicap : "-"}
       <Pencil className="h-3 w-3 text-slate-400" />
     </button>
   );
