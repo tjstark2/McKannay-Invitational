@@ -1,28 +1,5 @@
 import { MarketingNav, MarketingFooter } from "@/features/marketing/MarketingChrome";
 
-function IconTile({ className = "" }: { className?: string }) {
-  return (
-    <span
-      className={`flex items-center justify-center overflow-hidden bg-white ${className}`}
-    >
-      <img
-        src="/logo-icon.png"
-        alt="TourneyBirdie"
-        className="h-[82%] w-[82%] object-contain"
-      />
-    </span>
-  );
-}
-
-function Wordmark({ className = "" }: { className?: string }) {
-  return (
-    <span className={`font-display font-extrabold tracking-tight ${className}`}>
-      <span className="text-ink">TOURNEY</span>
-      <span className="text-green">BIRDIE</span>
-    </span>
-  );
-}
-
 export function Landing() {
   return (
     <div className="min-h-screen bg-[#f7f6f1] text-ink">
@@ -62,68 +39,14 @@ export function Landing() {
           </p>
         </div>
 
-        {/* hero phone */}
+        {/* hero image: mascot + live app */}
         <div className="relative flex justify-center">
           <div className="absolute top-8 h-80 w-80 rounded-full bg-accent/30 blur-2xl" />
-          <div className="relative w-[300px] overflow-hidden rounded-[34px] border-[7px] border-[#0c1f15] bg-[#f7f6f1] shadow-2xl">
-            <div className="relative h-40">
-              <img src="/images/header.jpg" alt="" className="h-full w-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#082014]/90 to-[#0b3d25]/30" />
-              <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-xl bg-white px-2.5 py-1 shadow-md">
-                <IconTile className="h-6 w-6 rounded-md" />
-                <Wordmark className="text-xs" />
-              </div>
-              <div className="absolute bottom-3 left-0 right-0 text-center text-white">
-                <p className="text-[8px] font-extrabold tracking-[0.18em] opacity-90">
-                  HILTON HEAD ISLAND, SC
-                </p>
-                <h4 className="font-display text-sm font-black">McKannay Invitational</h4>
-              </div>
-            </div>
-            <div className="p-3">
-              <div className="mb-2 flex items-center gap-1.5">
-                <span className="h-3 w-1 rounded bg-accent" />
-                <b className="text-[13px] font-black text-fairway-900">Live Round</b>
-                <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-red-100 px-1.5 py-0.5 text-[9px] font-black text-red-700">
-                  <span className="h-1 w-1 rounded-full bg-red-500" />
-                  LIVE
-                </span>
-              </div>
-              <div className="mb-2.5 overflow-hidden rounded-xl border border-sand-100">
-                <div className="relative h-20">
-                  <img src="/images/heron-point.jpg" alt="" className="h-full w-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#082014]/90 to-[#0b3d25]/30" />
-                  <div className="absolute bottom-2 left-2.5 text-white">
-                    <div className="text-[9px] font-bold text-[#cfe6d8]">Round 3 · Net</div>
-                    <div className="font-display text-sm font-black">Heron Point</div>
-                  </div>
-                </div>
-              </div>
-              <div className="mb-2 flex items-center gap-1.5">
-                <span className="h-3 w-1 rounded bg-accent" />
-                <b className="text-[13px] font-black text-fairway-900">Trip Standings</b>
-              </div>
-              <div className="rounded-xl border border-sand-100 bg-white p-3">
-                <div className="flex items-center justify-around text-center">
-                  <div>
-                    <img src="/brand/team-red.png" alt="" className="mx-auto h-7 w-7 object-contain" />
-                    <div className="mt-0.5 text-[10px] font-extrabold text-team-north">Team North</div>
-                    <div className="font-display text-3xl font-black text-team-north">8</div>
-                  </div>
-                  <div className="font-display text-sm font-black text-slate-400">VS</div>
-                  <div>
-                    <img src="/brand/team-blue.png" alt="" className="mx-auto h-7 w-7 object-contain" />
-                    <div className="mt-0.5 text-[10px] font-extrabold text-team-south">Team South</div>
-                    <div className="font-display text-3xl font-black text-team-south">4</div>
-                  </div>
-                </div>
-                <div className="mt-2.5 flex h-2 overflow-hidden rounded-full bg-sand-100">
-                  <span className="bg-team-north" style={{ width: "44%" }} />
-                  <span className="bg-team-south" style={{ width: "23%" }} />
-                </div>
-              </div>
-            </div>
-          </div>
+          <img
+            src="/brand/landing-hero.png"
+            alt="The TourneyBirdie mascot beside a phone showing live tournament standings"
+            className="relative w-full max-w-[480px] drop-shadow-2xl"
+          />
         </div>
       </header>
 
