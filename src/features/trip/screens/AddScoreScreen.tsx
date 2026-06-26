@@ -5,7 +5,6 @@ import { frontNineNetScore, netScore, playerNetToPar } from "@/lib/scoring";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { FlairCard } from "@/components/ui/FlairCard";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useViewer } from "@/features/trip/state/ViewerContext";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -92,10 +91,18 @@ export function AddScoreScreen() {
   if (selectedRound.groupSize != null) {
     return (
       <div className="space-y-4">
-        <SectionHeader
-          title="Log Round"
-          subtitle="Group round — one combined score per side, gross only."
-        />
+        <div className="relative pr-28">
+          <SectionHeader
+            title="Log Round"
+            subtitle="Group round — one combined score per side, gross only."
+          />
+          <img
+            src="/brand/tee-it-up-birdy.png"
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none absolute -top-4 right-0 h-28 w-auto drop-shadow-[0_10px_14px_rgba(11,36,24,0.35)]"
+          />
+        </div>
         <Card className="p-4">
           <label className="text-xs font-black uppercase text-slate-500">
             Round
@@ -257,15 +264,23 @@ export function AddScoreScreen() {
 
   return (
     <div className="space-y-4">
-      <ScreenHeader
-        img="/brand/tee-it-up.png"
-        title="Tee It Up"
-        subtitle={
-          canManage
-            ? "Enter front 9 progress first, then final gross score after 18."
-            : "Log your own round — front 9 after the turn, final gross after 18."
-        }
-      />
+      <div className="relative pr-28">
+        <ScreenHeader
+          img="/brand/tee-it-up.png"
+          title="Tee It Up"
+          subtitle={
+            canManage
+              ? "Enter front 9 progress first, then final gross score after 18."
+              : "Log your own round — front 9 after the turn, final gross after 18."
+          }
+        />
+        <img
+          src="/brand/tee-it-up-birdy.png"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-4 right-0 h-28 w-auto drop-shadow-[0_10px_14px_rgba(11,36,24,0.35)]"
+        />
+      </div>
 
       {lastSavedScore ? (
         <Card className="border border-green-200 bg-green-50 p-4">
@@ -469,8 +484,6 @@ export function AddScoreScreen() {
           })}
         </div>
       </Card>
-
-      <FlairCard img="/brand/tee-it-up-birdy.png" />
     </div>
   );
 }
