@@ -3,7 +3,7 @@
 // (from getSupabaseClient()) and these functions throw on error.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { TripPhoto } from "@/types";
+import type { TripMessage, TripMessageReaction, TripPhoto } from "@/types";
 
 const BUCKET = "trip-photos";
 const SIGNED_URL_TTL = 60 * 60; // 1 hour
@@ -132,4 +132,112 @@ export async function deletePhoto(
 
   // Best-effort file cleanup; the row is already gone.
   await supabase.storage.from(BUCKET).remove([photo.storagePath]);
+}
+
+// ---- Chat (Phase 2) -------------------------------------------------------
+
+type TripMessageRow = {
+  id: string;
+  trip_id: string;
+  user_id: string;
+  body: string;
+  created_at: string;
+};
+
+type ReactionRow = {
+  message_id: string;
+  user_id: string;
+  emoji: string;
+};
+
+function mapMessage(row: TripMessageRow): TripMessage {
+  return {
+    id: row.id,
+    tripId: row.trip_id,
+    userId: row.user_id,
+    body: row.body,
+    createdAt: row.created_at,
+  };
+}
+
+/** Oldest-first list of a trip's chat messages. */
+export async function loadMessages(
+  supabase: SupabaseClient,
+  tripId: string
+): Promise<TripMessage[]> {
+  const { data, error } = await supabase
+    .from("trip_messages")
+    .select("*")
+    .eq("trip_id", tripId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(`Couldn't load messages: ${error.message}`);
+  return ((data ?? []) as TripMessageRow[]).map(mapMessage);
+}
+
+/** Reactions for a set of message ids. */
+export async function loadReactions(
+  supabase: SupabaseClient,
+  messageIds: string[]
+): Promise<TripMessageReaction[]> {
+  if (messageIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("trip_message_reactions")
+    .select("message_id,user_id,emoji")
+    .in("message_id", messageIds);
+
+  if (error) throw new Error(`Couldn't load reactions: ${error.message}`);
+  return ((data ?? []) as ReactionRow[]).map((r) => ({
+    messageId: r.message_id,
+    userId: r.user_id,
+    emoji: r.emoji,
+  }));
+}
+
+/** Post a chat message. Returns the saved row. */
+export async function sendMessage(
+  supabase: SupabaseClient,
+  args: { tripId: string; userId: string; body: string }
+): Promise<TripMessage> {
+  const body = args.body.trim();
+  if (!body) throw new Error("Message is empty.");
+
+  const { data, error } = await supabase
+    .from("trip_messages")
+    .insert({ trip_id: args.tripId, user_id: args.userId, body })
+    .select("*")
+    .single();
+
+  if (error) throw new Error(`Couldn't send message: ${error.message}`);
+  return mapMessage(data as TripMessageRow);
+}
+
+/**
+ * Toggle one emoji reaction on a message for the current user.
+ * Returns "added" or "removed" so the caller can update local state.
+ */
+export async function toggleReaction(
+  supabase: SupabaseClient,
+  args: { messageId: string; userId: string; emoji: string; isOn: boolean }
+): Promise<"added" | "removed"> {
+  if (args.isOn) {
+    const { error } = await supabase
+      .from("trip_message_reactions")
+      .delete()
+      .eq("message_id", args.messageId)
+      .eq("user_id", args.userId)
+      .eq("emoji", args.emoji);
+    if (error) throw new Error(`Couldn't remove reaction: ${error.message}`);
+    return "removed";
+  }
+
+  const { error } = await supabase
+    .from("trip_message_reactions")
+    .insert({
+      message_id: args.messageId,
+      user_id: args.userId,
+      emoji: args.emoji,
+    });
+  if (error) throw new Error(`Couldn't add reaction: ${error.message}`);
+  return "added";
 }

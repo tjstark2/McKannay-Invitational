@@ -15,6 +15,8 @@ export type {
   TeamSummary,
   TeeTime,
   Trip,
+  TripMessage,
+  TripMessageReaction,
   TripPhoto,
   TripState,
   Winner,

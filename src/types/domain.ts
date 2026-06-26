@@ -176,3 +176,17 @@ export type TripPhoto = {
   height: number | null;
   createdAt: string;
 };
+
+export type TripMessage = {
+  id: string;
+  tripId: string;
+  userId: string;
+  body: string;
+  createdAt: string;
+};
+
+export type TripMessageReaction = {
+  messageId: string;
+  userId: string;
+  emoji: string;
+};

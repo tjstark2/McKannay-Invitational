@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { PhotosTab } from "@/features/trip/screens/clubhouse/PhotosTab";
+import { ChatTab } from "@/features/trip/screens/clubhouse/ChatTab";
 
 type ClubhouseTab = "photos" | "chat";
 
@@ -40,13 +40,7 @@ export function ClubhouseScreen() {
 
       {tab === "photos" ? <PhotosTab /> : null}
 
-      {tab === "chat" ? (
-        <EmptyState
-          img="/brand/clubhouse-birdy.png"
-          title="Chat is coming soon"
-          message="Group trash talk lands here next. For now, let the photos do the talking."
-        />
-      ) : null}
+      {tab === "chat" ? <ChatTab /> : null}
     </div>
   );
 }
