@@ -5,7 +5,7 @@ import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { createTrip, insertCourse, insertRound, insertTeeTime } from "@/lib/supabase/queries";
+import { createTrip, insertCourse, insertRound, insertTeeTime, tripExists } from "@/lib/supabase/queries";
 import { AuthShell } from "@/features/auth/AuthShell";
 import { ImagePlus } from "lucide-react";
 import { BackgroundPicker } from "@/features/trip/components/BackgroundPicker";
@@ -47,6 +47,27 @@ export default function CreatePage() {
   const [createdTripId, setCreatedTripId] = useState<string | null>(null);
   const [upgrading, setUpgrading] = useState(false);
   const [bgPickerIdx, setBgPickerIdx] = useState<number | null>(null);
+  const [checkingCode, setCheckingCode] = useState(false);
+
+  async function goFromBasics() {
+    const supabase = getSupabaseClient();
+    const code = joinCode.trim().toUpperCase();
+    if (!supabase) {
+      setStep(2);
+      return;
+    }
+    setCheckingCode(true);
+    setError(null);
+    try {
+      if (await tripExists(supabase, code)) {
+        setError(`Join code "${code}" is already taken - please pick another.`);
+        return;
+      }
+      setStep(2);
+    } finally {
+      setCheckingCode(false);
+    }
+  }
   const [name, setName] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [location, setLocation] = useState("");
@@ -227,7 +248,10 @@ export default function CreatePage() {
                 </p>
               </Field>
             </div>
-            <NavRow onBack={() => setStep(0)} onNext={() => setStep(2)} nextDisabled={!basicsValid} />
+            {error ? (
+              <p className="mt-3 text-sm font-bold text-team-north">{error}</p>
+            ) : null}
+            <NavRow onBack={() => setStep(0)} onNext={goFromBasics} nextDisabled={!basicsValid || checkingCode} nextLabel={checkingCode ? "Checking…" : "Next"} />
           </div>
         ) : null}
 

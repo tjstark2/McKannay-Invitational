@@ -47,7 +47,7 @@ export function TopHero({
             onClick={() => setPicking(true)}
             className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-extrabold text-fairway-900 shadow backdrop-blur"
           >
-            <ImagePlus size={14} /> Background
+            <ImagePlus size={14} /> Banner
           </button>
         ) : null}
 
@@ -69,7 +69,8 @@ export function TopHero({
         onSelect={choose}
         tripId={trip.id}
         canUpload={trip.isPro}
-        title="Tournament header"
+        title="Tournament banner"
+        subtitle="The big image at the top of every screen."
       />
     </div>
   );

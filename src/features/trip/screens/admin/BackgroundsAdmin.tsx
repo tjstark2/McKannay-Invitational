@@ -91,7 +91,7 @@ export function BackgroundsAdmin() {
       />
       <div className="mt-3 space-y-2">
         <Tile
-          label="Tournament header"
+          label="Tournament banner (top of every screen)"
           value={headerBg}
           onClick={() => setTarget({ kind: "header" })}
         />
@@ -112,7 +112,12 @@ export function BackgroundsAdmin() {
         onSelect={choose}
         tripId={trip.id}
         canUpload={trip.isPro}
-        title={target?.kind === "header" ? "Tournament header" : "Course background"}
+        title={target?.kind === "header" ? "Tournament banner" : "Course background"}
+        subtitle={
+          target?.kind === "header"
+            ? "The big image at the top of every screen."
+            : "Shows on this course's schedule card and detail."
+        }
       />
     </Card>
   );
