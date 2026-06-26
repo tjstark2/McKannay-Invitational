@@ -48,19 +48,26 @@ export function TeamDetailScreen({
 
       <Card className="p-5">
         <div className="flex items-start justify-between">
-          <div>
-            <h1
-              className={
-                team.id === "A"
-                  ? "font-anton text-4xl text-team-north"
-                  : "font-anton text-4xl text-team-south"
-              }
-            >
-              {team.name}
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              {roster.length} players
-            </p>
+          <div className="flex items-center gap-3">
+            <img
+              src={team.id === "A" ? "/brand/team-red.png" : "/brand/team-blue.png"}
+              alt=""
+              className="h-14 w-14 shrink-0 object-contain"
+            />
+            <div>
+              <h1
+                className={
+                  team.id === "A"
+                    ? "font-anton text-4xl text-team-north"
+                    : "font-anton text-4xl text-team-south"
+                }
+              >
+                {team.name}
+              </h1>
+              <p className="mt-1 text-sm text-slate-500">
+                {roster.length} players
+              </p>
+            </div>
           </div>
 
           <Pill tone={team.id === "A" ? "red" : "blue"}>

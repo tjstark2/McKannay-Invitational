@@ -5,6 +5,7 @@ import { frontNineNetScore, netScore, playerNetToPar } from "@/lib/scoring";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { FlairCard } from "@/components/ui/FlairCard";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useViewer } from "@/features/trip/state/ViewerContext";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -468,6 +469,8 @@ export function AddScoreScreen() {
           })}
         </div>
       </Card>
+
+      <FlairCard img="/brand/tee-it-up-birdy.png" />
     </div>
   );
 }

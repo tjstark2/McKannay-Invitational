@@ -44,19 +44,26 @@ export function TeamsScreen({
         >
           <Card className="p-5">
             <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2
-                  className={
-                    summary.teamId === "A"
-                      ? "font-anton text-3xl text-team-north"
-                      : "font-anton text-3xl text-team-south"
-                  }
-                >
-                  {summary.teamName}
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  {summary.playerCount} players
-                </p>
+              <div className="flex items-center gap-3">
+                <img
+                  src={summary.teamId === "A" ? "/brand/team-red.png" : "/brand/team-blue.png"}
+                  alt=""
+                  className="h-12 w-12 shrink-0 object-contain"
+                />
+                <div>
+                  <h2
+                    className={
+                      summary.teamId === "A"
+                        ? "font-anton text-3xl text-team-north"
+                        : "font-anton text-3xl text-team-south"
+                    }
+                  >
+                    {summary.teamName}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {summary.playerCount} players
+                  </p>
+                </div>
               </div>
 
               <div className="flex items-center gap-2">

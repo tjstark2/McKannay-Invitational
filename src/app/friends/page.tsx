@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { useRouter } from "next/navigation";
 import { UserPlus, Check, X, Clock, Users } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -71,9 +72,7 @@ export default function FriendsPage() {
 
   if (loading || !user || !data) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f7f6f1]">
-        <p className="text-3xl">⛳</p>
-      </div>
+      <LoadingScreen />
     );
   }
 

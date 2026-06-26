@@ -38,17 +38,19 @@ export function StandingsCard() {
       <Card className="p-5">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 text-center">
           <div>
-            <p className="font-bold text-team-north">{teamAName}</p>
-            <p className="mt-2 font-anton text-5xl text-team-north">
+            <img src="/brand/team-red.png" alt="" className="mx-auto h-12 w-12 object-contain" />
+            <p className="mt-1 font-bold text-team-north">{teamAName}</p>
+            <p className="mt-1 font-anton text-5xl text-team-north">
               {totals.A}
             </p>
           </div>
 
-          <div className="text-5xl">🏆</div>
+          <div className="font-anton text-xl text-slate-400">VS</div>
 
           <div>
-            <p className="font-bold text-team-south">{teamBName}</p>
-            <p className="mt-2 font-anton text-5xl text-team-south">{totals.B}</p>
+            <img src="/brand/team-blue.png" alt="" className="mx-auto h-12 w-12 object-contain" />
+            <p className="mt-1 font-bold text-team-south">{teamBName}</p>
+            <p className="mt-1 font-anton text-5xl text-team-south">{totals.B}</p>
           </div>
         </div>
 

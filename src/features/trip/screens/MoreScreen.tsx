@@ -3,6 +3,7 @@
 import { ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
+import { FlairCard } from "@/components/ui/FlairCard";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useViewer } from "@/features/trip/state/ViewerContext";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -170,6 +171,8 @@ export function MoreScreen({
           Sign Out
         </button>
       </div>
+
+      <FlairCard img="/brand/locker-birdy.png" />
 
       <div className="flex flex-col items-center py-2 text-center">
         <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { useParams, useRouter } from "next/navigation";
 import { Check, X, UserPlus, Pencil } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -128,9 +129,7 @@ export default function ManagePage() {
 
   if (loading || !ready) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f7f6f1]">
-        <p className="text-3xl">⛳</p>
-      </div>
+      <LoadingScreen />
     );
   }
 
