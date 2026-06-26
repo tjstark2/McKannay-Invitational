@@ -342,7 +342,7 @@ export function ChatTab({ onRead }: { onRead?: () => void }) {
           {isNew ? <NewPill /> : null}
         </div>
 
-        <ReactionControls summary={rx} onToggle={(e) => react(m.id, e)} />
+        <ReactionControls summary={rx} onToggle={(e) => react(m.id, e)} tripId={trip.id} />
       </div>
     );
   }

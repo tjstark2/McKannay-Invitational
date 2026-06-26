@@ -5,6 +5,7 @@ import { ImagePlus } from "lucide-react";
 import type { Screen } from "@/types";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useViewer } from "@/features/trip/state/ViewerContext";
+import { useBirdieBoss } from "@/features/account/birdieBoss";
 import { BrandBox } from "@/features/trip/components/Brand";
 import { CourseBackground } from "@/features/trip/components/CourseBackground";
 import { BackgroundPicker } from "@/features/trip/components/BackgroundPicker";
@@ -19,6 +20,7 @@ export function TopHero({
 }) {
   const { trip } = useTripState();
   const { canManage } = useViewer();
+  const { isBoss } = useBirdieBoss();
   const [bg, setBg] = useState<string | null>(trip.headerBackground);
   const [picking, setPicking] = useState(false);
 
@@ -45,6 +47,11 @@ export function TopHero({
           {trip.isPro ? (
             <span className="inline-flex items-center rounded-full bg-accent px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wide text-ink shadow">
               Pro Version
+            </span>
+          ) : null}
+          {isBoss ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#1d1402] px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wide text-accent shadow">
+              👑 Birdie Boss
             </span>
           ) : null}
         </div>

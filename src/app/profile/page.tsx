@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { useRouter } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ChevronDown } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
+import { useBirdieBoss } from "@/features/account/birdieBoss";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { BrandHeaderMark } from "@/features/trip/components/Brand";
 import { AccountMenu } from "@/features/account/AccountMenu";
@@ -22,10 +23,29 @@ type Profile = {
   avatar_id: string | null;
 };
 
+const BOSS_FEATURES = [
+  "Every avatar unlocked (except the Founder)",
+  "Exclusive Boss reaction stickers in Clubhouse & chat",
+  "Ad-free across the app",
+  "More Boss perks coming shortly",
+];
+
 export default function ProfilePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const { isBoss, upgrade } = useBirdieBoss();
+  const [upgrading, setUpgrading] = useState(false);
+  const [showFeatures, setShowFeatures] = useState(false);
+
+  async function becomeBoss() {
+    setUpgrading(true);
+    try {
+      await upgrade();
+    } finally {
+      setUpgrading(false);
+    }
+  }
 
   useEffect(() => {
     if (loading) return;
@@ -92,6 +112,11 @@ export default function ProfilePage() {
             </h1>
             <p className="mt-0.5 text-sm font-bold text-fairway-900">
               {profile?.username ? `@${profile.username}` : ""}
+              {isBoss ? (
+                <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-[#1d1402] px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-accent align-middle">
+                  👑 Birdie Boss
+                </span>
+              ) : null}
             </p>
             {location ? (
               <p className="text-sm text-slate-500">{location}</p>
@@ -99,34 +124,83 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Membership */}
+        {/* Birdie Boss */}
         <Section title="Membership">
-          <div className="rounded-2xl border border-line bg-white p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-anton text-2xl tracking-tight text-ink">
-                  Free plan
+          {isBoss ? (
+            <div className="overflow-hidden rounded-2xl border-2 border-accent/40">
+              <div className="flex items-center justify-between gap-3 bg-gradient-to-br from-[#1d1402] to-[#3a2a06] px-5 py-4">
+                <div>
+                  <p className="font-anton text-2xl tracking-tight text-white">
+                    👑 Birdie Boss
+                  </p>
+                  <p className="mt-0.5 text-sm font-semibold text-[#f5e6bf]">
+                    Your perks travel with you to every tournament.
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-accent px-3 py-1 text-xs font-black uppercase tracking-wide text-[#1d1402]">
+                  Active
+                </span>
+              </div>
+              <div className="bg-[#fffdf6] px-5 py-3">
+                <button
+                  onClick={() => setShowFeatures((s) => !s)}
+                  className="flex w-full items-center justify-between text-sm font-black text-[#a07a06]"
+                >
+                  See what&apos;s included
+                  <ChevronDown
+                    size={18}
+                    className={`transition ${showFeatures ? "rotate-180" : ""}`}
+                  />
+                </button>
+                {showFeatures ? (
+                  <div className="mt-3 space-y-2">
+                    {BOSS_FEATURES.map((f) => (
+                      <div key={f} className="flex items-start gap-2.5">
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/20 text-[11px] font-black text-[#a07a06]">
+                          ✓
+                        </span>
+                        <span className="text-sm font-semibold text-slate-600">
+                          {f}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-2xl border-2 border-accent/50">
+              <div className="relative bg-gradient-to-br from-[#1d1402] to-[#3a2a06] px-5 py-4 text-white">
+                <span className="absolute right-4 top-3 text-2xl">👑</span>
+                <p className="font-anton text-2xl tracking-tight">
+                  Birdie Boss
                 </p>
-                <p className="mt-0.5 text-sm text-slate-500">
-                  Run and join tournaments at no cost.
+                <p className="mt-0.5 text-sm font-semibold text-[#f5e6bf]">
+                  Your personal upgrade - travels with you to every tournament.
                 </p>
               </div>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-mint/20 px-3 py-1 text-xs font-black uppercase tracking-wide text-green">
-                <span className="h-1.5 w-1.5 rounded-full bg-green" />
-                Active
-              </span>
+              <div className="bg-[#fffdf6] px-5 py-4">
+                {BOSS_FEATURES.map((f) => (
+                  <div key={f} className="flex items-start gap-2.5 py-1">
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/20 text-[11px] font-black text-[#a07a06]">
+                      ✓
+                    </span>
+                    <span className="text-sm font-semibold text-slate-600">{f}</span>
+                  </div>
+                ))}
+                <div className="mt-3 rounded-xl bg-sand-50 p-3 text-center text-xs font-bold text-slate-500">
+                  Free while in preview - no card required.
+                </div>
+                <button
+                  onClick={becomeBoss}
+                  disabled={upgrading}
+                  className="mt-3 w-full rounded-2xl bg-accent px-4 py-3.5 font-black text-[#1d1402] disabled:opacity-50"
+                >
+                  {upgrading ? "Upgrading…" : "Become a Birdie Boss"}
+                </button>
+              </div>
             </div>
-
-            <div className="mt-4 rounded-xl bg-sand-50 p-3.5">
-              <p className="text-sm font-bold text-ink">
-                Go ad-free + unlock more birdies - coming soon.
-              </p>
-              <p className="mt-0.5 text-sm text-slate-500">
-                A personal membership that removes ads and adds extra avatar
-                options. We&apos;ll let you know the moment it&apos;s ready.
-              </p>
-            </div>
-          </div>
+          )}
         </Section>
 
         {/* Account details */}

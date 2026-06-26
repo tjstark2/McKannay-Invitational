@@ -661,6 +661,7 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
                   <ReactionControls
                     summary={reactionsForPhoto(photo.id)}
                     onToggle={(e) => reactPhoto(photo.id, e)}
+                    tripId={trip.id}
                   />
 
                   {photoComments.length > 0 ? (
