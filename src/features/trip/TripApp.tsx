@@ -6,6 +6,7 @@ import { AdminScreen } from "@/features/trip/screens/AdminScreen";
 import { BottomNav } from "@/features/trip/components/BottomNav";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { CourseDetailScreen } from "@/features/trip/screens/CourseDetailScreen";
+import { ClubhouseScreen } from "@/features/trip/screens/ClubhouseScreen";
 import { LeaderboardScreen } from "@/features/trip/screens/LeaderboardScreen";
 import { MatchCenterScreen } from "@/features/trip/screens/MatchCenterScreen";
 import { MatchDetailScreen } from "@/features/trip/screens/MatchDetailScreen";
@@ -234,6 +235,8 @@ function TripAppInner() {
           {activeScreen === "more" ? (
             <MoreScreen setActiveScreen={goToScreen} />
           ) : null}
+
+          {activeScreen === "clubhouse" ? <ClubhouseScreen /> : null}
 
           {activeScreen === "courseDetail" ? (
             <CourseDetailScreen

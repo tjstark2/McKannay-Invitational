@@ -17,6 +17,7 @@ export type Screen =
   | "rules"
   | "admin"
   | "more"
+  | "clubhouse"
   | "courseDetail";
 
 export type RoundFormat =
@@ -164,4 +165,14 @@ export type TripState = {
   groupScores: GroupScore[];
   scoringSettings: ScoringSettings;
   currentRoundId: string;
+};
+export type TripPhoto = {
+  id: string;
+  tripId: string;
+  userId: string;
+  storagePath: string;
+  caption: string | null;
+  width: number | null;
+  height: number | null;
+  createdAt: string;
 };

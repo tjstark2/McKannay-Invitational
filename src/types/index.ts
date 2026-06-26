@@ -15,6 +15,7 @@ export type {
   TeamSummary,
   TeeTime,
   Trip,
+  TripPhoto,
   TripState,
   Winner,
 } from "./domain";

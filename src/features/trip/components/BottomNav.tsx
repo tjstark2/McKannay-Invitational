@@ -11,6 +11,7 @@ export function BottomNav({
     { id: "overview", label: "The Nest", img: "/brand/the-nest.png" },
     { id: "tournament", label: "Pecking Order", img: "/brand/pecking-order.png" },
     { id: "addScore", label: "Tee It Up", img: "/brand/tee-it-up.png" },
+    { id: "clubhouse", label: "Clubhouse", img: "/brand/clubhouse.png" },
     { id: "more", label: "Locker", img: "/brand/locker.png" },
   ];
 
@@ -29,7 +30,7 @@ export function BottomNav({
 
   return (
     <div className="fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 rounded-t-[26px] border-t border-line bg-white/95 px-3 pb-4 pt-2 shadow-[0_-10px_28px_-18px_rgba(11,36,24,0.45)] backdrop-blur">
-      <div className="grid grid-cols-4 items-end gap-1">
+      <div className="grid grid-cols-5 items-end gap-1">
         {items.map((item) => {
           const active =
             item.id === "tournament"
