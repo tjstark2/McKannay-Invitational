@@ -14,18 +14,22 @@ import {
   uploadPhoto,
   deletePhoto,
   markRead,
+  loadReadState,
   loadPhotoReactions,
   togglePhotoReaction,
   loadPhotoComments,
   addPhotoComment,
   deletePhotoComment,
 } from "@/lib/supabase/clubhouse";
+import { NewPill } from "@/features/trip/screens/clubhouse/NewPill";
 import type {
   Player,
   PhotoComment,
   PhotoReaction,
   TripPhoto,
 } from "@/types";
+
+const EPOCH = "1970-01-01T00:00:00Z";
 
 function relativeTime(iso: string): string {
   const then = new Date(iso).getTime();
@@ -115,6 +119,7 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
   const [reactions, setReactions] = useState<PhotoReaction[]>([]);
   const [comments, setComments] = useState<PhotoComment[]>([]);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [baselineReadAt, setBaselineReadAt] = useState<string>(EPOCH);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -167,6 +172,11 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
     setLoading(true);
     (async () => {
       try {
+        const baseline = userId
+          ? (await loadReadState(supabase, trip.id, userId)).photosReadAt
+          : EPOCH;
+        setBaselineReadAt(baseline);
+
         const list = await loadPhotos(supabase, trip.id);
         if (!active) return;
         setPhotos(list);
@@ -586,6 +596,8 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
             const photoComments = comments.filter(
               (c) => c.photoId === photo.id
             );
+            const photoIsNew =
+              photo.createdAt > baselineReadAt && !isMine;
 
             return (
               <div
@@ -600,9 +612,12 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
                     size={36}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-extrabold text-ink">
-                      {name}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-extrabold text-ink">
+                        {name}
+                      </p>
+                      {photoIsNew ? <NewPill /> : null}
+                    </div>
                     <p className="text-xs font-semibold text-slate-400">
                       {relativeTime(photo.createdAt)}
                     </p>
@@ -676,6 +691,9 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
                                 {relativeTime(c.createdAt)}
                               </p>
                             </div>
+                            {c.createdAt > baselineReadAt && !cMine ? (
+                              <NewPill />
+                            ) : null}
                             {cMine ? (
                               <button
                                 onClick={() => removeComment(c)}

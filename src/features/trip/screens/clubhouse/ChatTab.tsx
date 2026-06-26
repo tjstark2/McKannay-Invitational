@@ -5,6 +5,7 @@ import { Send } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import { ReactionControls } from "@/features/trip/screens/clubhouse/ReactionControls";
+import { NewPill } from "@/features/trip/screens/clubhouse/NewPill";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -38,6 +39,7 @@ export function ChatTab({ onRead }: { onRead?: () => void }) {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null);
+  const [baseline, setBaseline] = useState<string>(EPOCH);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const unreadRef = useRef<HTMLDivElement | null>(null);
@@ -93,6 +95,7 @@ export function ChatTab({ onRead }: { onRead?: () => void }) {
         const baseline = userId
           ? (await loadReadState(supabase, trip.id, userId)).chatReadAt
           : EPOCH;
+        setBaseline(baseline);
 
         const msgs = await loadMessages(supabase, trip.id);
         if (!active) return;
@@ -313,6 +316,7 @@ export function ChatTab({ onRead }: { onRead?: () => void }) {
   function renderMessage(m: TripMessage, isMine: boolean) {
     const rx = reactionsForMessage(m.id);
     const showDivider = m.id === firstUnreadId;
+    const isNew = m.createdAt > baseline && (!userId || m.userId !== userId);
     return (
       <div key={m.id}>
         {showDivider ? (
@@ -335,6 +339,7 @@ export function ChatTab({ onRead }: { onRead?: () => void }) {
           >
             {m.body}
           </p>
+          {isNew ? <NewPill /> : null}
         </div>
 
         <ReactionControls summary={rx} onToggle={(e) => react(m.id, e)} />
