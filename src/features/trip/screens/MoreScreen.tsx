@@ -3,7 +3,6 @@
 import { ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
-import { FlairCard } from "@/components/ui/FlairCard";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useViewer } from "@/features/trip/state/ViewerContext";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -48,7 +47,7 @@ export function MoreScreen({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="relative flex items-center gap-3 pr-28">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-white shadow-[0_8px_18px_-12px_rgba(14,76,48,0.5)]">
           <img src="/brand/locker.png" alt="Locker" className="h-full w-full object-contain" />
         </span>
@@ -56,6 +55,12 @@ export function MoreScreen({
           <h1 className="font-anton text-3xl leading-none tracking-tight text-ink">Locker</h1>
           <p className="mt-1 text-xs font-semibold text-slate-500">Trip details, rules, setup, and utilities.</p>
         </div>
+        <img
+          src="/brand/locker-birdy.png"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-5 right-0 h-28 w-auto drop-shadow-[0_10px_14px_rgba(11,36,24,0.35)]"
+        />
       </div>
 
       {canManage ? (
@@ -171,8 +176,6 @@ export function MoreScreen({
           Sign Out
         </button>
       </div>
-
-      <FlairCard img="/brand/locker-birdy.png" />
 
       <div className="flex flex-col items-center py-2 text-center">
         <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm">
