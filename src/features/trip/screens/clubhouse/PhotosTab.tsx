@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
+import { AvatarWithFrame } from "@/features/cosmetics/AvatarWithFrame";
 import { ReactionControls } from "@/features/trip/screens/clubhouse/ReactionControls";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -605,7 +605,8 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
                 className="overflow-hidden rounded-[20px] border border-line bg-white shadow-[0_14px_30px_-22px_rgba(14,76,48,0.4)]"
               >
                 <div className="flex items-center gap-3 px-4 pt-3.5">
-                  <PlayerAvatar
+                  <AvatarWithFrame
+                    frameId={poster?.frameId}
                     avatarId={poster?.avatarId}
                     emoji={poster?.avatarEmoji}
                     name={name}
@@ -674,7 +675,8 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
                         return (
                           <div key={c.id} className="flex items-start gap-2">
                             <div className="pt-0.5">
-                              <PlayerAvatar
+                              <AvatarWithFrame
+                                frameId={cp?.frameId}
                                 avatarId={cp?.avatarId}
                                 emoji={cp?.avatarEmoji}
                                 name={cName}

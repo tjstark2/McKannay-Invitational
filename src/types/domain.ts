@@ -60,6 +60,8 @@ export type Player = {
   avatarEmoji?: string;
   accountId?: string;
   avatarId?: string; // chosen bird (from the account profile), shown everywhere
+  frameId?: string | null; // equipped border ring
+  nameplateId?: string | null; // equipped nameplate
 };
 
 export type Course = {

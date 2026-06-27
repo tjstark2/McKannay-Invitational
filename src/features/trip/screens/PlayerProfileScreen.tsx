@@ -1,4 +1,7 @@
-import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
+import { useEffect, useState } from "react";
+import { Nameplate } from "@/features/cosmetics/Nameplate";
+import { taglineForClass } from "@/features/cosmetics/taglines";
+import { fetchAvatars } from "@/features/avatar/data";
 import { formatPlusMinus } from "@/lib/format";
 import {
   frontNineNetScore,
@@ -32,6 +35,18 @@ export function PlayerProfileScreen({
 
   const player = players.find((item) => item.id === playerId) ?? players[0];
   const team = teams.find((item) => item.id === player.team);
+
+  const [klass, setKlass] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    fetchAvatars().then((list) => {
+      if (active)
+        setKlass(list.find((a) => a.id === player.avatarId)?.klass ?? null);
+    });
+    return () => {
+      active = false;
+    };
+  }, [player.avatarId]);
   const playerScores = scores.filter((score) => score.playerId === player.id);
   const finalPlayerScores = playerScores.filter(hasFinalScore);
 
@@ -91,23 +106,18 @@ export function PlayerProfileScreen({
       </div>
 
       <Card className="p-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <PlayerAvatar
-              avatarId={player.avatarId}
-              emoji={player.avatarEmoji}
-              name={player.name}
-              size={56}
-              ring={player.team === "A" ? "#dc2626" : "#2563eb"}
-            />
-            <div>
-              <h1 className="font-anton text-3xl tracking-tight text-ink">{player.name}</h1>
-              <p className="mt-1 text-sm text-slate-500">
-                {team?.name ?? `Team ${player.team}`}
-              </p>
-            </div>
-          </div>
-
+        <Nameplate
+          plateId={player.nameplateId}
+          avatarId={player.avatarId}
+          emoji={player.avatarEmoji}
+          name={player.name}
+          title={taglineForClass(klass)}
+          hcp={player.handicapIndex}
+        />
+        <div className="mt-3 flex items-center justify-between">
+          <p className="text-sm font-bold text-slate-500">
+            {team?.name ?? `Team ${player.team}`}
+          </p>
           <Pill tone={player.team === "A" ? "red" : "blue"}>
             Index {player.handicapIndex}
           </Pill>

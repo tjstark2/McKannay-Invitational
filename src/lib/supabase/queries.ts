@@ -352,6 +352,35 @@ export async function loadTripState(
         }
       }
     }
+
+    // Equipped cosmetics (border + nameplate) for the same accounts.
+    const cos = await supabase
+      .from("public_cosmetics")
+      .select("id,frame_id,nameplate_id")
+      .in("id", accountIds);
+    if (!cos.error && cos.data) {
+      const byCos = new Map<
+        string,
+        { frame_id: string | null; nameplate_id: string | null }
+      >();
+      for (const row of cos.data as {
+        id: string;
+        frame_id: string | null;
+        nameplate_id: string | null;
+      }[]) {
+        byCos.set(row.id, {
+          frame_id: row.frame_id,
+          nameplate_id: row.nameplate_id,
+        });
+      }
+      for (const p of players) {
+        if (p.accountId && byCos.has(p.accountId)) {
+          const c = byCos.get(p.accountId)!;
+          p.frameId = c.frame_id;
+          p.nameplateId = c.nameplate_id;
+        }
+      }
+    }
   }
   const courses = courseRows.map(mapCourse);
   const rounds: Round[] = roundRows.map(mapRound);

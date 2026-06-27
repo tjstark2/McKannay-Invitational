@@ -3,7 +3,7 @@ import { buildLeaderboard, getTournamentAwards } from "@/lib/scoring";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useTripState } from "@/features/trip/state/TripStateContext";
-import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
+import { AvatarWithFrame } from "@/features/cosmetics/AvatarWithFrame";
 
 type LbRow = ReturnType<typeof buildLeaderboard>[number];
 
@@ -33,7 +33,8 @@ function Pod({ row, place }: { row: LbRow; place: number }) {
           className="relative inline-flex rounded-full"
           style={{ boxShadow: `0 0 0 3px #fff, 0 0 0 6px ${t.ring}` }}
         >
-          <PlayerAvatar
+          <AvatarWithFrame
+            frameId={row.player.frameId}
             avatarId={row.player.avatarId}
             emoji={row.player.avatarEmoji}
             name={row.player.name}
@@ -164,7 +165,8 @@ export function LeaderboardScreen() {
                 >
                   {place}
                 </span>
-                <PlayerAvatar
+                <AvatarWithFrame
+                  frameId={row.player.frameId}
                   avatarId={row.player.avatarId}
                   emoji={row.player.avatarEmoji}
                   name={row.player.name}

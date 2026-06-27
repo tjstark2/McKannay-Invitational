@@ -1,4 +1,4 @@
-import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
+import { AvatarWithFrame } from "@/features/cosmetics/AvatarWithFrame";
 import { ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
@@ -42,7 +42,8 @@ export function PlayersScreen({
           <Card className="p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <PlayerAvatar
+                <AvatarWithFrame
+                  frameId={player.frameId}
                   avatarId={player.avatarId}
                   emoji={player.avatarEmoji}
                   name={player.name}

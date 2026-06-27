@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Send } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
+import { AvatarWithFrame } from "@/features/cosmetics/AvatarWithFrame";
 import { ReactionControls } from "@/features/trip/screens/clubhouse/ReactionControls";
 import { NewPill } from "@/features/trip/screens/clubhouse/NewPill";
 import { useTripState } from "@/features/trip/state/TripStateContext";
@@ -383,7 +383,8 @@ export function ChatTab({ onRead }: { onRead?: () => void }) {
             return (
               <div key={gi} className="flex gap-2.5">
                 <div className="w-9 shrink-0 pt-5">
-                  <PlayerAvatar
+                  <AvatarWithFrame
+                    frameId={poster?.frameId}
                     avatarId={poster?.avatarId}
                     emoji={poster?.avatarEmoji}
                     name={name}
