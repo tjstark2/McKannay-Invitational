@@ -59,7 +59,7 @@ export default function ChooseAvatarPage() {
       grantedIds={grants}
       onComplete={async (id) => {
         const res = await setMyAvatar(id);
-        if (res.ok) router.replace("/home");
+        if (res.ok) router.replace("/profile/customize?onboarding=1");
         return res;
       }}
     />

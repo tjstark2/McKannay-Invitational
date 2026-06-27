@@ -25,6 +25,17 @@ export default function CustomizePage() {
   const [klass, setKlass] = useState<string | null>(null);
   const [name, setName] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [onboarding, setOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setOnboarding(
+        new URLSearchParams(window.location.search).get("onboarding") === "1"
+      );
+    }
+  }, []);
+
+  const exitTo = onboarding ? "/home" : "/profile";
 
   useEffect(() => {
     if (loading) return;
@@ -77,7 +88,7 @@ export default function CustomizePage() {
         <div className="mx-auto flex max-w-2xl items-center justify-between px-5 py-3">
           <BrandHeaderMark />
           <button
-            onClick={() => router.push("/profile")}
+            onClick={() => router.push(exitTo)}
             className="text-sm font-bold text-fairway-900"
           >
             Done
@@ -89,6 +100,11 @@ export default function CustomizePage() {
         <h1 className="font-anton text-3xl tracking-tight text-ink">
           Customize My Birdie
         </h1>
+        {onboarding ? (
+          <p className="mt-1 text-sm font-semibold text-fairway-900">
+            Last step - add a border and nameplate, then tap Done to jump in.
+          </p>
+        ) : null}
 
         <div className="mt-4 flex gap-1 rounded-2xl border border-line bg-white p-1">
           {tabs.map((t) => (
@@ -142,7 +158,7 @@ export default function CustomizePage() {
             <Check size={16} /> Saved automatically
           </span>
           <button
-            onClick={() => router.push("/profile")}
+            onClick={() => router.push(exitTo)}
             className="rounded-2xl bg-fairway-900 px-7 py-2.5 font-black text-white"
           >
             Done

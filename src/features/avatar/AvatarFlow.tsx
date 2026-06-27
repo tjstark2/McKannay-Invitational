@@ -6,10 +6,11 @@ import {
   type AvatarTier,
   TIER_META,
   PUBLIC_TIER_TABS,
-  UNLOCKED_PUBLIC_TIERS,
   logoUrl,
   cardUrl,
 } from "./catalog";
+import { useBirdieBoss } from "@/features/account/birdieBoss";
+import { BossLockUpsell } from "@/features/cosmetics/BossLockUpsell";
 import {
   birdVoice,
   golfSwing,
@@ -42,9 +43,11 @@ export function AvatarFlow({
     [avatars, granted]
   );
   const isUnlocked = (a: Avatar) =>
-    a.tier === "special"
+    a.tier === "free"
+      ? true
+      : a.tier === "special"
       ? isGranted(a)
-      : UNLOCKED_PUBLIC_TIERS.includes(a.tier) || isGranted(a);
+      : isBoss || isGranted(a);
 
   const displayable = useMemo(
     () => avatars.filter((a) => a.tier !== "special" || hasSpecialAccess),
@@ -60,6 +63,9 @@ export function AvatarFlow({
   const [soundOn, setSoundOn] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const { isBoss, upgrade } = useBirdieBoss();
+  const [upsellMode, setUpsellMode] = useState<"locked" | "soft" | null>(null);
+  const [upgrading, setUpgrading] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const byId = (id: string) => avatars.find((a) => a.id === id);
@@ -103,15 +109,18 @@ export function AvatarFlow({
       showToast("That birdie is assigned to specific players.");
       return;
     }
-    if (!isUnlocked(b)) showToast("That bird’s locked - opening upgrade.");
     birdVoice(b.id);
-    if (mode === "edit") {
-      complete();
+    if (!isUnlocked(b)) {
+      setUpsellMode("locked");
       return;
     }
-    setTimeout(() => setStep("paywall"), 380);
+    if (mode === "edit") {
+      void saveSelected();
+      return;
+    }
+    setUpsellMode("soft");
   }
-  async function complete() {
+  async function saveSelected() {
     if (busy || !selected) return;
     setBusy(true);
     const res = await onComplete(selected.id);
@@ -120,6 +129,29 @@ export function AvatarFlow({
       setBusy(false);
     }
     // on success the page navigates away and this component unmounts
+  }
+  function complete() {
+    if (!selected) return;
+    if (!isUnlocked(selected)) {
+      setUpsellMode("locked");
+      return;
+    }
+    void saveSelected();
+  }
+  async function handleBossUpgrade() {
+    setUpgrading(true);
+    try {
+      await upgrade();
+    } finally {
+      setUpgrading(false);
+    }
+    setUpsellMode(null);
+    await saveSelected();
+  }
+  function handleBossClose() {
+    const mode = upsellMode;
+    setUpsellMode(null);
+    if (mode === "soft") void saveSelected();
   }
 
   const cssVar = (k: string, v: string) =>
@@ -347,6 +379,12 @@ export function AvatarFlow({
 
         <div className={`${styles.toast} ${toast ? styles.toastShow : ""}`}>{toast}</div>
       </div>
+      <BossLockUpsell
+        open={upsellMode !== null}
+        upgrading={upgrading}
+        onUpgrade={handleBossUpgrade}
+        onClose={handleBossClose}
+      />
     </div>
   );
 }
