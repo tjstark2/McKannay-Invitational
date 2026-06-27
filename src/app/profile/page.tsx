@@ -133,7 +133,7 @@ export default function ProfilePage() {
                   </span>
                 ) : null}
                 <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">
-                  {frameById(frameId).name} ring
+                  {frameById(frameId).name} border
                 </span>
               </div>
             </div>
@@ -142,7 +142,7 @@ export default function ProfilePage() {
             onClick={() => router.push("/profile/customize")}
             className="flex w-full items-center justify-center gap-2 bg-gradient-to-r from-accent to-[#e09a06] px-5 py-4 font-black text-[#1d1402] transition active:brightness-95"
           >
-            Customize my Birdie
+            Customize My Birdie
             <ChevronRight className="h-5 w-5" />
           </button>
         </div>

@@ -151,7 +151,7 @@ export function FramePicker({ avatarId }: { avatarId?: string | null }) {
       {saved ? (
         <div className="pointer-events-none fixed inset-x-0 bottom-6 z-[130] flex justify-center">
           <span className="rounded-full bg-fairway-900 px-5 py-2.5 text-sm font-black text-white shadow-xl">
-            ✓ Ring equipped
+            ✓ Border equipped
           </span>
         </div>
       ) : null}

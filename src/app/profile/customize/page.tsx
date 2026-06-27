@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Check } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
@@ -68,7 +68,7 @@ export default function CustomizePage() {
   const tabs: { id: Tab; label: string }[] = [
     { id: "birdie", label: "Birdie" },
     { id: "nameplate", label: "Nameplate" },
-    { id: "surrounding", label: "Surrounding" },
+    { id: "surrounding", label: "Border" },
   ];
 
   return (
@@ -85,9 +85,9 @@ export default function CustomizePage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-5 py-6">
+      <main className="mx-auto max-w-2xl px-5 py-6 pb-28">
         <h1 className="font-anton text-3xl tracking-tight text-ink">
-          Customize my Birdie
+          Customize My Birdie
         </h1>
 
         <div className="mt-4 flex gap-1 rounded-2xl border border-line bg-white p-1">
@@ -134,6 +134,21 @@ export default function CustomizePage() {
           )}
         </div>
       </main>
+
+      {/* Clear save affordance: everything auto-saves; this confirms + exits */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-5 py-3">
+          <span className="inline-flex items-center gap-1.5 text-sm font-bold text-green">
+            <Check size={16} /> Saved automatically
+          </span>
+          <button
+            onClick={() => router.push("/profile")}
+            className="rounded-2xl bg-fairway-900 px-7 py-2.5 font-black text-white"
+          >
+            Done
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

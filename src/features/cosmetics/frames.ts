@@ -14,6 +14,7 @@ export interface FrameDef {
   bolts?: boolean; // lightning bolts
   orbit?: boolean; // orbiting golf ball
   cat?: "animated" | "seasonal" | "solid"; // boss sub-category
+  particles?: { emoji: string; mode: "fall" | "float" }; // themed motion
 }
 
 export const FOUNDER_EMAIL = "tjstark2@gmail.com";
@@ -41,12 +42,12 @@ export const FRAMES: FrameDef[] = [
   { id: "legendary", name: "Legendary", tier: "boss", cat: "seasonal", sparkle: true, ring: "background:conic-gradient(from 0deg,#f6e27a,#0e0e0e,#d6b66a,#0e0e0e,#f6e27a);animation:tbspin 9s linear infinite;", glow: "rgba(214,182,106,.95)" },
   { id: "lightning", name: "Lightning", tier: "boss", cat: "seasonal", bolts: true, ring: "background:linear-gradient(135deg,#0a2540,#0e3a5a);", glow: "rgba(125,249,255,.9)" },
   { id: "hole_in_one", name: "Hole in One", tier: "boss", cat: "seasonal", orbit: true, ring: "background:conic-gradient(from 0deg,#1f8a5b,#0c5c39,#3fcf8a,#1f8a5b);animation:tbspin 7s linear infinite;" },
-  { id: "frostbite", name: "Frostbite", tier: "boss", cat: "seasonal", sparkle: true, ring: "background:conic-gradient(from 0deg,#bfe9ff,#5aa9d6,#eafaff,#bfe9ff);animation:tbspinR 9s linear infinite;", glow: "rgba(150,220,255,.7)" },
-  { id: "spooky", name: "Spooky", tier: "boss", cat: "seasonal", ring: "background:conic-gradient(from 0deg,#ff7a18,#3a1145,#ffae42,#3a1145,#ff7a18);animation:tbspin 7s linear infinite;", glow: "rgba(255,120,20,.8)" },
-  { id: "holly_jolly", name: "Holly Jolly", tier: "boss", cat: "seasonal", sparkle: true, ring: "background:repeating-conic-gradient(#c01f2e 0deg 18deg,#fff 18deg 36deg,#1f8a3c 36deg 54deg);animation:tbspin 8s linear infinite;" },
-  { id: "lucky", name: "Lucky", tier: "boss", cat: "seasonal", sparkle: true, ring: "background:repeating-conic-gradient(#1f8a3c 0deg 22deg,#6ee07a 22deg 44deg);animation:tbspin 8s linear infinite;", glow: "rgba(46,200,90,.7)" },
-  { id: "sweetheart", name: "Sweetheart", tier: "boss", cat: "seasonal", sparkle: true, ring: "background:conic-gradient(from 0deg,#ff8fb3,#e23a6e,#ffd0de,#ff8fb3);animation:tbspin 7s linear infinite;", glow: "rgba(255,90,150,.75)" },
-  { id: "old_glory", name: "Old Glory", tier: "boss", cat: "seasonal", sparkle: true, ring: "background:conic-gradient(from 0deg,#b22234,#fff,#3c3b6e,#fff,#b22234);animation:tbspin 8s linear infinite;" },
+  { id: "frostbite", name: "Frostbite", tier: "boss", cat: "seasonal", particles: { emoji: "❄", mode: "fall" }, sparkle: true, ring: "background:conic-gradient(from 0deg,#bfe9ff,#5aa9d6,#eafaff,#bfe9ff);animation:tbspinR 9s linear infinite;", glow: "rgba(150,220,255,.7)" },
+  { id: "spooky", name: "Spooky", tier: "boss", cat: "seasonal", particles: { emoji: "👻", mode: "float" }, ring: "background:conic-gradient(from 0deg,#ff7a18,#3a1145,#ffae42,#3a1145,#ff7a18);animation:tbspin 7s linear infinite;", glow: "rgba(255,120,20,.8)" },
+  { id: "holly_jolly", name: "Holly Jolly", tier: "boss", cat: "seasonal", particles: { emoji: "❄", mode: "fall" }, sparkle: true, ring: "background:repeating-conic-gradient(#c01f2e 0deg 18deg,#fff 18deg 36deg,#1f8a3c 36deg 54deg);animation:tbspin 8s linear infinite;" },
+  { id: "lucky", name: "Lucky", tier: "boss", cat: "seasonal", particles: { emoji: "🍀", mode: "float" }, sparkle: true, ring: "background:repeating-conic-gradient(#1f8a3c 0deg 22deg,#6ee07a 22deg 44deg);animation:tbspin 8s linear infinite;", glow: "rgba(46,200,90,.7)" },
+  { id: "sweetheart", name: "Sweetheart", tier: "boss", cat: "seasonal", particles: { emoji: "💗", mode: "float" }, sparkle: true, ring: "background:conic-gradient(from 0deg,#ff8fb3,#e23a6e,#ffd0de,#ff8fb3);animation:tbspin 7s linear infinite;", glow: "rgba(255,90,150,.75)" },
+  { id: "old_glory", name: "Old Glory", tier: "boss", cat: "seasonal", particles: { emoji: "⭐", mode: "float" }, sparkle: true, ring: "background:conic-gradient(from 0deg,#b22234,#fff,#3c3b6e,#fff,#b22234);animation:tbspin 8s linear infinite;" },
 
   // Birdie Boss - solid colors (6)
   { id: "onyx", name: "Onyx", tier: "boss", cat: "solid", ring: "background:#161616;" },
@@ -55,6 +56,8 @@ export const FRAMES: FrameDef[] = [
   { id: "crimson", name: "Crimson", tier: "boss", cat: "solid", ring: "background:#9e1b2b;" },
   { id: "forest", name: "Forest", tier: "boss", cat: "solid", ring: "background:#1f5d3a;" },
   { id: "royal", name: "Royal", tier: "boss", cat: "solid", ring: "background:#4a2a8a;" },
+
+  { id: "harvest", name: "Harvest", tier: "boss", cat: "seasonal", ring: "background:conic-gradient(from 0deg,#c97e2a,#5a2d0c,#e0a040,#7a3d12,#c97e2a);animation:tbspin 8s linear infinite;", particles: { emoji: "🍂", mode: "fall" } },
 
   // Owner exclusive
   { id: "founder_flames", name: "Founder's Flames", tier: "owner", ring: "background:radial-gradient(circle,#ff7a18,#7a1e02);", flames: true },

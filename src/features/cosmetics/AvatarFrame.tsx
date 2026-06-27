@@ -137,6 +137,35 @@ function Orbit({ size }: { size: number }) {
   );
 }
 
+function RingParticles({ size, emoji, mode }: { size: number; emoji: string; mode: "fall" | "float" }) {
+  const items = [
+    { left: 12, dur: 3.0, delay: 0 },
+    { left: 50, dur: 3.6, delay: 0.7 },
+    { left: 80, dur: 2.8, delay: 1.3 },
+  ];
+  const fs = Math.max(9, size * 0.18);
+  return (
+    <span aria-hidden style={{ position: "absolute", inset: `-${Math.round(size * 0.12)}px`, overflow: "hidden", pointerEvents: "none", zIndex: 3 }}>
+      {items.map((p, i) => (
+        <span
+          key={i}
+          style={{
+            position: "absolute",
+            left: `${p.left}%`,
+            top: mode === "fall" ? "-14%" : undefined,
+            bottom: mode === "float" ? "-14%" : undefined,
+            fontSize: fs,
+            lineHeight: 1,
+            animation: `${mode === "fall" ? "tbfall" : "tbfloatup"} ${p.dur}s linear infinite ${p.delay}s`,
+          }}
+        >
+          {emoji}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 /**
  * Renders a circular avatar wrapped in its equipped frame ring (pure CSS).
  * Works at any size; drop-in wherever a player avatar shows.
@@ -180,6 +209,9 @@ export function AvatarFrame({
       {f.sparkle ? <Sparkles size={size} /> : null}
       {f.bolts ? <Bolts size={size} /> : null}
       {f.orbit ? <Orbit size={size} /> : null}
+      {f.particles ? (
+        <RingParticles size={size} emoji={f.particles.emoji} mode={f.particles.mode} />
+      ) : null}
       <span
         aria-hidden
         style={{
