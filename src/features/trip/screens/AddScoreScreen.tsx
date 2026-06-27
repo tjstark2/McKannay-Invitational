@@ -9,6 +9,7 @@ import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useViewer } from "@/features/trip/state/ViewerContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import { GroupedRoundEntry } from "@/features/trip/screens/GroupedRoundEntry";
+import { roundLifecycle } from "@/features/trip/roundLifecycle";
 
 type LastSavedScore = {
   playerName: string;
@@ -27,6 +28,7 @@ export function AddScoreScreen() {
     scoringSettings,
     currentRoundId,
     upsertScore,
+    updateRound,
   } = useTripState();
   const { canManage } = useViewer();
   const { user } = useAuth();
@@ -85,6 +87,64 @@ export function AddScoreScreen() {
   const selectedRound =
     rounds.find((round) => round.id === roundId) ?? rounds[0];
   if (!selectedRound) return null;
+
+  // Score entry is gated by the round lifecycle: the organizer must open the
+  // round, and a finished round is locked.
+  const life = roundLifecycle(selectedRound);
+  if (life !== "live") {
+    return (
+      <div className="space-y-4">
+        <SectionHeader
+          title="Log Round"
+          subtitle="Pick a round to enter scores."
+        />
+        <Card className="p-4">
+          <label className="text-xs font-black uppercase text-slate-500">
+            Round
+          </label>
+          <select
+            value={selectedRound.id}
+            onChange={(event) => setRoundId(event.target.value)}
+            className="mt-2 w-full rounded-xl border border-slate-200 p-3 font-bold"
+          >
+            {rounds.map((round) => (
+              <option key={round.id} value={round.id}>
+                {round.title}
+              </option>
+            ))}
+          </select>
+        </Card>
+        <Card className="p-6 text-center">
+          <div className="text-3xl">{life === "finished" ? "🔒" : "⛳"}</div>
+          <p className="mt-2 font-black text-ink">
+            {life === "finished"
+              ? "This round is finished"
+              : "This round hasn't started yet"}
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            {life === "finished"
+              ? "Scores are locked for this round."
+              : "The organizer needs to open this round before scores can be entered."}
+          </p>
+          {canManage ? (
+            <button
+              onClick={() =>
+                updateRound(
+                  selectedRound.id,
+                  life === "finished"
+                    ? { finishedAt: null }
+                    : { startedAt: new Date().toISOString() }
+                )
+              }
+              className="mt-4 rounded-2xl bg-fairway-900 px-6 py-3 font-black text-white"
+            >
+              {life === "finished" ? "Reopen round" : "Open this round"}
+            </button>
+          ) : null}
+        </Card>
+      </div>
+    );
+  }
 
   // Grouped formats (scramble / best ball 2v2 & 4v4): one combined score per
   // side, entered against the round's matchups.

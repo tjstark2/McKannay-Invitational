@@ -528,6 +528,10 @@ export async function persistRoundUpdates(
   if (updates.pointsAvailable !== undefined)
     row.points_available = updates.pointsAvailable;
   if (updates.courseId !== undefined) row.course_id = updates.courseId;
+  if (updates.startedAt !== undefined) row.started_at = updates.startedAt;
+  if (updates.finishedAt !== undefined) row.finished_at = updates.finishedAt;
+  if (updates.firstScoreAt !== undefined)
+    row.first_score_at = updates.firstScoreAt;
   if (Object.keys(row).length === 0) return;
   const { error } = await supabase.from("rounds").update(row).eq("id", roundId);
   throwIf(error, "update round");

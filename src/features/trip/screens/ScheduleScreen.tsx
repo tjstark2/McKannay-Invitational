@@ -6,6 +6,8 @@ import { Pill } from "@/components/ui/Pill";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useTripState } from "@/features/trip/state/TripStateContext";
+import { useViewer } from "@/features/trip/state/ViewerContext";
+import { roundLifecycle, lifecycleLabel } from "@/features/trip/roundLifecycle";
 import type { Screen } from "@/types";
 import { CourseBackground } from "@/features/trip/components/CourseBackground";
 
@@ -16,7 +18,8 @@ export function ScheduleScreen({
   setActiveScreen: (screen: Screen) => void;
   setSelectedCourseId: (courseId: string) => void;
 }) {
-  const { courses, players, rounds } = useTripState();
+  const { courses, players, rounds, updateRound } = useTripState();
+  const { canManage } = useViewer();
 
   const getPlayerName = (playerId: string) =>
     players.find((player) => player.id === playerId)?.name ?? playerId;
@@ -43,6 +46,13 @@ export function ScheduleScreen({
 
       {rounds.map((round) => {
         const course = courses.find((item) => item.id === round.courseId) ?? courses[0];
+        const life = roundLifecycle(round);
+        const lifeTone =
+          life === "live"
+            ? "bg-mint/20 text-green"
+            : life === "finished"
+            ? "bg-accent/20 text-[#a07a06]"
+            : "bg-slate-100 text-slate-500";
 
         return (
           <Card key={round.id} className="overflow-hidden">
@@ -75,7 +85,10 @@ export function ScheduleScreen({
                 <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-slate-300" />
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className={`rounded-full px-2.5 py-1 text-[11px] font-black uppercase tracking-wide ${lifeTone}`}>
+                  {lifecycleLabel[life]}
+                </span>
                 <Pill tone="green">{round.pointsAvailable} pts</Pill>
                 <Pill tone="blue">{formatRoundFormat(round.format)}</Pill>
                 <Pill tone="purple">{course.rating}/{course.slope}</Pill>
@@ -86,6 +99,37 @@ export function ScheduleScreen({
                     : ""}
                 </Pill>
               </div>
+
+              {canManage ? (
+                <div className="mt-3 flex gap-2">
+                  {life === "not_started" ? (
+                    <button
+                      onClick={() =>
+                        updateRound(round.id, { startedAt: new Date().toISOString() })
+                      }
+                      className="flex-1 rounded-xl bg-fairway-900 px-4 py-2.5 text-sm font-black text-white"
+                    >
+                      Start round
+                    </button>
+                  ) : life === "live" ? (
+                    <button
+                      onClick={() =>
+                        updateRound(round.id, { finishedAt: new Date().toISOString() })
+                      }
+                      className="flex-1 rounded-xl border-2 border-accent bg-accent/10 px-4 py-2.5 text-sm font-black text-[#a07a06]"
+                    >
+                      Finish round
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => updateRound(round.id, { finishedAt: null })}
+                      className="flex-1 rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-black text-fairway-900"
+                    >
+                      Reopen round
+                    </button>
+                  )}
+                </div>
+              ) : null}
 
               <div className="mt-4 space-y-2">
                 {round.teeTimes.map((tee, index) => (
