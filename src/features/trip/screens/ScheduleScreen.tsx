@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useViewer } from "@/features/trip/state/ViewerContext";
 import { roundLifecycle, lifecycleLabel } from "@/features/trip/roundLifecycle";
+import { RoundLifecycleButton } from "@/features/trip/components/RoundLifecycleButton";
 import type { Screen } from "@/types";
 import { CourseBackground } from "@/features/trip/components/CourseBackground";
 
@@ -18,7 +19,7 @@ export function ScheduleScreen({
   setActiveScreen: (screen: Screen) => void;
   setSelectedCourseId: (courseId: string) => void;
 }) {
-  const { courses, players, rounds, updateRound } = useTripState();
+  const { courses, players, rounds } = useTripState();
   const { canManage } = useViewer();
 
   const getPlayerName = (playerId: string) =>
@@ -101,33 +102,8 @@ export function ScheduleScreen({
               </div>
 
               {canManage ? (
-                <div className="mt-3 flex gap-2">
-                  {life === "not_started" ? (
-                    <button
-                      onClick={() =>
-                        updateRound(round.id, { startedAt: new Date().toISOString() })
-                      }
-                      className="flex-1 rounded-xl bg-fairway-900 px-4 py-2.5 text-sm font-black text-white"
-                    >
-                      Start round
-                    </button>
-                  ) : life === "live" ? (
-                    <button
-                      onClick={() =>
-                        updateRound(round.id, { finishedAt: new Date().toISOString() })
-                      }
-                      className="flex-1 rounded-xl border-2 border-accent bg-accent/10 px-4 py-2.5 text-sm font-black text-[#a07a06]"
-                    >
-                      Finish round
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => updateRound(round.id, { finishedAt: null })}
-                      className="flex-1 rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-black text-fairway-900"
-                    >
-                      Reopen round
-                    </button>
-                  )}
+                <div className="mt-3">
+                  <RoundLifecycleButton round={round} />
                 </div>
               ) : null}
 

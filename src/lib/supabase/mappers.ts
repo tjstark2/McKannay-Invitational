@@ -109,6 +109,7 @@ export type RoundRow = {
   points_available: number | null;
   arrival_time: string | null;
   sort_order: number | null;
+  round_date?: string | null;
   started_at?: string | null;
   finished_at?: string | null;
   first_score_at?: string | null;
@@ -224,6 +225,7 @@ export function mapRound(row: RoundRow): Round {
     pointsAvailable: Number(row.points_available ?? 0),
     arrivalTime: row.arrival_time ?? "",
     teeTimes,
+    roundDate: row.round_date ?? null,
     startedAt: row.started_at ?? null,
     finishedAt: row.finished_at ?? null,
     firstScoreAt: row.first_score_at ?? null,

@@ -10,6 +10,7 @@ import { useViewer } from "@/features/trip/state/ViewerContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import { GroupedRoundEntry } from "@/features/trip/screens/GroupedRoundEntry";
 import { roundLifecycle } from "@/features/trip/roundLifecycle";
+import { RoundLifecycleButton } from "@/features/trip/components/RoundLifecycleButton";
 
 type LastSavedScore = {
   playerName: string;
@@ -28,7 +29,6 @@ export function AddScoreScreen() {
     scoringSettings,
     currentRoundId,
     upsertScore,
-    updateRound,
   } = useTripState();
   const { canManage } = useViewer();
   const { user } = useAuth();
@@ -127,19 +127,9 @@ export function AddScoreScreen() {
               : "The organizer needs to open this round before scores can be entered."}
           </p>
           {canManage ? (
-            <button
-              onClick={() =>
-                updateRound(
-                  selectedRound.id,
-                  life === "finished"
-                    ? { finishedAt: null }
-                    : { startedAt: new Date().toISOString() }
-                )
-              }
-              className="mt-4 rounded-2xl bg-fairway-900 px-6 py-3 font-black text-white"
-            >
-              {life === "finished" ? "Reopen round" : "Open this round"}
-            </button>
+            <div className="mt-4 flex justify-center">
+              <RoundLifecycleButton round={selectedRound} compact />
+            </div>
           ) : null}
         </Card>
       </div>

@@ -528,6 +528,7 @@ export async function persistRoundUpdates(
   if (updates.pointsAvailable !== undefined)
     row.points_available = updates.pointsAvailable;
   if (updates.courseId !== undefined) row.course_id = updates.courseId;
+  if (updates.roundDate !== undefined) row.round_date = updates.roundDate;
   if (updates.startedAt !== undefined) row.started_at = updates.startedAt;
   if (updates.finishedAt !== undefined) row.finished_at = updates.finishedAt;
   if (updates.firstScoreAt !== undefined)

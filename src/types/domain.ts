@@ -95,6 +95,7 @@ export type Round = {
   pointsAvailable: number;
   arrivalTime: string;
   teeTimes: TeeTime[];
+  roundDate?: string | null; // scheduled calendar date (yyyy-mm-dd)
   startedAt?: string | null; // owner opened the round (gates scoring)
   finishedAt?: string | null; // owner finished the round (concludes voting)
   firstScoreAt?: string | null; // first score logged (drives 7h voting close)
