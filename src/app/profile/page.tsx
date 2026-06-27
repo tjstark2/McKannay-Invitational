@@ -6,10 +6,11 @@ import { useRouter } from "next/navigation";
 import { ChevronRight, ChevronDown } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useBirdieBoss } from "@/features/account/birdieBoss";
+import { AvatarFrame } from "@/features/cosmetics/AvatarFrame";
+import { useCosmetics } from "@/features/cosmetics/useCosmetics";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { BrandHeaderMark } from "@/features/trip/components/Brand";
 import { AccountMenu } from "@/features/account/AccountMenu";
-import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 
 type Profile = {
   first_name: string | null;
@@ -35,6 +36,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const { isBoss, upgrade } = useBirdieBoss();
+  const { frameId } = useCosmetics();
   const [upgrading, setUpgrading] = useState(false);
   const [showFeatures, setShowFeatures] = useState(false);
 
@@ -100,11 +102,11 @@ export default function ProfilePage() {
       <main className="mx-auto max-w-2xl space-y-6 px-5 py-8">
         {/* Identity */}
         <div className="flex items-center gap-4">
-          <PlayerAvatar
+          <AvatarFrame
+            frameId={frameId}
             avatarId={profile?.avatar_id}
             name={fullName || user.email}
-            size={68}
-            ring="#1f6f54"
+            size={72}
           />
           <div className="min-w-0">
             <h1 className="truncate font-anton text-3xl tracking-tight text-ink">
@@ -238,10 +240,10 @@ export default function ProfilePage() {
         {/* Actions */}
         <div className="grid gap-2">
           <button
-            onClick={() => router.push("/profile/avatar")}
+            onClick={() => router.push("/profile/customize")}
             className="flex w-full items-center justify-between rounded-2xl border border-line bg-white px-4 py-3.5 font-black text-fairway-900"
           >
-            <span>🐦 Change your birdie</span>
+            <span>🐦 Customize my Birdie</span>
             <ChevronRight className="h-5 w-5 text-slate-300" />
           </button>
           <button

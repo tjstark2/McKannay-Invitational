@@ -1,0 +1,131 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ChevronRight } from "lucide-react";
+import { useAuth } from "@/features/auth/AuthContext";
+import { getSupabaseClient } from "@/lib/supabase/client";
+import { LoadingScreen } from "@/components/ui/LoadingScreen";
+import { BrandHeaderMark } from "@/features/trip/components/Brand";
+import { AvatarFrame } from "@/features/cosmetics/AvatarFrame";
+import { FramePicker } from "@/features/cosmetics/FramePicker";
+import { NameplatePicker } from "@/features/cosmetics/NameplatePicker";
+import { useCosmetics } from "@/features/cosmetics/useCosmetics";
+
+type Tab = "birdie" | "nameplate" | "surrounding";
+
+export default function CustomizePage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const { frameId } = useCosmetics();
+  const [tab, setTab] = useState<Tab>("surrounding");
+  const [avatarId, setAvatarId] = useState<string | null>(null);
+  const [name, setName] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      router.replace("/");
+      return;
+    }
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      setReady(true);
+      return;
+    }
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("avatar_id,first_name,last_name,username")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (!active) return;
+      setAvatarId(data?.avatar_id ?? null);
+      setName(
+        [data?.first_name, data?.last_name].filter(Boolean).join(" ") ||
+          data?.username ||
+          (user.email ?? "You")
+      );
+      setReady(true);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [user, loading, router]);
+
+  if (loading || !user || !ready) return <LoadingScreen />;
+
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "birdie", label: "Birdie" },
+    { id: "nameplate", label: "Nameplate" },
+    { id: "surrounding", label: "Surrounding" },
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#f7f6f1]">
+      <header className="relative z-50 border-b border-sand-100 bg-white/80 backdrop-blur">
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-5 py-3">
+          <BrandHeaderMark />
+          <button
+            onClick={() => router.push("/profile")}
+            className="text-sm font-bold text-fairway-900"
+          >
+            Done
+          </button>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-2xl px-5 py-6">
+        <h1 className="font-anton text-3xl tracking-tight text-ink">
+          Customize my Birdie
+        </h1>
+
+        <div className="mt-4 flex gap-1 rounded-2xl border border-line bg-white p-1">
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex-1 rounded-xl py-2.5 text-sm font-black ${
+                tab === t.id
+                  ? "bg-fairway-900 text-white"
+                  : "text-slate-500"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-6">
+          {tab === "birdie" ? (
+            <div className="flex flex-col items-center">
+              <AvatarFrame frameId={frameId} avatarId={avatarId} name={name} size={120} />
+              <button
+                onClick={() => router.push("/profile/avatar")}
+                className="mt-5 flex w-full max-w-sm items-center justify-between rounded-2xl bg-fairway-900 px-5 py-4 font-black text-white"
+              >
+                Choose your birdie
+                <ChevronRight size={20} />
+              </button>
+              <p className="mt-2 text-xs text-slate-400">
+                Birdie Boss unlocks the premium birds.
+              </p>
+            </div>
+          ) : tab === "nameplate" ? (
+            <NameplatePicker
+              avatarId={avatarId}
+              name={name}
+              title="Wants the final putt"
+              hcp="8.4"
+              wins="12"
+            />
+          ) : (
+            <FramePicker avatarId={avatarId} />
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}

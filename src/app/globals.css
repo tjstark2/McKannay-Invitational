@@ -50,3 +50,14 @@ h4 {
   0%, 100% { opacity: 0.25; transform: translateY(0); }
   50% { opacity: 1; transform: translateY(-3px); }
 }
+
+/* ---- Profile cosmetics (frame rings) ---- */
+@keyframes tbspin { to { transform: rotate(360deg); } }
+@keyframes tbspinR { to { transform: rotate(-360deg); } }
+@keyframes tbglow { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
+@keyframes tbhue { to { filter: hue-rotate(360deg); } }
+@keyframes tbflame {
+  0%,100% { transform: rotate(var(--a)) scaleY(1); opacity: .9; }
+  50% { transform: rotate(var(--a)) translateY(-2px) scaleY(1.18); opacity: 1; }
+}
+@keyframes tbsheen { 0% { background-position: -160% 0; } 100% { background-position: 260% 0; } }
