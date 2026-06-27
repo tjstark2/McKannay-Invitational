@@ -61,35 +61,44 @@ function Ball() {
   );
 }
 
-function Dots({ color, drift }: { color: string; drift?: boolean }) {
-  const pts = [
-    { top: "12px", right: "20px", s: 8, d: 1.7, delay: 0 },
-    { top: "40px", right: "52px", s: 6, d: 2.1, delay: 0.6 },
-    { top: "auto", right: "92px", s: 5, d: 2.4, delay: 1.1 },
+function Particles({
+  emoji,
+  up,
+  color,
+}: {
+  emoji: string;
+  up?: boolean;
+  color?: string;
+}) {
+  const items = [
+    { left: 30, dur: 3.0, delay: 0, size: 14 },
+    { left: 45, dur: 3.6, delay: 0.8, size: 12 },
+    { left: 58, dur: 2.7, delay: 0.4, size: 15 },
+    { left: 70, dur: 3.3, delay: 1.4, size: 13 },
+    { left: 82, dur: 2.9, delay: 0.6, size: 12 },
+    { left: 92, dur: 3.5, delay: 1.1, size: 14 },
   ];
   return (
-    <>
-      {pts.map((p, i) => (
+    <span aria-hidden style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
+      {items.map((p, i) => (
         <span
           key={i}
-          aria-hidden
           style={{
             position: "absolute",
-            top: p.top,
-            bottom: p.top === "auto" ? 16 : undefined,
-            right: p.right,
-            width: p.s,
-            height: p.s,
-            borderRadius: "50%",
-            background: color,
-            boxShadow: `0 0 6px ${color}`,
-            animation: drift
-              ? `tbdrift ${p.d + 1}s ease-in infinite ${p.delay}s`
-              : `tbtwinkle ${p.d}s ease-in-out infinite ${p.delay}s`,
+            left: `${p.left}%`,
+            top: up ? undefined : "-12%",
+            bottom: up ? "-12%" : undefined,
+            fontSize: p.size,
+            lineHeight: 1,
+            color,
+            textShadow: color ? `0 0 6px ${color}` : undefined,
+            animation: `${up ? "tbfloatup" : "tbfall"} ${p.dur}s linear infinite ${p.delay}s`,
           }}
-        />
+        >
+          {emoji}
+        </span>
       ))}
-    </>
+    </span>
   );
 }
 
@@ -98,23 +107,6 @@ function Moon() {
     <>
       <span aria-hidden style={{ position: "absolute", inset: 0, boxShadow: "inset 0 0 34px rgba(255,140,30,.4)", animation: "tbglow 2.2s ease-in-out infinite", pointerEvents: "none" }} />
       <span aria-hidden style={{ position: "absolute", top: 14, right: 20, width: 20, height: 20, borderRadius: "50%", background: "radial-gradient(circle at 38% 34%,#fff4c2,#ffb23d)", boxShadow: "0 0 14px rgba(255,178,61,.7)" }} />
-    </>
-  );
-}
-
-function Hearts() {
-  const pts = [
-    { right: "24px", d: 2.4, delay: 0 },
-    { right: "60px", d: 2.8, delay: 0.7 },
-    { right: "92px", d: 3.1, delay: 1.4 },
-  ];
-  return (
-    <>
-      {pts.map((p, i) => (
-        <span key={i} aria-hidden style={{ position: "absolute", bottom: 8, right: p.right, fontSize: 13, animation: `tbdrift ${p.d}s ease-in infinite ${p.delay}s` }}>
-          💗
-        </span>
-      ))}
     </>
   );
 }
@@ -128,22 +120,24 @@ function Fx({ fx }: { fx?: PlateFx }) {
     case "ball":
       return <Ball />;
     case "snow":
-      return <Dots color="#fff" />;
+      return <Particles emoji="❄" color="#fff" />;
     case "leaves":
-      return <Dots color="#ffcf8a" drift />;
+      return <Particles emoji="🍂" />;
     case "moon":
       return <Moon />;
     case "hearts":
-      return <Hearts />;
+      return <Particles emoji="💗" up />;
+    case "clovers":
+      return <Particles emoji="🍀" />;
     default:
       return null;
   }
 }
 
 function PlateAvatar({ ring, avatarId, emoji, name }: { ring?: string; avatarId?: string | null; emoji?: string | null; name?: string | null }) {
-  const spin = ring && ring.includes("conic") ? "animation:tbspin 7s linear infinite" : "";
+  const spin = ring ? ring.includes("conic") : false;
   return (
-    <span style={{ position: "relative", width: 60, height: 60, flexShrink: 0 }}>
+    <span style={{ position: "relative", display: "inline-block", width: 60, height: 60, flexShrink: 0, zIndex: 1 }}>
       <span aria-hidden style={{ position: "absolute", inset: 0, borderRadius: "50%", background: ring || "#5b6b60", ...(spin ? { animation: "tbspin 7s linear infinite" } : {}) }} />
       <span aria-hidden style={{ position: "absolute", inset: 4, borderRadius: "50%", background: "#fff" }} />
       <span style={{ position: "absolute", inset: 6 }}>
@@ -202,9 +196,7 @@ export function Nameplate({
     <div style={wrap}>
       <Fx fx={p.fx} />
 
-      <span style={{ position: "relative", zIndex: 1 }}>
-        <PlateAvatar ring={p.ring} avatarId={avatarId} emoji={emoji} name={name} />
-      </span>
+      <PlateAvatar ring={p.ring} avatarId={avatarId} emoji={emoji} name={name} />
 
       <div style={{ position: "relative", zIndex: 1, minWidth: 0, flex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

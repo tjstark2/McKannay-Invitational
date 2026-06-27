@@ -142,7 +142,7 @@ export default function ProfilePage() {
             onClick={() => router.push("/profile/customize")}
             className="flex w-full items-center justify-center gap-2 bg-gradient-to-r from-accent to-[#e09a06] px-5 py-4 font-black text-[#1d1402] transition active:brightness-95"
           >
-            🎨 Customize my Birdie
+            Customize my Birdie
             <ChevronRight className="h-5 w-5" />
           </button>
         </div>

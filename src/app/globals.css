@@ -68,3 +68,7 @@ h4 {
 @keyframes tbball { 0% { transform:translateY(-26px) scale(1); opacity:0;} 14% { opacity:1;} 58% { transform:translateY(4px) scale(1);} 72% { transform:translateY(9px) scaleX(1.4) scaleY(.45); opacity:1;} 84%,100% { transform:translateY(9px) scale(.2); opacity:0;} }
 @keyframes tborbit { to { transform:rotate(360deg);} }
 @keyframes tbdrift { 0% { transform:translateY(-4px); opacity:0;} 20% { opacity:1;} 100% { transform:translateY(14px); opacity:0;} }
+
+/* ---- Seasonal particle motion ---- */
+@keyframes tbfall { 0% { transform:translateY(-30%) rotate(0deg); opacity:0; } 12% { opacity:1; } 88% { opacity:1; } 100% { transform:translateY(130%) rotate(40deg); opacity:0; } }
+@keyframes tbfloatup { 0% { transform:translateY(30%) scale(.8); opacity:0; } 18% { opacity:1; } 100% { transform:translateY(-130%) scale(1); opacity:0; } }
