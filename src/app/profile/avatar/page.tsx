@@ -58,10 +58,10 @@ export default function EditAvatarPage() {
       initialId={current}
       avatars={avatars}
       grantedIds={grants}
-      onCancel={() => router.replace("/profile")}
+      onCancel={() => router.replace("/profile/customize")}
       onComplete={async (id) => {
         const res = await setMyAvatar(id);
-        if (res.ok) router.replace("/profile");
+        if (res.ok) router.replace("/profile/customize");
         return res;
       }}
     />

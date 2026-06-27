@@ -27,11 +27,12 @@ export function FramePicker({ avatarId }: { avatarId?: string | null }) {
 
   function tap(f: FrameDef) {
     setPreview(f.id);
-    if (unlocked(f)) {
-      void equipFrame(f.id);
-    } else if (f.tier === "boss") {
-      setUpsell(true);
-    }
+  }
+
+  function equipSelected() {
+    const f = frameById(shown);
+    if (unlocked(f)) void equipFrame(f.id);
+    else if (f.tier === "boss") setUpsell(true);
   }
 
   async function doUpgrade() {
@@ -55,17 +56,32 @@ export function FramePicker({ avatarId }: { avatarId?: string | null }) {
 
   return (
     <div>
-      <div className="mb-4 flex flex-col items-center">
+      <div className="sticky top-0 z-10 mb-4 flex flex-col items-center bg-[#f7f6f1]/95 pb-3 pt-1 backdrop-blur">
         <AvatarFrame frameId={shown} avatarId={avatarId} size={120} />
         <p className="mt-2 text-sm font-black text-ink">
           {frameById(shown).name}
         </p>
         {shown === frameId ? (
-          <p className="text-xs font-bold text-green">Equipped</p>
+          <button
+            disabled
+            className="mt-2 inline-flex items-center gap-1.5 rounded-2xl bg-mint/20 px-5 py-2.5 text-sm font-black text-green"
+          >
+            <Check size={16} /> Equipped
+          </button>
         ) : unlocked(frameById(shown)) ? (
-          <p className="text-xs text-slate-400">Tap to equip</p>
+          <button
+            onClick={equipSelected}
+            className="mt-2 rounded-2xl bg-fairway-900 px-6 py-2.5 text-sm font-black text-white shadow"
+          >
+            Equip this ring
+          </button>
         ) : (
-          <p className="text-xs font-bold text-[#a07a06]">Birdie Boss locked</p>
+          <button
+            onClick={equipSelected}
+            className="mt-2 inline-flex items-center gap-1.5 rounded-2xl bg-accent px-5 py-2.5 text-sm font-black text-[#1d1402] shadow"
+          >
+            <Lock size={15} /> Unlock with Birdie Boss
+          </button>
         )}
       </div>
 

@@ -22,7 +22,7 @@ export function NameplatePicker({
   wins?: string | number | null;
 }) {
   const { isBoss, upgrade } = useBirdieBoss();
-  const { nameplateId, frameId, equipNameplate } = useCosmetics();
+  const { nameplateId, equipNameplate } = useCosmetics();
   const [upsell, setUpsell] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
 
@@ -63,7 +63,6 @@ export function NameplatePicker({
             >
               <Nameplate
                 plateId={p.id}
-                frameId={frameId}
                 avatarId={avatarId}
                 name={name}
                 title={title}

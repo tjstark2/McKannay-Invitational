@@ -11,6 +11,8 @@ import { AvatarFrame } from "@/features/cosmetics/AvatarFrame";
 import { FramePicker } from "@/features/cosmetics/FramePicker";
 import { NameplatePicker } from "@/features/cosmetics/NameplatePicker";
 import { useCosmetics } from "@/features/cosmetics/useCosmetics";
+import { fetchAvatars } from "@/features/avatar/data";
+import { taglineForClass } from "@/features/cosmetics/taglines";
 
 type Tab = "birdie" | "nameplate" | "surrounding";
 
@@ -20,6 +22,7 @@ export default function CustomizePage() {
   const { frameId } = useCosmetics();
   const [tab, setTab] = useState<Tab>("surrounding");
   const [avatarId, setAvatarId] = useState<string | null>(null);
+  const [klass, setKlass] = useState<string | null>(null);
   const [name, setName] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -36,13 +39,18 @@ export default function CustomizePage() {
     }
     let active = true;
     (async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("avatar_id,first_name,last_name,username")
-        .eq("id", user.id)
-        .maybeSingle();
+      const [{ data }, avatars] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("avatar_id,first_name,last_name,username")
+          .eq("id", user.id)
+          .maybeSingle(),
+        fetchAvatars(),
+      ]);
       if (!active) return;
-      setAvatarId(data?.avatar_id ?? null);
+      const aid = data?.avatar_id ?? null;
+      setAvatarId(aid);
+      setKlass(avatars.find((a) => a.id === aid)?.klass ?? null);
       setName(
         [data?.first_name, data?.last_name].filter(Boolean).join(" ") ||
           data?.username ||
@@ -117,7 +125,7 @@ export default function CustomizePage() {
             <NameplatePicker
               avatarId={avatarId}
               name={name}
-              title="Wants the final putt"
+              title={taglineForClass(klass)}
               hcp="8.4"
               wins="12"
             />

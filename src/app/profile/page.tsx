@@ -7,6 +7,7 @@ import { ChevronRight, ChevronDown } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { useBirdieBoss } from "@/features/account/birdieBoss";
 import { AvatarFrame } from "@/features/cosmetics/AvatarFrame";
+import { frameById } from "@/features/cosmetics/frames";
 import { useCosmetics } from "@/features/cosmetics/useCosmetics";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { BrandHeaderMark } from "@/features/trip/components/Brand";
@@ -100,30 +101,50 @@ export default function ProfilePage() {
       </header>
 
       <main className="mx-auto max-w-2xl space-y-6 px-5 py-8">
-        {/* Identity */}
-        <div className="flex items-center gap-4">
-          <AvatarFrame
-            frameId={frameId}
-            avatarId={profile?.avatar_id}
-            name={fullName || user.email}
-            size={72}
-          />
-          <div className="min-w-0">
-            <h1 className="truncate font-anton text-3xl tracking-tight text-ink">
-              {fullName || "Your Profile"}
-            </h1>
-            <p className="mt-0.5 text-sm font-bold text-fairway-900">
-              {profile?.username ? `@${profile.username}` : ""}
-              {isBoss ? (
-                <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-[#1d1402] px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-accent align-middle">
-                  👑 Birdie Boss
+        {/* Hero */}
+        <div className="overflow-hidden rounded-3xl border border-line shadow-sm">
+          <div className="relative bg-gradient-to-br from-fairway-900 to-fairway-700 px-6 py-7">
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  "radial-gradient(circle at 85% -10%, rgba(243,181,10,.35), transparent 55%)",
+              }}
+            />
+            <div className="relative flex flex-col items-center text-center">
+              <AvatarFrame
+                frameId={frameId}
+                avatarId={profile?.avatar_id}
+                name={fullName || user.email}
+                size={108}
+              />
+              <h1 className="mt-3 font-anton text-3xl tracking-tight text-white">
+                {fullName || "Your Profile"}
+              </h1>
+              <p className="text-sm font-semibold text-mint">
+                {profile?.username ? `@${profile.username}` : ""}
+                {profile?.username && location ? " · " : ""}
+                {location ?? ""}
+              </p>
+              <div className="mt-2.5 flex flex-wrap items-center justify-center gap-1.5">
+                {isBoss ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#1d1402] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-accent">
+                    👑 Birdie Boss
+                  </span>
+                ) : null}
+                <span className="rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">
+                  {frameById(frameId).name} ring
                 </span>
-              ) : null}
-            </p>
-            {location ? (
-              <p className="text-sm text-slate-500">{location}</p>
-            ) : null}
+              </div>
+            </div>
           </div>
+          <button
+            onClick={() => router.push("/profile/customize")}
+            className="flex w-full items-center justify-center gap-2 bg-gradient-to-r from-accent to-[#e09a06] px-5 py-4 font-black text-[#1d1402] transition active:brightness-95"
+          >
+            🎨 Customize my Birdie
+            <ChevronRight className="h-5 w-5" />
+          </button>
         </div>
 
         {/* Birdie Boss */}
@@ -239,13 +260,6 @@ export default function ProfilePage() {
 
         {/* Actions */}
         <div className="grid gap-2">
-          <button
-            onClick={() => router.push("/profile/customize")}
-            className="flex w-full items-center justify-between rounded-2xl border border-line bg-white px-4 py-3.5 font-black text-fairway-900"
-          >
-            <span>🐦 Customize my Birdie</span>
-            <ChevronRight className="h-5 w-5 text-slate-300" />
-          </button>
           <button
             onClick={() => router.push("/profile/edit")}
             className="w-full rounded-2xl bg-fairway-900 px-4 py-3.5 font-black text-white"

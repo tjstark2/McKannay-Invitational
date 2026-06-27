@@ -47,6 +47,96 @@ function Flames({ size }: { size: number }) {
   );
 }
 
+function Sparkles({ size }: { size: number }) {
+  const pts = [
+    { x: 0.16, y: 0.18, d: 1.7, delay: 0 },
+    { x: 0.82, y: 0.3, d: 2.1, delay: 0.5 },
+    { x: 0.3, y: 0.84, d: 2.4, delay: 1.0 },
+  ];
+  const s = Math.max(3, size * 0.07);
+  return (
+    <>
+      {pts.map((p, i) => (
+        <span
+          key={i}
+          aria-hidden
+          style={{
+            position: "absolute",
+            left: `${p.x * 100}%`,
+            top: `${p.y * 100}%`,
+            width: s,
+            height: s,
+            borderRadius: "50%",
+            background: "#fff",
+            boxShadow: "0 0 6px #fff",
+            zIndex: 3,
+            animation: `tbtwinkle ${p.d}s ease-in-out infinite ${p.delay}s`,
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
+function Bolts({ size }: { size: number }) {
+  const pts = [
+    { x: 0.74, y: 0.04, h: 0.4, delay: 0 },
+    { x: 0.58, y: 0.12, h: 0.3, delay: 0.18 },
+    { x: 0.68, y: 0.58, h: 0.26, delay: 0.32 },
+  ];
+  return (
+    <>
+      {pts.map((p, i) => (
+        <span
+          key={i}
+          aria-hidden
+          style={{
+            position: "absolute",
+            left: `${p.x * 100}%`,
+            top: `${p.y * 100}%`,
+            width: 5,
+            height: p.h * size,
+            background: "linear-gradient(#fff,#7df9ff)",
+            clipPath: "polygon(50% 0,12% 42%,52% 44%,18% 100%,72% 38%,40% 40%)",
+            filter: "drop-shadow(0 0 4px #7df9ff)",
+            zIndex: 3,
+            animation: `tbzap ${0.5 + p.delay}s steps(1) infinite ${p.delay}s`,
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
+function Orbit({ size }: { size: number }) {
+  const ball = Math.max(7, size * 0.13);
+  return (
+    <span
+      aria-hidden
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 3,
+        animation: "tborbit 2.8s linear infinite",
+      }}
+    >
+      <span
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: -ball / 2.5,
+          width: ball,
+          height: ball,
+          marginLeft: -ball / 2,
+          borderRadius: "50%",
+          background: "radial-gradient(circle at 35% 30%,#fff,#d8dde2)",
+          boxShadow: "0 0 4px rgba(0,0,0,.3)",
+        }}
+      />
+    </span>
+  );
+}
+
 /**
  * Renders a circular avatar wrapped in its equipped frame ring (pure CSS).
  * Works at any size; drop-in wherever a player avatar shows.
@@ -87,6 +177,9 @@ export function AvatarFrame({
         />
       ) : null}
       {f.flames ? <Flames size={size} /> : null}
+      {f.sparkle ? <Sparkles size={size} /> : null}
+      {f.bolts ? <Bolts size={size} /> : null}
+      {f.orbit ? <Orbit size={size} /> : null}
       <span
         aria-hidden
         style={{
