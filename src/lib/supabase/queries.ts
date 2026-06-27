@@ -278,6 +278,8 @@ export async function loadTripState(
     playersResult,
     coursesResult,
     roundsResult,
+    awardConfigResult,
+    votesResult,
   ] = await Promise.all([
     supabase.from("scoring_settings").select("*").eq("trip_id", tripId).maybeSingle(),
     supabase.from("teams").select("*").eq("trip_id", tripId),
@@ -290,6 +292,15 @@ export async function loadTripState(
       )
       .eq("trip_id", tripId)
       .order("round_number"),
+    supabase
+      .from("trip_award_config")
+      .select("voting_enabled, award_keys")
+      .eq("trip_id", tripId)
+      .maybeSingle(),
+    supabase
+      .from("round_votes")
+      .select("round_id, award_key, voter_account, nominee_player")
+      .eq("trip_id", tripId),
   ]);
 
   throwIf(teamsResult.error, "load teams");
@@ -427,6 +438,19 @@ export async function loadTripState(
   const trip = mapTrip(tripRow);
   trip.totalPoints = derivedTotalPoints;
 
+  const ac = (awardConfigResult.data ?? null) as
+    | { voting_enabled?: boolean }
+    | null;
+  const votingEnabled = ac ? Boolean(ac.voting_enabled) : true;
+  const votes = ((votesResult.data ?? []) as Record<string, string>[]).map(
+    (v) => ({
+      roundId: v.round_id,
+      awardKey: v.award_key,
+      voterAccount: v.voter_account,
+      nomineePlayer: v.nominee_player,
+    })
+  );
+
   return {
     state: {
       trip,
@@ -439,12 +463,66 @@ export async function loadTripState(
       groupScores,
       scoringSettings,
       currentRoundId,
+      votingEnabled,
+      votes,
     },
     teamDbIds,
   };
 }
 
 // ---- WRITES ----------------------------------------------------------------
+
+export async function castVoteRow(
+  supabase: SupabaseClient,
+  input: {
+    tripId: string;
+    roundId: string;
+    awardKey: string;
+    voterAccount: string;
+    nomineePlayer: string;
+  }
+) {
+  const { error } = await supabase.from("round_votes").upsert(
+    {
+      trip_id: input.tripId,
+      round_id: input.roundId,
+      award_key: input.awardKey,
+      voter_account: input.voterAccount,
+      nominee_player: input.nomineePlayer,
+    },
+    { onConflict: "round_id,award_key,voter_account" }
+  );
+  throwIf(error, "cast vote");
+}
+
+export async function persistVotingEnabled(
+  supabase: SupabaseClient,
+  tripId: string,
+  enabled: boolean
+) {
+  const { error } = await supabase
+    .from("trip_award_config")
+    .upsert(
+      { trip_id: tripId, voting_enabled: enabled, updated_at: new Date().toISOString() },
+      { onConflict: "trip_id" }
+    );
+  throwIf(error, "update voting config");
+}
+
+// Stamp the round's first score time once (drives the 7h voting auto-close).
+export async function stampFirstScoreAt(
+  supabase: SupabaseClient,
+  roundId: string,
+  whenISO: string
+) {
+  const { error } = await supabase
+    .from("rounds")
+    .update({ first_score_at: whenISO })
+    .eq("id", roundId)
+    .is("first_score_at", null);
+  throwIf(error, "stamp first score");
+}
+
 
 export async function persistTripUpdates(
   supabase: SupabaseClient,

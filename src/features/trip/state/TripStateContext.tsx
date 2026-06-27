@@ -37,6 +37,9 @@ import {
   setTeeTimePlayersRows,
   upsertScoreRow,
   upsertGroupScoreRow,
+  castVoteRow,
+  persistVotingEnabled,
+  stampFirstScoreAt,
 } from "@/lib/supabase/queries";
 import type {
   Match,
@@ -80,6 +83,13 @@ type TripStateContextValue = TripState & {
   updateManualMatchResult: (matchId: string, result: Winner) => void;
   updateScoringSettings: (updates: Partial<ScoringSettings>) => void;
   upsertScore: (score: ScoreEntry) => void;
+  castVote: (input: {
+    roundId: string;
+    awardKey: string;
+    nomineePlayer: string;
+    voterAccount: string;
+  }) => void;
+  setVotingEnabled: (enabled: boolean) => void;
   upsertGroupScore: (input: {
     matchId: string;
     side: "A" | "B";
@@ -605,8 +615,16 @@ export function TripStateProvider({
             (item) =>
               item.roundId === score.roundId && item.playerId === score.playerId
           );
+          const round = current.rounds.find((r) => r.id === score.roundId);
+          const needsStamp = round != null && !round.firstScoreAt;
+          const nowISO = new Date().toISOString();
           return {
             ...current,
+            rounds: needsStamp
+              ? current.rounds.map((r) =>
+                  r.id === score.roundId ? { ...r, firstScoreAt: nowISO } : r
+                )
+              : current.rounds,
             scores: exists
               ? current.scores.map((item) =>
                   item.roundId === score.roundId &&
@@ -618,6 +636,41 @@ export function TripStateProvider({
           };
         });
         persist((s) => upsertScoreRow(s, score));
+        persist((s) => stampFirstScoreAt(s, score.roundId, new Date().toISOString()));
+      },
+
+      castVote: ({ roundId, awardKey, nomineePlayer, voterAccount }) => {
+        setState((current) => {
+          const others = current.votes.filter(
+            (v) =>
+              !(
+                v.roundId === roundId &&
+                v.awardKey === awardKey &&
+                v.voterAccount === voterAccount
+              )
+          );
+          return {
+            ...current,
+            votes: [
+              ...others,
+              { roundId, awardKey, voterAccount, nomineePlayer },
+            ],
+          };
+        });
+        persist((s) =>
+          castVoteRow(s, {
+            tripId,
+            roundId,
+            awardKey,
+            voterAccount,
+            nomineePlayer,
+          })
+        );
+      },
+
+      setVotingEnabled: (enabled) => {
+        setState((current) => ({ ...current, votingEnabled: enabled }));
+        persist((s) => persistVotingEnabled(s, tripId, enabled));
       },
 
       upsertGroupScore: (input) => {

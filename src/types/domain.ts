@@ -162,6 +162,13 @@ export type TeamSummary = {
   completedMatches: number;
 };
 
+export type Vote = {
+  roundId: string;
+  awardKey: string;
+  voterAccount: string;
+  nomineePlayer: string;
+};
+
 export type TripState = {
   trip: Trip;
   teams: Team[];
@@ -173,6 +180,8 @@ export type TripState = {
   groupScores: GroupScore[];
   scoringSettings: ScoringSettings;
   currentRoundId: string;
+  votingEnabled: boolean; // owner/admin toggle (effective only on Pro trips)
+  votes: Vote[];
 };
 export type TripPhoto = {
   id: string;

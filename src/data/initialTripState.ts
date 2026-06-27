@@ -239,4 +239,6 @@ export const initialTripState: TripState = {
   groupScores: [],
   scoringSettings: initialScoringSettings,
   currentRoundId: "round-1",
+  votingEnabled: true,
+  votes: [],
 };

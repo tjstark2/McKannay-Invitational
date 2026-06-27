@@ -67,6 +67,8 @@ export function AdminScreen() {
     addTeeTime,
     deleteTeeTime,
     setTeeTimePlayers,
+    votingEnabled,
+    setVotingEnabled,
     saving,
     saveError,
     saveTick,
@@ -602,6 +604,25 @@ export function AdminScreen() {
                           ))}
                         </select>
 
+                        <div className="mt-3">
+                          <label className="text-xs font-black uppercase text-slate-500">
+                            Date
+                          </label>
+                          <input
+                            type="date"
+                            value={round.roundDate ? String(round.roundDate).slice(0, 10) : ""}
+                            onChange={(event) =>
+                              updateRound(round.id, {
+                                roundDate: event.target.value || null,
+                              })
+                            }
+                            className={inputClass}
+                          />
+                          <p className="mt-1 text-[11px] text-slate-500">
+                            On this day you&apos;ll get a reminder to open the round.
+                          </p>
+                        </div>
+
                         <div className="mt-3 grid grid-cols-2 gap-3">
                           <div>
                             <label className="text-xs font-black uppercase text-slate-500">
@@ -1051,6 +1072,39 @@ export function AdminScreen() {
       {/* ===================== SCORING ===================== */}
       {activeTab === "scoring" ? (
         <Card className="p-4">
+          <div className="mb-4 rounded-2xl border border-line bg-[#f7f6f1] p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="font-black">Post-Round Awards (Voting)</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Players vote for fun superlatives after finishing a round.
+                  {trip.isPro
+                    ? " Turn off if you'd rather skip voting this trip."
+                    : " This is a Pro feature."}
+                </p>
+              </div>
+              {trip.isPro ? (
+                <button
+                  onClick={() => setVotingEnabled(!votingEnabled)}
+                  aria-label="Toggle voting"
+                  className={`mt-1 h-7 w-12 shrink-0 rounded-full p-1 transition-colors ${
+                    votingEnabled ? "bg-mint" : "bg-slate-300"
+                  }`}
+                >
+                  <span
+                    className={`block h-5 w-5 rounded-full bg-white transition-transform ${
+                      votingEnabled ? "translate-x-5" : ""
+                    }`}
+                  />
+                </button>
+              ) : (
+                <span className="mt-1 shrink-0 rounded-full bg-accent/20 px-2.5 py-1 text-[11px] font-black uppercase text-[#a07a06]">
+                  Pro
+                </span>
+              )}
+            </div>
+          </div>
+
           <h2 className="font-black">Scoring Settings</h2>
           <p className="mt-1 text-sm text-slate-500">
             Handicap allowances by format. Best Ball uses manual result entry.
