@@ -46,8 +46,13 @@ export function AddScoreScreen() {
   );
   const selectablePlayers = canManage ? players : myPlayers;
 
+  const ownPlayer = players.find(
+    (player) => player.accountId && player.accountId === user?.id
+  );
   const [roundId, setRoundId] = useState(currentRoundId || rounds[0]?.id || "");
-  const [playerId, setPlayerId] = useState(selectablePlayers[0]?.id || "");
+  const [playerId, setPlayerId] = useState(
+    ownPlayer?.id || selectablePlayers[0]?.id || ""
+  );
   // Inputs are "dirty" only once the user types. Until then we show whatever
   // is already saved, so the front nine appears automatically when you return.
   const [frontInput, setFrontInput] = useState("");
@@ -65,9 +70,9 @@ export function AddScoreScreen() {
       selectablePlayers.length > 0 &&
       !selectablePlayers.some((player) => player.id === playerId)
     ) {
-      setPlayerId(selectablePlayers[0].id);
+      setPlayerId(ownPlayer?.id ?? selectablePlayers[0].id);
     }
-  }, [selectablePlayers, playerId]);
+  }, [selectablePlayers, playerId, ownPlayer]);
 
   // When the round or player changes, drop any typed-over state so the fields
   // fall back to showing the saved values for the new selection.
@@ -422,6 +427,12 @@ export function AddScoreScreen() {
             {selectedPlayer.name}
           </div>
         )}
+
+        {canManage && user?.id && selectedPlayer.accountId !== user.id ? (
+          <div className="mt-2 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm font-semibold text-blue-900">
+            You&apos;re entering a score for {selectedPlayer.name}, not yourself.
+          </div>
+        ) : null}
 
         {existingScore ? (
           <div className="mt-4 rounded-xl bg-[#f3efe6] p-3 text-sm text-slate-600">
