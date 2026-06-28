@@ -22,6 +22,7 @@ type LastSavedScore = {
 
 export function AddScoreScreen() {
   const {
+    trip,
     courses,
     players,
     rounds,
@@ -92,6 +93,22 @@ export function AddScoreScreen() {
   const selectedRound =
     rounds.find((round) => round.id === roundId) ?? rounds[0];
   if (!selectedRound) return null;
+
+  // Whole-trip lock once the tournament has ended.
+  if (trip.wrappedAt) {
+    return (
+      <div className="space-y-4">
+        <SectionHeader title="Log Round" subtitle="This tournament has ended." />
+        <Card className="p-6 text-center">
+          <div className="text-3xl">🔒</div>
+          <p className="mt-2 font-black text-ink">Tournament ended</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Scores are locked. The owner can reopen the tournament from Admin.
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   // Score entry is gated by the round lifecycle: the organizer must open the
   // round, and a finished round is locked.

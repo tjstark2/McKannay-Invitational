@@ -36,6 +36,7 @@ export type TripRow = {
   default_format: string | null;
   roster_size: number | null;
   is_pro: boolean | null;
+  wrapped_at?: string | null;
   header_background: string | null;
 };
 
@@ -143,6 +144,7 @@ export function mapTrip(row: TripRow): Trip {
     defaultFormat: row.default_format ?? null,
     rosterSize: Number(row.roster_size ?? 0),
     isPro: Boolean(row.is_pro ?? false),
+    wrappedAt: row.wrapped_at ?? null,
     headerBackground: row.header_background ?? null,
   };
 }

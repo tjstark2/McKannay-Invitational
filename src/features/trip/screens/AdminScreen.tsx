@@ -4,6 +4,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useTripState } from "@/features/trip/state/TripStateContext";
+import { useViewer } from "@/features/trip/state/ViewerContext";
 import { BackgroundsAdmin } from "@/features/trip/screens/admin/BackgroundsAdmin";
 import { ProUpgradeAdmin } from "@/features/trip/screens/admin/ProUpgradeAdmin";
 import type { Round, TeamId, Winner } from "@/types";
@@ -69,11 +70,15 @@ export function AdminScreen() {
     setTeeTimePlayers,
     votingEnabled,
     setVotingEnabled,
+    endTournament,
+    reopenTournament,
     saving,
     saveError,
     saveTick,
     activeJoinCode,
   } = useTripState();
+  const { isOwner } = useViewer();
+  const [endConfirm, setEndConfirm] = useState(false);
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<AdminTab>("setup");
@@ -1103,6 +1108,58 @@ export function AdminScreen() {
                 </span>
               )}
             </div>
+          </div>
+
+          <div className="mb-4 rounded-2xl border border-line bg-[#f7f6f1] p-4">
+            <h2 className="font-black">Tournament status</h2>
+            {trip.wrappedAt ? (
+              <>
+                <p className="mt-1 text-sm text-slate-500">
+                  This tournament has ended and is locked. Only the owner can
+                  reopen it for edits.
+                </p>
+                {isOwner ? (
+                  <button
+                    onClick={reopenTournament}
+                    className="mt-3 rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-black text-fairway-900"
+                  >
+                    Reopen tournament
+                  </button>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <p className="mt-1 text-sm text-slate-500">
+                  Ending the tournament locks all scores and reveals the Wrapped.
+                </p>
+                {endConfirm ? (
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => setEndConfirm(false)}
+                      className="flex-1 rounded-xl border border-line bg-white py-2.5 text-sm font-black text-slate-600"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        endTournament();
+                        setEndConfirm(false);
+                      }}
+                      className="flex-1 rounded-xl bg-[#b3261e] py-2.5 text-sm font-black text-white"
+                    >
+                      End tournament
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setEndConfirm(true)}
+                    className="mt-3 rounded-xl border-2 border-[#b3261e] bg-[#b3261e]/10 px-4 py-2.5 text-sm font-black text-[#b3261e]"
+                  >
+                    End tournament
+                  </button>
+                )}
+              </>
+            )}
           </div>
 
           <h2 className="font-black">Scoring Settings</h2>

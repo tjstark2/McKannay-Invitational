@@ -241,4 +241,5 @@ export const initialTripState: TripState = {
   currentRoundId: "round-1",
   votingEnabled: true,
   votes: [],
+  seenRounds: [],
 };

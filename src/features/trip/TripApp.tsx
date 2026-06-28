@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { RoundTodayBanner } from "@/features/trip/components/RoundTodayBanner";
-import { VotingGate } from "@/features/voting/VotingGate";
+import { PostRoundGate } from "@/features/voting/PostRoundGate";
+import { WrappedBanner } from "@/features/voting/WrappedBanner";
 import { AddScoreScreen } from "@/features/trip/screens/AddScoreScreen";
 import { AdminScreen } from "@/features/trip/screens/AdminScreen";
 import { BottomNav } from "@/features/trip/components/BottomNav";
@@ -235,7 +236,8 @@ function TripAppInner() {
         </div>
         <TopHero activeScreen={activeScreen} setActiveScreen={goToScreen} />
         <RoundTodayBanner />
-        <VotingGate />
+        <WrappedBanner />
+        <PostRoundGate />
 
         <main className="px-5 py-6">
           {activeScreen === "overview" ? (

@@ -43,6 +43,7 @@ export type Trip = {
   defaultFormat: string | null;
   rosterSize: number;
   isPro: boolean;
+  wrappedAt?: string | null;
   headerBackground: string | null;
 };
 
@@ -182,6 +183,7 @@ export type TripState = {
   currentRoundId: string;
   votingEnabled: boolean; // owner/admin toggle (effective only on Pro trips)
   votes: Vote[];
+  seenRounds: string[]; // round ids whose results this user has already seen
 };
 export type TripPhoto = {
   id: string;

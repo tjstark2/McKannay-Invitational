@@ -29,11 +29,12 @@ export function RoundLifecycleButton({
   round: Round;
   compact?: boolean;
 }) {
-  const { players, scores, updateRound } = useTripState();
+  const { players, scores, updateRound, trip } = useTripState();
   const { canManage } = useViewer();
   const [confirm, setConfirm] = useState<null | "start" | "finish">(null);
 
   if (!canManage) return null;
+  if (trip.wrappedAt) return null; // tournament locked
   const life = roundLifecycle(round);
 
   const missing = unscoredPlayers(round, players, scores);

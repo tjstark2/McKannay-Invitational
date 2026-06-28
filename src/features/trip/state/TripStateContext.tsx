@@ -40,6 +40,7 @@ import {
   castVoteRow,
   persistVotingEnabled,
   stampFirstScoreAt,
+  markRoundSeenRow,
 } from "@/lib/supabase/queries";
 import type {
   Match,
@@ -90,6 +91,9 @@ type TripStateContextValue = TripState & {
     voterAccount: string;
   }) => void;
   setVotingEnabled: (enabled: boolean) => void;
+  markRoundSeen: (roundId: string, accountId: string) => void;
+  endTournament: () => void;
+  reopenTournament: () => void;
   upsertGroupScore: (input: {
     matchId: string;
     side: "A" | "B";
@@ -671,6 +675,32 @@ export function TripStateProvider({
       setVotingEnabled: (enabled) => {
         setState((current) => ({ ...current, votingEnabled: enabled }));
         persist((s) => persistVotingEnabled(s, tripId, enabled));
+      },
+
+      markRoundSeen: (roundId, accountId) => {
+        setState((current) =>
+          current.seenRounds.includes(roundId)
+            ? current
+            : { ...current, seenRounds: [...current.seenRounds, roundId] }
+        );
+        persist((s) => markRoundSeenRow(s, accountId, roundId));
+      },
+
+      endTournament: () => {
+        const nowISO = new Date().toISOString();
+        setState((current) => ({
+          ...current,
+          trip: { ...current.trip, wrappedAt: nowISO },
+        }));
+        persist((s) => persistTripUpdates(s, tripId, { wrappedAt: nowISO }));
+      },
+
+      reopenTournament: () => {
+        setState((current) => ({
+          ...current,
+          trip: { ...current.trip, wrappedAt: null },
+        }));
+        persist((s) => persistTripUpdates(s, tripId, { wrappedAt: null }));
       },
 
       upsertGroupScore: (input) => {

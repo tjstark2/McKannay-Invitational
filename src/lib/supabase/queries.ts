@@ -280,6 +280,7 @@ export async function loadTripState(
     roundsResult,
     awardConfigResult,
     votesResult,
+    seenResult,
   ] = await Promise.all([
     supabase.from("scoring_settings").select("*").eq("trip_id", tripId).maybeSingle(),
     supabase.from("teams").select("*").eq("trip_id", tripId),
@@ -301,6 +302,7 @@ export async function loadTripState(
       .from("round_votes")
       .select("round_id, award_key, voter_account, nominee_player")
       .eq("trip_id", tripId),
+    supabase.from("round_vote_seen").select("round_id"),
   ]);
 
   throwIf(teamsResult.error, "load teams");
@@ -451,6 +453,10 @@ export async function loadTripState(
     })
   );
 
+  const seenRounds = ((seenResult.data ?? []) as { round_id: string }[]).map(
+    (r) => r.round_id
+  );
+
   return {
     state: {
       trip,
@@ -465,6 +471,7 @@ export async function loadTripState(
       currentRoundId,
       votingEnabled,
       votes,
+      seenRounds,
     },
     teamDbIds,
   };
@@ -523,6 +530,20 @@ export async function stampFirstScoreAt(
   throwIf(error, "stamp first score");
 }
 
+export async function markRoundSeenRow(
+  supabase: SupabaseClient,
+  accountId: string,
+  roundId: string
+) {
+  const { error } = await supabase
+    .from("round_vote_seen")
+    .upsert(
+      { account_id: accountId, round_id: roundId },
+      { onConflict: "account_id,round_id" }
+    );
+  throwIf(error, "mark round seen");
+}
+
 
 export async function persistTripUpdates(
   supabase: SupabaseClient,
@@ -548,6 +569,7 @@ export async function persistTripUpdates(
     row.is_pro = updates.isPro;
     if (updates.isPro) row.pro_since = new Date().toISOString();
   }
+  if (updates.wrappedAt !== undefined) row.wrapped_at = updates.wrappedAt;
 
   if (Object.keys(row).length === 0) return;
   const { error } = await supabase.from("trips").update(row).eq("id", tripId);
