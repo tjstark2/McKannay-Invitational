@@ -11,8 +11,6 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { GroupedRoundEntry } from "@/features/trip/screens/GroupedRoundEntry";
 import { roundLifecycle } from "@/features/trip/roundLifecycle";
 import { RoundLifecycleButton } from "@/features/trip/components/RoundLifecycleButton";
-import { VotingModal } from "@/features/voting/VotingModal";
-import type { Round } from "@/types/domain";
 
 type LastSavedScore = {
   playerName: string;
@@ -24,7 +22,6 @@ type LastSavedScore = {
 
 export function AddScoreScreen() {
   const {
-    trip,
     courses,
     players,
     rounds,
@@ -32,13 +29,9 @@ export function AddScoreScreen() {
     scoringSettings,
     currentRoundId,
     upsertScore,
-    votingEnabled,
   } = useTripState();
   const { canManage } = useViewer();
   const { user } = useAuth();
-
-  const [votingForRound, setVotingForRound] = useState<Round | null>(null);
-  const [voterPlayerId, setVoterPlayerId] = useState<string | null>(null);
 
   // Members may only log for the player linked to their own account.
   const myPlayers = players.filter(
@@ -284,22 +277,6 @@ export function AddScoreScreen() {
       savedType: finalGross != null ? "final" : "front",
     });
 
-    // Post-round voting: when you submit YOUR OWN final score on a Pro trip
-    // with voting enabled, offer the superlative ballot for that round.
-    const isOwnFinal =
-      finalGross != null &&
-      user?.id &&
-      selectedPlayer.accountId === user.id;
-    const votingEligible =
-      trip.isPro &&
-      votingEnabled &&
-      roundLifecycle(selectedRound) !== "finished" &&
-      players.length > 1;
-    if (isOwnFinal && votingEligible) {
-      setVoterPlayerId(selectedPlayer.id);
-      setVotingForRound(selectedRound);
-    }
-
     // Fall back to showing the freshly saved values.
     setFrontInput("");
     setGrossInput("");
@@ -342,14 +319,6 @@ export function AddScoreScreen() {
 
   return (
     <div className="space-y-4">
-      {votingForRound && user?.id ? (
-        <VotingModal
-          round={votingForRound}
-          voterAccount={user.id}
-          voterPlayerId={voterPlayerId}
-          onClose={() => setVotingForRound(null)}
-        />
-      ) : null}
       <div className="relative pr-28">
         <ScreenHeader
           img="/brand/tee-it-up.png"
