@@ -125,6 +125,15 @@ function staggerTee(index: number): string {
   return to12h(`${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`);
 }
 
+// Tee-time inputs are free text now (so we can show "8:00 AM" samples). Keep
+// what the user typed, convert 24h "HH:MM" if that's what they entered, and
+// fall back to a staggered sample when blank.
+function normTee(raw: string, index: number): string {
+  const s = (raw || "").trim();
+  if (!s) return staggerTee(index);
+  return to12h(s) || s;
+}
+
 export default function CreatePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -261,9 +270,11 @@ export default function CreatePage() {
 
   const step1Valid = name.trim() && joinCode.trim();
   const step2Valid = stateAbbr.trim() && location.trim();
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const minStartStr = new Date(Date.now() - 6 * 86400000)
+    .toISOString()
+    .slice(0, 10);
   const step3Valid = Boolean(
-    startDate && endDate && startDate >= todayStr && endDate >= startDate
+    startDate && endDate && startDate >= minStartStr && endDate >= startDate
   );
   const step4Valid = teamAName.trim() && teamBName.trim();
   const step5Valid = roster >= 2 && (roster % 2 === 0 || oddConfirm);
@@ -342,7 +353,7 @@ export default function CreatePage() {
         for (const r of rounds) {
           n += 1;
           const p = presetById(r.presetId);
-          const teeTimes = r.teeTimes.map((t, idx) => to12h(t) || staggerTee(idx));
+          const teeTimes = r.teeTimes.map((t, idx) => normTee(t, idx));
           const arrival = to12h(r.arrival) || teeTimes[0] || staggerTee(0);
           const roundId = await insertRound(supabase, tripId, {
             roundNumber: n,
@@ -548,14 +559,15 @@ export default function CreatePage() {
             <StepHead n="3" title="When's the trip?" />
             <div className="mt-4 space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                <Field label="From"><input className={inp} type="date" min={todayStr} value={startDate} onChange={(e) => setStartDate(e.target.value)} /></Field>
-                <Field label="To"><input className={inp} type="date" min={startDate || todayStr} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></Field>
+                <Field label="From"><input className={inp} type="date" min={minStartStr} value={startDate} onChange={(e) => setStartDate(e.target.value)} /></Field>
+                <Field label="To"><input className={inp} type="date" min={startDate || minStartStr} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></Field>
               </div>
-              {startDate && startDate < todayStr ? (
-                <p className="text-[13px] font-bold text-red-600">Start date can&apos;t be in the past.</p>
+              {startDate && startDate < minStartStr ? (
+                <p className="text-[13px] font-bold text-red-600">Start date can&apos;t be more than 6 days ago.</p>
               ) : startDate && endDate && endDate < startDate ? (
                 <p className="text-[13px] font-bold text-red-600">End date must be on or after the start date.</p>
               ) : null}
+              <p className="text-[12px] text-slate-400">Already teed off? You can start a tournament up to 6 days after it began.</p>
             </div>
             <NavRow onBack={() => setStep(2)} onNext={() => setStep(4)} nextDisabled={!step3Valid} />
           </div>
@@ -644,7 +656,7 @@ export default function CreatePage() {
                     <input className="rounded-xl border-[1.5px] border-sand-200 px-3 py-2 text-sm outline-none focus:border-fairway-900" inputMode="decimal" value={c.rating ?? ""} onChange={(e) => setCourses((p) => p.map((x, j) => (j === i ? { ...x, rating: e.target.value.replace(/[^0-9.]/g, "").slice(0, 5) } : x)))} placeholder="Rating (e.g. 72.3)" />
                     <input className="rounded-xl border-[1.5px] border-sand-200 px-3 py-2 text-sm outline-none focus:border-fairway-900" inputMode="numeric" value={c.slope ?? ""} onChange={(e) => setCourses((p) => p.map((x, j) => (j === i ? { ...x, slope: e.target.value.replace(/[^0-9]/g, "").slice(0, 3) } : x)))} placeholder="Slope (e.g. 131)" />
                   </div>
-                  <p className="mt-1 text-[11px] text-slate-400">Tees, yardage, rating & slope are optional - add or edit them anytime in Admin.</p>
+                  <p className="mt-1 text-[11px] text-slate-400"><b className="text-slate-500">Rating & Slope are required</b> for net (handicap) scoring to calculate correctly. Tees and yardage are optional. Add or edit any of these later in Admin.</p>
                   <button
                     type="button"
                     onClick={() => setBgPickerIdx(i)}
@@ -713,7 +725,7 @@ export default function CreatePage() {
                           <p className="mb-1.5 text-[11px] text-slate-400">Format is like 8:00 AM. Leave blank and we&apos;ll fill in staggered sample times.</p>
                           <div className="space-y-1.5">
                             {r.teeTimes.map((t, ti) => (
-                              <input key={ti} type="time" className="w-full rounded-lg border-[1.5px] border-sand-200 bg-white px-3 py-2 text-sm outline-none focus:border-fairway-900" value={t} onChange={(e) => setRounds((pr) => pr.map((x, j) => (j === i ? { ...x, teeTimes: x.teeTimes.map((v, k) => (k === ti ? e.target.value : v)) } : x)))} />
+                              <input key={ti} type="text" placeholder={staggerTee(ti)} className="w-full rounded-lg border-[1.5px] border-sand-200 bg-white px-3 py-2 text-sm outline-none focus:border-fairway-900" value={t} onChange={(e) => setRounds((pr) => pr.map((x, j) => (j === i ? { ...x, teeTimes: x.teeTimes.map((v, k) => (k === ti ? e.target.value : v)) } : x)))} />
                             ))}
                           </div>
                         </div>

@@ -21,14 +21,20 @@ export function RoundTodayBanner() {
   if (!canManage) return null;
 
   const ymd = todayYMD();
+  const maxYmd = new Date(Date.now() + 6 * 86400000)
+    .toISOString()
+    .slice(0, 10);
   const due = rounds.find(
     (r) =>
       r.roundDate &&
-      String(r.roundDate).slice(0, 10) === ymd &&
+      String(r.roundDate).slice(0, 10) <= maxYmd &&
       roundLifecycle(r) === "not_started" &&
       !dismissed.includes(r.id)
   );
   if (!due) return null;
+
+  const dueYmd = String(due.roundDate).slice(0, 10);
+  const soon = dueYmd <= ymd;
 
   return (
     <div className="mx-5 mt-4 rounded-2xl border border-accent/40 bg-accent/10 p-4">
@@ -36,10 +42,10 @@ export function RoundTodayBanner() {
         <span className="text-xl">📣</span>
         <div className="flex-1">
           <p className="text-sm font-black text-ink">
-            {due.title} is scheduled today
+            {due.title} {soon ? "is scheduled today" : "is coming up"}
           </p>
           <p className="mt-0.5 text-xs text-slate-600">
-            Open it so players can start entering scores.
+            You can open it now so players can start entering scores.
           </p>
           <div className="mt-3">
             <RoundLifecycleButton round={due} compact />

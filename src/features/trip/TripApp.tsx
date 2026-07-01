@@ -6,8 +6,7 @@ import { PostRoundGate } from "@/features/voting/PostRoundGate";
 import { WrappedBanner } from "@/features/voting/WrappedBanner";
 import { AddScoreScreen } from "@/features/trip/screens/AddScoreScreen";
 import { AdminScreen } from "@/features/trip/screens/AdminScreen";
-import { GuidedTour, buildTourSteps } from "@/features/trip/GuidedTour";
-import { TourHost } from "@/features/trip/tour/spotlight";
+import { TourHost, startSpotlightTour, buildMemberSpotlight, buildAdminSpotlight } from "@/features/trip/tour/spotlight";
 import { BottomNav } from "@/features/trip/components/BottomNav";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { CourseDetailScreen } from "@/features/trip/screens/CourseDetailScreen";
@@ -63,36 +62,46 @@ function TripAppInner() {
   const [selectedCourseId, setSelectedCourseId] = useState(courses[0]?.id ?? "");
   const [selectedTeamId, setSelectedTeamId] = useState<TeamId>("A");
   const [selectedMatchId, setSelectedMatchId] = useState(matches[0]?.id ?? "");
-  const [tourOn, setTourOn] = useState(false);
-
-  // Owners get the cross-route spotlight tour (home -> manage -> admin) driven
-  // by TourHost. Members get this one-time card walkthrough inside the tourney.
+  // Owners get the cross-route spotlight tour (started from create). Admins get
+  // an admin-flavored spotlight; everyone else gets the player walkthrough. Once
+  // per person per tournament.
   useEffect(() => {
     if (loading || !trip?.id || isOwner) return;
     try {
-      if (!localStorage.getItem(`tb_tour_v2_${trip.id}_member`)) setTourOn(true);
+      const key = `tb_tour_v3_${trip.id}_member`;
+      if (!localStorage.getItem(key)) {
+        localStorage.setItem(key, "1");
+        startSpotlightTour(
+          canManage
+            ? buildAdminSpotlight(trip.joinCode, Boolean(trip.isPro))
+            : buildMemberSpotlight(trip.joinCode, Boolean(trip.isPro))
+        );
+      }
     } catch {
       /* storage unavailable */
     }
-  }, [loading, trip?.id, isOwner]);
+  }, [loading, trip?.id, isOwner, canManage]);
 
-  const closeTour = () => {
-    setTourOn(false);
-    try {
-      localStorage.setItem(`tb_tour_v2_${trip.id}_member`, "1");
-    } catch {
-      /* ignore */
-    }
-  };
-
-  // The spotlight tour asks us to switch to a given in-app screen (e.g. Admin).
+  // The spotlight tour can switch the in-app screen (e.g. Admin) and the
+  // tournament sub-tab (Schedule / Leaders / ...).
   useEffect(() => {
-    const h = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (typeof detail === "string") setActiveScreen(detail as Screen);
+    const onScreen = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      if (typeof d === "string") setActiveScreen(d as Screen);
     };
-    window.addEventListener("tb-tour-appscreen", h);
-    return () => window.removeEventListener("tb-tour-appscreen", h);
+    const onTab = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      if (typeof d === "string") {
+        setActiveScreen("tournament" as Screen);
+        setTournamentTab(d as TournamentTab);
+      }
+    };
+    window.addEventListener("tb-tour-appscreen", onScreen);
+    window.addEventListener("tb-tour-tourneytab", onTab);
+    return () => {
+      window.removeEventListener("tb-tour-appscreen", onScreen);
+      window.removeEventListener("tb-tour-tourneytab", onTab);
+    };
   }, []);
   const [tournamentTab, setTournamentTab] =
     useState<TournamentTab>("scoreboard");
@@ -272,32 +281,6 @@ function TripAppInner() {
         <WrappedBanner />
         <PostRoundGate />
         <TourHost />
-        {tourOn ? (
-          <GuidedTour
-            steps={buildTourSteps({
-              phase: "member",
-              isOwner,
-              isPro: Boolean(trip.isPro),
-              trip,
-              players,
-              teams,
-              rounds,
-              navigate: (screen, subtab) => {
-                setActiveScreen(screen as Screen);
-                if (subtab) setTournamentTab(subtab as TournamentTab);
-              },
-              onUpgrade: () => {
-                setActiveScreen("admin" as Screen);
-                closeTour();
-              },
-            })}
-            onClose={closeTour}
-            onUpgrade={() => {
-              setActiveScreen("admin" as Screen);
-              closeTour();
-            }}
-          />
-        ) : null}
 
         <main className="px-5 py-6">
           {activeScreen === "overview" ? (
@@ -323,6 +306,7 @@ function TripAppInner() {
                 ].map((tab) => (
                   <button
                     key={tab.id}
+                    data-tour={`tab-${tab.id}`}
                     onClick={() => setTournamentTab(tab.id as TournamentTab)}
                     className={`rounded-xl px-3 py-2 text-sm font-extrabold transition ${
                       tournamentTab === tab.id
