@@ -18,13 +18,15 @@ export function SignUpForm() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [marketingOptIn, setMarketingOptIn] = useState(false);
+  const [marketingOptIn, setMarketingOptIn] = useState(true);
   const [smsOptIn, setSmsOptIn] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
 
   const usernameStatus = useUsernameCheck(username);
+
+  const phoneValid = /^\d{3}-\d{3}-\d{4}$/.test(phone);
 
   const canSubmit =
     firstName.trim() &&
@@ -33,7 +35,7 @@ export function SignUpForm() {
     city.trim() &&
     stateAbbr.trim() &&
     email.trim() &&
-    phone.trim() &&
+    phoneValid &&
     password.length >= 8 &&
     !busy;
 
@@ -154,11 +156,17 @@ export function SignUpForm() {
           <input
             className={inputClass}
             type="tel"
+            inputMode="numeric"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="(555) 123-4567"
+            onChange={(e) => setPhone(formatPhone(e.target.value))}
+            placeholder="123-456-7890"
             autoComplete="tel"
           />
+          {phone && !phoneValid ? (
+            <p className="mt-1 text-xs font-bold text-red-600">
+              Enter a 10-digit phone number.
+            </p>
+          ) : null}
         </Field>
         <Field label="Password" hint="At least 8 characters">
           <input
@@ -227,6 +235,14 @@ export function SignUpForm() {
 
 const inputClass =
   "w-full rounded-2xl border-[1.5px] border-sand-200 bg-white px-4 py-3.5 text-base outline-none focus:border-fairway-900";
+
+// Digits only, auto-inserting dashes as the user types: ###-###-####
+function formatPhone(v: string) {
+  const d = v.replace(/\D/g, "").slice(0, 10);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0, 3)}-${d.slice(3)}`;
+  return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+}
 
 function Field({
   label,

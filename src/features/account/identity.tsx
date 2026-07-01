@@ -70,6 +70,7 @@ export function StateSelect({
 }) {
   const [text, setText] = useState(value || "");
   const [open, setOpen] = useState(false);
+  const [touched, setTouched] = useState(false);
 
   useEffect(() => {
     setText(value || "");
@@ -92,11 +93,25 @@ export function StateSelect({
         value={text}
         placeholder="State"
         onChange={(e) => {
-          setText(e.target.value);
-          onChange("");
+          const v = e.target.value;
+          setText(v);
           setOpen(true);
+          const exact = US_STATES.find(
+            (s) =>
+              s.abbr.toLowerCase() === v.trim().toLowerCase() ||
+              s.name.toLowerCase() === v.trim().toLowerCase()
+          );
+          onChange(exact ? exact.abbr : "");
+          if (exact) {
+            setText(exact.abbr);
+            setOpen(false);
+          }
         }}
-        onFocus={() => setOpen(true)}
+        onFocus={() => {
+          setOpen(true);
+          setTouched(false);
+        }}
+        onBlur={() => setTimeout(() => setTouched(true), 150)}
       />
       {open ? (
         <>
@@ -123,6 +138,11 @@ export function StateSelect({
             )}
           </div>
         </>
+      ) : null}
+      {touched && !value && text.trim() ? (
+        <p className="mt-1 text-xs font-bold text-red-600">
+          Pick a state from the list.
+        </p>
       ) : null}
     </div>
   );
