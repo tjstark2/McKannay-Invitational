@@ -20,8 +20,8 @@ export type SignUpInput = {
   email: string;
   phone: string;
   password: string;
-  tournamentUpdatesOptIn: boolean;
   marketingOptIn: boolean;
+  smsOptIn: boolean;
 };
 
 type AuthResult = {
@@ -98,8 +98,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             city: input.city.trim(),
             state: input.state.trim().toUpperCase(),
             phone: input.phone.trim(),
-            tournament_updates_opt_in: input.tournamentUpdatesOptIn,
             marketing_opt_in: input.marketingOptIn,
+            sms_opt_in: input.smsOptIn,
           },
         },
       });
