@@ -23,6 +23,7 @@ export type TripRow = {
   id: string;
   name: string;
   location: string | null;
+  state?: string | null;
   dates: string | null;
   join_code: string;
   series_id: string | null;
@@ -69,6 +70,7 @@ export type CourseRow = {
   id: string;
   name: string;
   location: string | null;
+  state?: string | null;
   address: string | null;
   par: number | null;
   course_rating: number | null;
@@ -132,6 +134,7 @@ export function mapTrip(row: TripRow): Trip {
     id: row.id,
     name: row.name,
     location: row.location ?? "",
+    state: row.state ?? "",
     dates: row.dates ?? "",
     joinCode: row.join_code,
     seriesId: row.series_id ?? null,

@@ -31,6 +31,7 @@ export type Trip = {
   id: string;
   name: string;
   location: string;
+  state: string;
   dates: string;
   joinCode: string;
   seriesId: string | null;

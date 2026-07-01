@@ -7,11 +7,11 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { createTrip, insertCourse, insertRound, insertTeeTime, tripExists } from "@/lib/supabase/queries";
 import { AuthShell } from "@/features/auth/AuthShell";
-import { ProUpsell } from "@/features/trip/components/ProUpsell";
 import { ImagePlus } from "lucide-react";
 import { BackgroundPicker } from "@/features/trip/components/BackgroundPicker";
 import { STOCK_BACKGROUNDS } from "@/lib/backgrounds";
 import { setHeaderBackground } from "@/lib/supabase/backgrounds";
+import { StateSelect } from "@/features/account/identity";
 
 type FmtOpt = {
   id: string;
@@ -38,6 +38,22 @@ type RoundDraft = { presetId: string; courseIdx: number; arrival: string; teeTim
 
 function teeCountFor(roster: number, teePer: number) {
   return Math.max(1, Math.ceil((roster || 4) / teePer));
+}
+
+// Build a friendly display string from two yyyy-mm-dd values, e.g. "Sep 10 - 13, 2026".
+function formatDateRange(from: string, to: string): string {
+  if (!from) return "";
+  const f = new Date(from + "T00:00:00");
+  const t = to ? new Date(to + "T00:00:00") : f;
+  const mon = (d: Date) => d.toLocaleDateString("en-US", { month: "short" });
+  const yr = t.getFullYear();
+  if (f.getTime() === t.getTime()) {
+    return `${mon(f)} ${f.getDate()}, ${yr}`;
+  }
+  if (f.getMonth() === t.getMonth() && f.getFullYear() === t.getFullYear()) {
+    return `${mon(f)} ${f.getDate()} - ${t.getDate()}, ${yr}`;
+  }
+  return `${mon(f)} ${f.getDate()} - ${mon(t)} ${t.getDate()}, ${yr}`;
 }
 
 export default function CreatePage() {
@@ -74,8 +90,14 @@ export default function CreatePage() {
   }
   const [name, setName] = useState("");
   const [joinCode, setJoinCode] = useState("");
+  const [wantsPro, setWantsPro] = useState(true);
   const [location, setLocation] = useState("");
-  const [dates, setDates] = useState("");
+  const [stateAbbr, setStateAbbr] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [oddConfirm, setOddConfirm] = useState(false);
+  const [postStep, setPostStep] = useState<0 | 1>(0);
+  const [upgradedNow, setUpgradedNow] = useState(false);
   const [teamAName, setTeamAName] = useState("Team A");
   const [teamBName, setTeamBName] = useState("Team B");
   const [rosterSize, setRosterSize] = useState("12");
@@ -116,7 +138,18 @@ export default function CreatePage() {
     );
   }
 
-  const basicsValid = name.trim() && joinCode.trim() && teamAName.trim() && teamBName.trim();
+  const basicsValid =
+    name.trim() &&
+    joinCode.trim() &&
+    teamAName.trim() &&
+    teamBName.trim() &&
+    stateAbbr.trim() &&
+    location.trim() &&
+    startDate &&
+    endDate &&
+    endDate >= startDate &&
+    roster >= 2 &&
+    (roster % 2 === 0 || oddConfirm);
 
   async function finish() {
     if (!user) return;
@@ -128,12 +161,16 @@ export default function CreatePage() {
     setBusy(true);
     setError(null);
     const code = joinCode.trim().toUpperCase();
+    const displayDates = formatDateRange(startDate, endDate);
+    const combinedLocation = [location.trim(), stateAbbr.trim()]
+      .filter(Boolean)
+      .join(", ");
     try {
       const created = await createTrip(supabase, {
         name,
         joinCode: code,
-        location,
-        dates,
+        location: combinedLocation,
+        dates: displayDates,
         teamAName,
         teamBName,
         rosterSize: roster,
@@ -146,6 +183,20 @@ export default function CreatePage() {
         return;
       }
       const tripId = created.tripId;
+
+      // Structured state + the up-front Pro choice (no billing yet - free preview).
+      try {
+        await supabase
+          .from("trips")
+          .update({
+            state: stateAbbr.trim() || null,
+            is_pro: wantsPro,
+            ...(wantsPro ? { pro_since: new Date().toISOString() } : {}),
+          })
+          .eq("id", tripId);
+      } catch {
+        /* non-fatal */
+      }
 
       if (headerBg) {
         try {
@@ -193,19 +244,6 @@ export default function CreatePage() {
     }
   }
 
-  async function upgradeAndContinue() {
-    const supabase = getSupabaseClient();
-    if (supabase && createdTripId) {
-      setUpgrading(true);
-      // No billing yet - this just sets the structural Pro flag (free preview).
-      await supabase
-        .from("trips")
-        .update({ is_pro: true, pro_since: new Date().toISOString() })
-        .eq("id", createdTripId);
-    }
-    if (createdCode) router.push(`/t/${createdCode}`);
-  }
-
   if (loading || !user) {
     return (
       <LoadingScreen />
@@ -213,13 +251,74 @@ export default function CreatePage() {
   }
 
   if (createdCode) {
+    const isPro = wantsPro || upgradedNow;
+    const share = async () => {
+      const text = `Join my tournament "${name}" on TourneyBirdie - code ${createdCode}`;
+      try {
+        if (navigator.share) await navigator.share({ title: "TourneyBirdie", text });
+        else { await navigator.clipboard.writeText(createdCode); }
+      } catch { /* ignore */ }
+    };
+    const upgradeNow = async () => {
+      const supabase = getSupabaseClient();
+      if (supabase && createdTripId) {
+        setUpgrading(true);
+        await supabase.from("trips").update({ is_pro: true, pro_since: new Date().toISOString() }).eq("id", createdTripId);
+        setUpgrading(false);
+      }
+      setUpgradedNow(true);
+    };
     return (
       <AuthShell>
-        <ProUpsell
-          upgrading={upgrading}
-          onUpgrade={upgradeAndContinue}
-          onSkip={() => router.push(`/t/${createdCode}`)}
-        />
+        {postStep === 0 ? (
+          <div className="text-center">
+            <img src="/create-mascot.png" alt="" className="mx-auto h-40 w-auto" />
+            <h1 className="mt-1 text-3xl font-black text-fairway-900">
+              {isPro ? "Pro tournament created! ✨" : "Tournament created! 🎉"}
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">Share this code so players can join.</p>
+            <div className="mx-auto mt-4 rounded-2xl border-2 border-dashed border-accent bg-white p-4">
+              <div className="text-[11px] font-black uppercase tracking-wide text-slate-500">Join code</div>
+              <div className="text-4xl font-black tracking-[4px] text-fairway-900">{createdCode}</div>
+            </div>
+
+            {isPro ? (
+              <div className="mt-4 rounded-2xl border-[1.5px] border-emerald-200 bg-emerald-50 p-4 text-left">
+                <p className="font-black text-emerald-900">✨ Pro is on - you unlocked:</p>
+                <ul className="mt-2 space-y-1.5 text-[13.5px] text-emerald-900">
+                  <li>🏅 Post-round awards &amp; voting (toggle in Admin → Scoring)</li>
+                  <li>🎬 Trip Wrapped auto-generates when you End the tournament</li>
+                  <li>🖼️ Custom round backgrounds + Clubhouse chat &amp; photos</li>
+                </ul>
+                <p className="mt-3 text-[13px] font-bold text-emerald-900">Next: invite players, assign teams, and start Round 1 on the course.</p>
+              </div>
+            ) : (
+              <div className="mt-4 rounded-2xl border-[1.5px] border-amber-200 bg-amber-50 p-4 text-left">
+                <p className="font-black text-amber-900">💡 You&apos;re on Free - Pro would add:</p>
+                <ul className="mt-2 space-y-1.5 text-[13.5px] text-amber-900">
+                  <li>🏅 Post-round awards &amp; voting</li>
+                  <li>🎬 Trip Wrapped shareable recap</li>
+                  <li>🖼️ Custom backgrounds + Clubhouse chat &amp; photos</li>
+                </ul>
+                <button onClick={upgradeNow} disabled={upgrading} className="mt-3 w-full rounded-2xl bg-accent px-4 py-3 font-black text-ink disabled:opacity-50">{upgrading ? "Upgrading…" : "Upgrade to Pro ✨"}</button>
+              </div>
+            )}
+
+            <button onClick={() => setPostStep(1)} className="mt-6 w-full rounded-2xl bg-fairway-900 px-4 py-4 font-black text-white">Next: invite your crew →</button>
+          </div>
+        ) : (
+          <div>
+            <h1 className="text-3xl font-black text-fairway-900">Invite your crew</h1>
+            <p className="mt-1 text-sm text-slate-500">Share the code now, or later - players can also enter it themselves.</p>
+            <div className="mt-4 rounded-2xl border-2 border-dashed border-accent bg-white p-4 text-center">
+              <div className="text-[11px] font-black uppercase tracking-wide text-slate-500">Join code</div>
+              <div className="text-4xl font-black tracking-[4px] text-fairway-900">{createdCode}</div>
+              <button onClick={share} className="mt-3 w-full rounded-2xl border-[1.5px] border-fairway-900 px-4 py-2.5 font-black text-fairway-900">📋 Copy / Share</button>
+            </div>
+            <button onClick={() => router.push(`/t/${createdCode}`)} className="mt-6 w-full rounded-2xl bg-fairway-900 px-4 py-4 font-black text-white">Go to tournament →</button>
+            <button onClick={() => router.push(`/t/${createdCode}`)} className="mt-2 w-full text-center text-sm font-bold text-slate-500">Skip - I&apos;ll invite later</button>
+          </div>
+        )}
       </AuthShell>
     );
   }
@@ -233,7 +332,7 @@ export default function CreatePage() {
           ))}
         </div>
 
-        {step === 0 ? <Intro onNext={() => setStep(1)} onCancel={() => router.push("/home")} /> : null}
+        {step === 0 ? <Paywall wantsPro={wantsPro} setWantsPro={setWantsPro} onNext={() => setStep(1)} onCancel={() => router.push("/home")} /> : null}
 
         {step === 1 ? (
           <div>
@@ -246,18 +345,42 @@ export default function CreatePage() {
                 <input className={inp} value={joinCode} onChange={(e) => { setJoinCode(e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()); setError(null); }} placeholder="MCK2027" autoCapitalize="characters" />
               </Field>
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Location" hint="optional"><input className={inp} value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Hilton Head, SC" /></Field>
-                <Field label="Dates" hint="optional"><input className={inp} value={dates} onChange={(e) => setDates(e.target.value)} placeholder="Sept 10-13" /></Field>
+                <Field label="State"><StateSelect value={stateAbbr} onChange={setStateAbbr} /></Field>
+                <Field label="Location"><input className={inp} value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Hilton Head" /></Field>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="From"><input className={inp} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></Field>
+                <Field label="To"><input className={inp} type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></Field>
+              </div>
+              {startDate && endDate && endDate < startDate ? (
+                <p className="text-[13px] font-bold text-red-600">End date must be on or after the start date.</p>
+              ) : null}
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Team A name"><input className={inp} value={teamAName} onChange={(e) => setTeamAName(e.target.value)} /></Field>
                 <Field label="Team B name"><input className={inp} value={teamBName} onChange={(e) => setTeamBName(e.target.value)} /></Field>
               </div>
               <Field label="Number of players" hint="spots on the roster">
-                <input className={inp} inputMode="numeric" value={rosterSize} onChange={(e) => setRosterSize(e.target.value.replace(/[^0-9]/g, "").slice(0, 3))} placeholder="12" />
-                <p className="mt-1.5 text-[13px] text-slate-400">
-                  Group formats need even teams: 2v2 needs a multiple of 4, 4v4 a multiple of 8. Formats that don&apos;t fit won&apos;t be offered.
-                </p>
+                <input className={inp} inputMode="numeric" value={rosterSize} onChange={(e) => { setRosterSize(e.target.value.replace(/[^0-9]/g, "").slice(0, 3)); setOddConfirm(false); }} placeholder="8" />
+                {roster < 2 ? (
+                  <p className="mt-1.5 text-[13px] font-bold text-red-600">You need at least 2 players to run a tournament.</p>
+                ) : roster % 2 !== 0 ? (
+                  <div className="mt-2 rounded-2xl border-[1.5px] border-amber-300 bg-amber-50 p-3">
+                    <p className="text-sm font-black text-amber-900">⚠︎ That&apos;s an odd number of players.</p>
+                    <ul className="mt-1.5 list-disc pl-5 text-[13px] text-amber-900">
+                      <li>Teams won&apos;t be even - one side plays a person short.</li>
+                      <li>Team scoring can get lopsided; best ball &amp; match play expect pairs.</li>
+                      <li>You&apos;ll likely add a sub/&quot;ghost&quot; player or someone sits a round.</li>
+                    </ul>
+                    <label className="mt-2 flex items-start gap-2 text-[13px] font-bold text-amber-900">
+                      <input type="checkbox" checked={oddConfirm} onChange={(e) => setOddConfirm(e.target.checked)} className="mt-0.5" />
+                      <span>I understand - use an odd number anyway.</span>
+                    </label>
+                  </div>
+                ) : (
+                  <p className="mt-1.5 text-[13px] text-slate-400">
+                    Two even teams. Group formats need more: 2v2 a multiple of 4, 4v4 a multiple of 8 - formats that don&apos;t fit won&apos;t be offered.
+                  </p>
+                )}
               </Field>
             </div>
             {error ? (
@@ -365,7 +488,7 @@ export default function CreatePage() {
                           </div>
                           <div className="space-y-1.5">
                             {r.teeTimes.map((t, ti) => (
-                              <input key={ti} className="w-full rounded-lg border-[1.5px] border-sand-200 bg-white px-3 py-2 text-sm outline-none focus:border-fairway-900" value={t} onChange={(e) => setRounds((pr) => pr.map((x, j) => (j === i ? { ...x, teeTimes: x.teeTimes.map((v, k) => (k === ti ? e.target.value : v)) } : x)))} placeholder={`Tee time ${ti + 1} (optional)`} />
+                              <input key={ti} type="time" className="w-full rounded-lg border-[1.5px] border-sand-200 bg-white px-3 py-2 text-sm outline-none focus:border-fairway-900" value={t} onChange={(e) => setRounds((pr) => pr.map((x, j) => (j === i ? { ...x, teeTimes: x.teeTimes.map((v, k) => (k === ti ? e.target.value : v)) } : x)))} />
                             ))}
                           </div>
                         </div>
@@ -411,20 +534,53 @@ export default function CreatePage() {
   );
 }
 
-function Intro({ onNext, onCancel }: { onNext: () => void; onCancel: () => void }) {
+function Paywall({
+  wantsPro,
+  setWantsPro,
+  onNext,
+  onCancel,
+}: {
+  wantsPro: boolean;
+  setWantsPro: (v: boolean) => void;
+  onNext: () => void;
+  onCancel: () => void;
+}) {
+  const proFeatures = [
+    { t: "Post-round awards & voting", d: "Sandman, First Beer, Three-Putt - players vote." },
+    { t: "Trip Wrapped", d: "A shareable, downloadable recap at the end." },
+    { t: "Custom round backgrounds", d: "Your own course photos set the vibe." },
+    { t: "Clubhouse chat & photos", d: "A group feed for smack talk and shots." },
+  ];
   return (
-    <div>
-      <StepHead n="1" title="How This Works" />
-      <div className="mt-4 space-y-3 text-sm text-slate-600">
-        <p>A tournament is made up of <strong>rounds</strong>, and each round can have its own <strong>format</strong> - so Day 1 could be a scramble, Day 2 best ball, and so on.</p>
-        <div className="rounded-2xl border-[1.5px] border-sand-200 bg-white p-4"><p className="font-black text-ink">You&apos;ll set up now</p><p className="mt-1">The basics (name, teams, player count), your course(s), and optionally your rounds, formats, and tee times.</p></div>
-        <div className="rounded-2xl border-[1.5px] border-sand-200 bg-white p-4"><p className="font-black text-ink">You&apos;ll handle later</p><p className="mt-1">Players are assigned to teams <strong>after</strong> they join and you approve them. Tee times, courses, and rounds can be adjusted anytime in Admin.</p></div>
-        <p className="text-slate-500">Formats: Casual, Scramble (2v2 / 4v4), and Best Ball (2v2 / 4v4). Group formats turn in one combined score per group and award points to the winning team.</p>
+    <div className="-mx-5 -mt-2 overflow-hidden rounded-b-3xl bg-[radial-gradient(120%_65%_at_50%_0%,#16b57a_0%,#0c8a5c_45%,#075437_100%)] px-5 pb-6 pt-3 text-emerald-50">
+      <img src="/create-mascot.png" alt="TourneyBirdie mascot" className="mx-auto h-52 w-auto drop-shadow-xl" />
+      <h1 className="text-center text-3xl font-black text-white">Run It Like A Pro</h1>
+      <p className="mt-1 text-center text-sm text-emerald-100/80">See what a Pro tournament unlocks.</p>
+
+      <div className="relative mt-4 flex rounded-full bg-black/25 p-1">
+        <span className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-accent transition-all ${wantsPro ? "left-[calc(50%)]" : "left-1"}`} />
+        <button onClick={() => setWantsPro(false)} className={`relative z-10 flex-1 rounded-full py-2.5 text-sm font-black ${wantsPro ? "text-emerald-50" : "text-ink"}`}>Free</button>
+        <button onClick={() => setWantsPro(true)} className={`relative z-10 flex-1 rounded-full py-2.5 text-sm font-black ${wantsPro ? "text-ink" : "text-emerald-50"}`}>Pro ✨</button>
       </div>
-      <div className="mt-6 flex items-center gap-2">
-        <button onClick={onCancel} className="rounded-2xl px-4 py-3 text-sm font-bold text-slate-500">Cancel</button>
-        <button onClick={onNext} className="flex-1 rounded-2xl bg-accent px-4 py-4 font-black text-ink">Get started</button>
+
+      <div className="mt-4 space-y-0">
+        <div className="flex items-start gap-3 border-b border-white/10 py-2.5">
+          <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-accent text-[11px] font-black text-ink">✓</span>
+          <div><b className="text-[14.5px]">Scoring, teams & leaderboard</b><p className="mt-0.5 text-[12.5px] text-emerald-100/75">Always free - the core tournament engine.</p></div>
+        </div>
+        {proFeatures.map((f, i) => (
+          <div key={i} className="flex items-start gap-3 border-b border-white/10 py-2.5 transition-all" style={{ opacity: wantsPro ? 1 : 0.35, transform: wantsPro ? "none" : "translateY(4px)", transitionDelay: `${i * 60}ms` }}>
+            <span className={`mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full text-[11px] font-black ${wantsPro ? "bg-accent text-ink" : "bg-white/15 text-white"}`}>✓</span>
+            <div><b className="text-[14.5px]">{f.t}</b><p className="mt-0.5 text-[12.5px] text-emerald-100/75">{f.d}</p></div>
+          </div>
+        ))}
       </div>
+
+      <p className="mt-3 text-center text-xs text-emerald-100/70">{wantsPro ? "Pro • free while in beta" : "Free • upgrade anytime"}</p>
+      <button onClick={onNext} className={`mt-3 w-full rounded-2xl px-4 py-4 font-black ${wantsPro ? "bg-accent text-ink" : "bg-white text-fairway-900"}`}>
+        {wantsPro ? "Start with Pro ✨" : "Start Free"}
+      </button>
+      <button onClick={onCancel} className="mt-2 w-full text-center text-sm font-bold text-emerald-100/80">Cancel</button>
     </div>
   );
 }

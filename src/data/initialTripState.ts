@@ -14,6 +14,7 @@ export const initialTrip: Trip = {
   id: "mckannay-2026",
   name: "2nd Annual McKannay Invitational",
   location: "Hilton Head, SC",
+  state: "SC",
   dates: "Sept 9-13",
   joinCode: "MCK2026",
   seriesId: null,
