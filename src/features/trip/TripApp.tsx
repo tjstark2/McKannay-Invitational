@@ -6,6 +6,7 @@ import { PostRoundGate } from "@/features/voting/PostRoundGate";
 import { WrappedBanner } from "@/features/voting/WrappedBanner";
 import { AddScoreScreen } from "@/features/trip/screens/AddScoreScreen";
 import { AdminScreen } from "@/features/trip/screens/AdminScreen";
+import { GuidedTour, buildTourSteps } from "@/features/trip/GuidedTour";
 import { BottomNav } from "@/features/trip/components/BottomNav";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { CourseDetailScreen } from "@/features/trip/screens/CourseDetailScreen";
@@ -51,9 +52,9 @@ type TournamentTab =
   | "players";
 
 function TripAppInner() {
-  const { trip, players, courses, matches, loading, error, resetState } =
+  const { trip, players, courses, matches, teams, rounds, loading, error, resetState } =
     useTripState();
-  const { canManage } = useViewer();
+  const { canManage, isOwner } = useViewer();
   const { user } = useAuth();
 
   const [activeScreen, setActiveScreen] = useState<Screen>("overview");
@@ -61,6 +62,32 @@ function TripAppInner() {
   const [selectedCourseId, setSelectedCourseId] = useState(courses[0]?.id ?? "");
   const [selectedTeamId, setSelectedTeamId] = useState<TeamId>("A");
   const [selectedMatchId, setSelectedMatchId] = useState(matches[0]?.id ?? "");
+  const [tourOn, setTourOn] = useState(false);
+
+  // First-run guided tour: owners get the organizer walkthrough, everyone else
+  // gets the player walkthrough. Shown once per person per tournament.
+  useEffect(() => {
+    if (loading || !trip?.id || players.length === 0) return;
+    const key = `tb_tour_v1_${trip.id}_${isOwner ? "owner" : "member"}`;
+    try {
+      if (!localStorage.getItem(key)) setTourOn(true);
+    } catch {
+      /* localStorage unavailable */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, trip?.id, players.length, isOwner]);
+
+  const closeTour = () => {
+    setTourOn(false);
+    try {
+      localStorage.setItem(
+        `tb_tour_v1_${trip.id}_${isOwner ? "owner" : "member"}`,
+        "1"
+      );
+    } catch {
+      /* ignore */
+    }
+  };
   const [tournamentTab, setTournamentTab] =
     useState<TournamentTab>("scoreboard");
   const [clubhouseTab, setClubhouseTab] = useState<ClubhouseTab>("photos");
@@ -238,6 +265,31 @@ function TripAppInner() {
         <RoundTodayBanner />
         <WrappedBanner />
         <PostRoundGate />
+        {tourOn ? (
+          <GuidedTour
+            steps={buildTourSteps({
+              isOwner,
+              isPro: Boolean(trip.isPro),
+              trip,
+              players,
+              teams,
+              rounds,
+              navigate: (screen, subtab) => {
+                setActiveScreen(screen as Screen);
+                if (subtab) setTournamentTab(subtab as TournamentTab);
+              },
+              onUpgrade: () => {
+                setActiveScreen("admin" as Screen);
+                closeTour();
+              },
+            })}
+            onClose={closeTour}
+            onUpgrade={() => {
+              setActiveScreen("admin" as Screen);
+              closeTour();
+            }}
+          />
+        ) : null}
 
         <main className="px-5 py-6">
           {activeScreen === "overview" ? (
