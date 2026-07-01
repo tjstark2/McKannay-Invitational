@@ -64,24 +64,32 @@ function TripAppInner() {
   const [selectedMatchId, setSelectedMatchId] = useState(matches[0]?.id ?? "");
   const [tourOn, setTourOn] = useState(false);
 
-  // First-run guided tour: owners get the organizer walkthrough, everyone else
-  // gets the player walkthrough. Shown once per person per tournament.
+  // First-run guided tour. Owners who just came from the home walkthrough get
+  // the Admin phase (flagged in sessionStorage); otherwise it's a one-time
+  // first-run per person per tournament. No player-count gate - brand-new
+  // tournaments have an empty roster and still need the tour.
   useEffect(() => {
-    if (loading || !trip?.id || players.length === 0) return;
-    const key = `tb_tour_v1_${trip.id}_${isOwner ? "owner" : "member"}`;
+    if (loading || !trip?.id) return;
+    let start = false;
     try {
-      if (!localStorage.getItem(key)) setTourOn(true);
+      if (isOwner && sessionStorage.getItem("tb_tour_admin") === trip.id) {
+        start = true;
+        sessionStorage.removeItem("tb_tour_admin");
+      } else {
+        const key = `tb_tour_v2_${trip.id}_${isOwner ? "owner" : "member"}`;
+        if (!localStorage.getItem(key)) start = true;
+      }
     } catch {
-      /* localStorage unavailable */
+      /* storage unavailable */
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, trip?.id, players.length, isOwner]);
+    if (start) setTourOn(true);
+  }, [loading, trip?.id, isOwner]);
 
   const closeTour = () => {
     setTourOn(false);
     try {
       localStorage.setItem(
-        `tb_tour_v1_${trip.id}_${isOwner ? "owner" : "member"}`,
+        `tb_tour_v2_${trip.id}_${isOwner ? "owner" : "member"}`,
         "1"
       );
     } catch {
@@ -268,6 +276,7 @@ function TripAppInner() {
         {tourOn ? (
           <GuidedTour
             steps={buildTourSteps({
+              phase: isOwner ? "admin" : "member",
               isOwner,
               isPro: Boolean(trip.isPro),
               trip,

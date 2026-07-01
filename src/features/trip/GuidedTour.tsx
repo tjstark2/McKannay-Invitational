@@ -12,8 +12,28 @@ export type TourStep = {
 
 export type TourNavigate = (screen: string, subtab?: string) => void;
 
+// Home-screen phase: only needs the tournament's name (the home screen has
+// trip summaries, not full Trip objects).
+export function buildHomeTourSteps(tripName: string): TourStep[] {
+  return [
+    {
+      title: `"${tripName}" is live! 🎉`,
+      body: `This is your home base. Every tournament you run or join shows up here - tap a card to open it.`,
+    },
+    {
+      title: "Manage members (outside the tournament)",
+      body: `On your tournament's card, "Manage members" is where you approve players who join, invite people, assign teams, and - since you're the owner - delete the tournament if you ever need to.`,
+    },
+    {
+      title: "Let's head inside",
+      body: `Now I'll take you into "${tripName}" and walk you through the Admin controls you'll use to run it.`,
+    },
+  ];
+}
+
 // Build the walkthrough from LIVE tournament data so it reads like the real thing.
 export function buildTourSteps(ctx: {
+  phase: "home" | "admin" | "member";
   isOwner: boolean;
   isPro: boolean;
   trip: Trip;
@@ -23,7 +43,7 @@ export function buildTourSteps(ctx: {
   navigate: TourNavigate;
   onUpgrade: () => void;
 }): TourStep[] {
-  const { isOwner, isPro, trip, players, teams, rounds, navigate } = ctx;
+  const { phase, isOwner, isPro, trip, players, teams, rounds, navigate } = ctx;
   const teamA = teams.find((t) => t.id === "A")?.name ?? "Team A";
   const teamB = teams.find((t) => t.id === "B")?.name ?? "Team B";
   const someone = players[0]?.name ?? "a player";
@@ -39,46 +59,56 @@ export function buildTourSteps(ctx: {
         title: "Unlock more with Pro",
         body: `Upgrade to Pro to add post-round awards & voting, a shareable Trip Wrapped, custom round backgrounds, and Clubhouse chat & photos.`,
         go: () => navigate("admin"),
-        upgrade: isOwner, // only the owner can upgrade
+        upgrade: isOwner,
       };
 
-  if (isOwner) {
+  // PHASE 1 (on the logged-in home screen): orient them to the outside-the-
+  // tournament controls before we dive in.
+  if (phase === "home") {
     return [
       {
-        title: `Welcome, organizer!`,
-        body: `You're running "${trip.name}". Here's a 60-second tour of your controls. Everything you set up now can be changed later.`,
-        go: () => navigate("overview"),
+        title: `"${trip.name}" is live! 🎉`,
+        body: `This is your home base. Every tournament you run or join shows up here - tap a card to open it.`,
       },
       {
-        title: "Your command center: Admin",
-        body: `This Admin area is where you manage everything. You've got ${players.length} player${players.length === 1 ? "" : "s"} so far${players[0] ? ` (like ${someone})` : ""}. As people join with your code, you approve them here.`,
+        title: "Manage members (outside the tournament)",
+        body: `On your tournament's card, "Manage members" is where you approve players who join, invite people, assign teams, and - since you're the owner - delete the tournament if you ever need to.`,
+      },
+      {
+        title: "Let's go inside",
+        body: `Now I'll take you into "${trip.name}" and show you the Admin controls you'll use during the tournament.`,
+      },
+    ];
+  }
+
+  // PHASE 2 (inside the tournament, owner): the Admin controls.
+  if (phase === "admin") {
+    return [
+      {
+        title: "Your Admin controls",
+        body: `You're inside "${trip.name}" now. This Admin area is mission control. You've got ${players.length} player${players.length === 1 ? "" : "s"} so far${players[0] ? ` (like ${someone})` : ""}.`,
         go: () => navigate("admin"),
       },
       {
-        title: "Assign players to teams",
-        body: `Tap a player to set their handicap and put them on ${teamA} or ${teamB}. Even teams keep scoring fair.`,
+        title: "Approve players & assign teams",
+        body: `As people join with your code, approve them here, set handicaps, and put each on ${teamA} or ${teamB}. Even teams keep scoring fair.`,
         go: () => navigate("admin"),
       },
       {
         title: "Share control: make an Admin",
-        body: `Promote a trusted player to Admin and they can edit rounds, enter scores, and manage settings with you. Only you - the owner - can delete the tournament.`,
+        body: `Promote a trusted player to Admin to help run scoring and rounds. Only you - the owner - can delete the tournament.`,
         go: () => navigate("admin"),
       },
       {
         title: "Rounds, courses & tee times",
-        body: `Add each round, pick its course and format, and set tee times. "${roundTitle}" is ready to go - start it when you're on the course.`,
-        go: () => navigate("admin"),
-      },
-      {
-        title: "Delete tournament",
-        body: `At the very bottom of Admin is Delete Tournament. It permanently removes the tournament, scores and all - so it's owner-only and asks you to confirm.`,
+        body: `Add each round, pick its course and format, and set tee times. "${roundTitle}" is ready - start it when you're on the course.`,
         go: () => navigate("admin"),
       },
       proStep,
       {
         title: "You're set!",
-        body: `Invite players with your join code ${trip.joinCode}, assign teams as they join, and start ${roundTitle} on the course. You can reopen this tour anytime from Admin.`,
-        go: () => navigate("overview"),
+        body: `Invite players with join code ${trip.joinCode}, assign teams as they arrive, and start ${roundTitle}. You can find everything again right here in Admin.`,
+        go: () => navigate("admin"),
       },
     ];
   }

@@ -474,7 +474,7 @@ export default function CreatePage() {
               </div>
             ) : null}
 
-            <button onClick={() => router.push(`/t/${createdCode}`)} className="mt-6 w-full rounded-2xl bg-fairway-900 px-4 py-4 font-black text-white">Go to tournament →</button>
+            <button onClick={() => { try { sessionStorage.setItem("tb_tour_home", createdCode); } catch { /* ignore */ } router.push("/home"); }} className="mt-6 w-full rounded-2xl bg-fairway-900 px-4 py-4 font-black text-white">Go to tournament →</button>
           </div>
         )}
       </AuthShell>
