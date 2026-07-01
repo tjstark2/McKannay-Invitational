@@ -200,10 +200,10 @@ function HandicapSetup({
     if (!supabase) return;
     setBusy(true);
     setError(null);
-    const ok = await setMyHandicap(supabase, trip.id, num);
+    const res = await setMyHandicap(supabase, trip.id, num);
     setBusy(false);
-    if (!ok) {
-      setError("Couldn't save your handicap. Try again.");
+    if (!res.ok) {
+      setError(res.error || "Couldn't save your handicap. Try again.");
       return;
     }
     onDone();

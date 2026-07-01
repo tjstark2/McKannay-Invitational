@@ -123,12 +123,12 @@ export async function setMyHandicap(
   supabase: SupabaseClient,
   tripId: string,
   handicap: number
-): Promise<boolean> {
+): Promise<{ ok: boolean; error?: string }> {
   const { error } = await supabase.rpc("set_my_handicap", {
     p_trip: tripId,
     p_hcp: handicap,
   });
-  return !error;
+  return error ? { ok: false, error: error.message } : { ok: true };
 }
 
 async function membersWithProfiles(
