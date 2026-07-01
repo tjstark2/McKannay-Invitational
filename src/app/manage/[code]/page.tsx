@@ -34,6 +34,7 @@ import {
   type RosterPlayer,
 } from "@/lib/supabase/memberships";
 import { handleAndLocation, searchUsers, type PublicProfile } from "@/lib/supabase/friends";
+import { TourHost } from "@/features/trip/tour/spotlight";
 
 export default function ManagePage() {
   const params = useParams();
@@ -399,6 +400,7 @@ export default function ManagePage() {
 
   return (
     <Shell>
+      <TourHost />
       <p className="text-xs font-extrabold uppercase tracking-wide text-accent-dark">
         Manage tournament
       </p>
@@ -409,7 +411,7 @@ export default function ManagePage() {
       </p>
 
       {/* invite by username */}
-      <section className="mt-7">
+      <section data-tour="mng-invite" className="mt-7">
         <h2 className="font-anton text-2xl tracking-tight text-ink">Invite a Player</h2>
         <div className="relative mt-3">
           <div className="flex items-center gap-2 rounded-2xl border border-sand-100 bg-white px-3 py-2">
@@ -496,7 +498,7 @@ export default function ManagePage() {
       </section>
 
       {/* requests */}
-      <section className="mt-8">
+      <section data-tour="mng-requests" className="mt-8">
         <h2 className="flex items-center gap-2 font-anton text-2xl tracking-tight text-ink">
           Join Requests
           {requests.length > 0 ? (
@@ -532,7 +534,7 @@ export default function ManagePage() {
       </section>
 
       {/* roster */}
-      <section className="mt-9">
+      <section data-tour="mng-roster" className="mt-9">
         <div className="flex items-end justify-between gap-3">
           <div>
             <h2 className="font-anton text-2xl tracking-tight text-ink">Roster</h2>
@@ -611,7 +613,7 @@ export default function ManagePage() {
       </section>
 
       {/* team names */}
-      <section className="mt-9">
+      <section data-tour="mng-teams" className="mt-9">
         <h2 className="font-anton text-2xl tracking-tight text-ink">Team Names</h2>
         <div className="mt-3 space-y-2">
           {teams.map((t) => (
@@ -704,7 +706,7 @@ function DangerZone({
   }
 
   return (
-    <section className="mt-12 rounded-2xl border border-red-200 bg-red-50/50 p-5">
+    <section data-tour="mng-delete" className="mt-12 rounded-2xl border border-red-200 bg-red-50/50 p-5">
       <h2 className="text-lg font-black text-red-700">Danger Zone</h2>
       {!open ? (
         <button

@@ -264,6 +264,7 @@ export function AdminScreen() {
         onClick={() =>
           activeJoinCode && router.push(`/manage/${activeJoinCode}`)
         }
+        data-tour="adm-managelink"
         className="flex w-full items-center justify-between rounded-2xl border border-sand-100 bg-white px-4 py-3 text-left"
       >
         <span>
@@ -278,7 +279,7 @@ export function AdminScreen() {
       </button>
 
 
-      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+      <div data-tour="adm-tabs" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -297,7 +298,7 @@ export function AdminScreen() {
       {/* ===================== SETUP ===================== */}
       {activeTab === "setup" ? (
         <>
-          <ProUpgradeAdmin />
+          <div data-tour="adm-pro"><ProUpgradeAdmin /></div>
           <BackgroundsAdmin />
           <Card className="p-4">
             <h2 className="font-black">Trip Setup</h2>

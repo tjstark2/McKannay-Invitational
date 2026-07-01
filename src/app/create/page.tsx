@@ -13,6 +13,7 @@ import { STOCK_BACKGROUNDS } from "@/lib/backgrounds";
 import { setHeaderBackground } from "@/lib/supabase/backgrounds";
 import { StateSelect } from "@/features/account/identity";
 import { loadFriendsData } from "@/lib/supabase/friends";
+import { startSpotlightTour, type SpotStep } from "@/features/trip/tour/spotlight";
 
 type FmtOpt = {
   id: string;
@@ -474,7 +475,24 @@ export default function CreatePage() {
               </div>
             ) : null}
 
-            <button onClick={() => { try { sessionStorage.setItem("tb_tour_home", createdCode); } catch { /* ignore */ } router.push("/home"); }} className="mt-6 w-full rounded-2xl bg-fairway-900 px-4 py-4 font-black text-white">Go to tournament →</button>
+            <button onClick={() => {
+              const mng = `/manage/${createdCode}`;
+              const trn = `/t/${createdCode}`;
+              const steps: SpotStep[] = [
+                { path: "/home", title: `"${name}" is live! 🎉`, body: "This is your home base. I'll walk you through setting it up - first managing members & teams, then running the tournament itself." },
+                { path: mng, anchor: "mng-invite", title: "Invite players", body: "Invite people by username - they'll see it on their dashboard. Players can also join with your code." },
+                { path: mng, anchor: "mng-requests", title: "Approve who joins", body: "Anyone who requests to join shows up here for you to approve or decline." },
+                { path: mng, anchor: "mng-roster", title: "Assign teams", body: "Add players to the roster and put each one on a team right here." },
+                { path: mng, anchor: "mng-teams", title: "Name your teams", body: "Rename your two teams however you like." },
+                { path: mng, anchor: "mng-delete", title: "Delete tournament", body: "The Danger Zone permanently deletes the tournament - owner-only, and it asks you to confirm." },
+                { path: trn, appScreen: "admin", anchor: "adm-managelink", title: "Now, inside the tournament", body: "This is the in-tournament Admin. You can jump back to Manage members & teams anytime from right here." },
+                { path: trn, appScreen: "admin", anchor: "adm-tabs", title: "Rounds & Scoring", body: "Switch tabs: Rounds to add rounds, courses & tee times; Scoring to toggle post-round awards & voting." },
+                { path: trn, appScreen: "admin", anchor: "adm-pro", title: wantsPro ? "Pro is on ✨" : "Unlock more with Pro", body: wantsPro ? "Awards & voting, Trip Wrapped, custom round backgrounds, and the Clubhouse are all unlocked." : "Tap Upgrade to Pro here to add awards & voting, Trip Wrapped, custom backgrounds, and the Clubhouse." },
+                { path: trn, appScreen: "admin", title: "You're all set!", body: `Invite your crew with code ${createdCode} and start Round 1. Everything's reachable from Admin.` },
+              ];
+              startSpotlightTour(steps);
+              router.push("/home");
+            }} className="mt-6 w-full rounded-2xl bg-fairway-900 px-4 py-4 font-black text-white">Go to tournament →</button>
           </div>
         )}
       </AuthShell>

@@ -7,6 +7,7 @@ import { WrappedBanner } from "@/features/voting/WrappedBanner";
 import { AddScoreScreen } from "@/features/trip/screens/AddScoreScreen";
 import { AdminScreen } from "@/features/trip/screens/AdminScreen";
 import { GuidedTour, buildTourSteps } from "@/features/trip/GuidedTour";
+import { TourHost } from "@/features/trip/tour/spotlight";
 import { BottomNav } from "@/features/trip/components/BottomNav";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { CourseDetailScreen } from "@/features/trip/screens/CourseDetailScreen";
@@ -64,38 +65,35 @@ function TripAppInner() {
   const [selectedMatchId, setSelectedMatchId] = useState(matches[0]?.id ?? "");
   const [tourOn, setTourOn] = useState(false);
 
-  // First-run guided tour. Owners who just came from the home walkthrough get
-  // the Admin phase (flagged in sessionStorage); otherwise it's a one-time
-  // first-run per person per tournament. No player-count gate - brand-new
-  // tournaments have an empty roster and still need the tour.
+  // Owners get the cross-route spotlight tour (home -> manage -> admin) driven
+  // by TourHost. Members get this one-time card walkthrough inside the tourney.
   useEffect(() => {
-    if (loading || !trip?.id) return;
-    let start = false;
+    if (loading || !trip?.id || isOwner) return;
     try {
-      if (isOwner && sessionStorage.getItem("tb_tour_admin") === trip.id) {
-        start = true;
-        sessionStorage.removeItem("tb_tour_admin");
-      } else {
-        const key = `tb_tour_v2_${trip.id}_${isOwner ? "owner" : "member"}`;
-        if (!localStorage.getItem(key)) start = true;
-      }
+      if (!localStorage.getItem(`tb_tour_v2_${trip.id}_member`)) setTourOn(true);
     } catch {
       /* storage unavailable */
     }
-    if (start) setTourOn(true);
   }, [loading, trip?.id, isOwner]);
 
   const closeTour = () => {
     setTourOn(false);
     try {
-      localStorage.setItem(
-        `tb_tour_v2_${trip.id}_${isOwner ? "owner" : "member"}`,
-        "1"
-      );
+      localStorage.setItem(`tb_tour_v2_${trip.id}_member`, "1");
     } catch {
       /* ignore */
     }
   };
+
+  // The spotlight tour asks us to switch to a given in-app screen (e.g. Admin).
+  useEffect(() => {
+    const h = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (typeof detail === "string") setActiveScreen(detail as Screen);
+    };
+    window.addEventListener("tb-tour-appscreen", h);
+    return () => window.removeEventListener("tb-tour-appscreen", h);
+  }, []);
   const [tournamentTab, setTournamentTab] =
     useState<TournamentTab>("scoreboard");
   const [clubhouseTab, setClubhouseTab] = useState<ClubhouseTab>("photos");
@@ -273,10 +271,11 @@ function TripAppInner() {
         <RoundTodayBanner />
         <WrappedBanner />
         <PostRoundGate />
+        <TourHost />
         {tourOn ? (
           <GuidedTour
             steps={buildTourSteps({
-              phase: isOwner ? "admin" : "member",
+              phase: "member",
               isOwner,
               isPro: Boolean(trip.isPro),
               trip,

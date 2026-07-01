@@ -21,7 +21,7 @@ import {
   type InvitationItem,
 } from "@/lib/supabase/memberships";
 import { BrandHeaderMark } from "@/features/trip/components/Brand";
-import { GuidedTour, buildHomeTourSteps } from "@/features/trip/GuidedTour";
+import { TourHost } from "@/features/trip/tour/spotlight";
 import { AccountMenu } from "@/features/account/AccountMenu";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -41,28 +41,6 @@ export function AccountHome() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [trips, setTrips] = useState<MyTripSummary[] | null>(null);
-  const [homeTour, setHomeTour] = useState<{ name: string; code: string; id: string } | null>(null);
-
-  // After creating a tournament we land here with a flag. Start the owner
-  // walkthrough on this home screen, then hand off into the tournament's Admin.
-  useEffect(() => {
-    if (!trips) return;
-    let code: string | null = null;
-    try {
-      code = sessionStorage.getItem("tb_tour_home");
-    } catch {
-      /* storage unavailable */
-    }
-    if (!code) return;
-    const t = trips.find((x) => x.joinCode === code);
-    if (!t) return;
-    try {
-      sessionStorage.removeItem("tb_tour_home");
-    } catch {
-      /* ignore */
-    }
-    setHomeTour({ name: t.name, code: t.joinCode, id: t.id });
-  }, [trips]);
   const [pending, setPending] = useState<TripRef[]>([]);
   const [invitations, setInvitations] = useState<InvitationItem[]>([]);
   const [requestCounts, setRequestCounts] = useState<Record<string, number>>({});
@@ -174,22 +152,7 @@ export function AccountHome() {
 
   return (
     <div className="min-h-screen bg-[#f7f6f1]">
-      {homeTour ? (
-        <GuidedTour
-          steps={buildHomeTourSteps(homeTour.name)}
-          onClose={() => {
-            const { id, code } = homeTour;
-            setHomeTour(null);
-            try {
-              sessionStorage.setItem("tb_tour_admin", id);
-            } catch {
-              /* ignore */
-            }
-            router.push(`/t/${code}`);
-          }}
-          onUpgrade={() => {}}
-        />
-      ) : null}
+      <TourHost />
       <header className="relative z-50 border-b border-sand-100 bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3">
           <BrandHeaderMark />
