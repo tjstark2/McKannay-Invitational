@@ -9,6 +9,7 @@ import { usePathname, useRouter } from "next/navigation";
 export type SpotStep = {
   path: string;
   appScreen?: string;
+  adminTab?: string;
   anchor?: string;
   title: string;
   body: string;
@@ -80,6 +81,11 @@ export function TourHost() {
       if (step.appScreen) {
         window.dispatchEvent(
           new CustomEvent("tb-tour-appscreen", { detail: step.appScreen })
+        );
+      }
+      if (step.adminTab) {
+        window.dispatchEvent(
+          new CustomEvent("tb-tour-admintab", { detail: step.adminTab })
         );
       }
     }

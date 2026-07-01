@@ -83,6 +83,16 @@ export function AdminScreen() {
 
   const [activeTab, setActiveTab] = useState<AdminTab>("setup");
 
+  // The guided tour can flip us between Setup / Rounds / Scoring.
+  useEffect(() => {
+    const h = (e: Event) => {
+      const t = (e as CustomEvent).detail;
+      if (t === "setup" || t === "rounds" || t === "scoring") setActiveTab(t);
+    };
+    window.addEventListener("tb-tour-admintab", h);
+    return () => window.removeEventListener("tb-tour-admintab", h);
+  }, []);
+
   const [newPlayerName, setNewPlayerName] = useState("");
   const [newPlayerHandicap, setNewPlayerHandicap] = useState("");
   const [newPlayerTeam, setNewPlayerTeam] = useState<TeamId>("A");
@@ -299,7 +309,7 @@ export function AdminScreen() {
       {activeTab === "setup" ? (
         <>
           <div data-tour="adm-pro"><ProUpgradeAdmin /></div>
-          <BackgroundsAdmin />
+          <div data-tour="adm-backgrounds"><BackgroundsAdmin /></div>
           <Card className="p-4">
             <h2 className="font-black">Trip Setup</h2>
 
@@ -489,7 +499,7 @@ export function AdminScreen() {
       {/* ===================== ROUNDS ===================== */}
       {activeTab === "rounds" ? (
         <>
-          <Card className="p-4">
+          <Card data-tour="adm-rounds" className="p-4">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="font-black">Active Round</h2>
               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-amber-700">
@@ -1077,7 +1087,7 @@ export function AdminScreen() {
 
       {/* ===================== SCORING ===================== */}
       {activeTab === "scoring" ? (
-        <Card className="p-4">
+        <Card data-tour="adm-scoring" className="p-4">
           <div className="mb-4 rounded-2xl border border-line bg-[#f7f6f1] p-4">
             <div className="flex items-start justify-between gap-3">
               <div>

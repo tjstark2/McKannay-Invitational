@@ -479,16 +479,20 @@ export default function CreatePage() {
               const mng = `/manage/${createdCode}`;
               const trn = `/t/${createdCode}`;
               const steps: SpotStep[] = [
-                { path: "/home", title: `"${name}" is live! 🎉`, body: "This is your home base. I'll walk you through setting it up - first managing members & teams, then running the tournament itself." },
-                { path: mng, anchor: "mng-invite", title: "Invite players", body: "Invite people by username - they'll see it on their dashboard. Players can also join with your code." },
-                { path: mng, anchor: "mng-requests", title: "Approve who joins", body: "Anyone who requests to join shows up here for you to approve or decline." },
-                { path: mng, anchor: "mng-roster", title: "Assign teams", body: "Add players to the roster and put each one on a team right here." },
-                { path: mng, anchor: "mng-teams", title: "Name your teams", body: "Rename your two teams however you like." },
-                { path: mng, anchor: "mng-delete", title: "Delete tournament", body: "The Danger Zone permanently deletes the tournament - owner-only, and it asks you to confirm." },
-                { path: trn, appScreen: "admin", anchor: "adm-managelink", title: "Now, inside the tournament", body: "This is the in-tournament Admin. You can jump back to Manage members & teams anytime from right here." },
-                { path: trn, appScreen: "admin", anchor: "adm-tabs", title: "Rounds & Scoring", body: "Switch tabs: Rounds to add rounds, courses & tee times; Scoring to toggle post-round awards & voting." },
-                { path: trn, appScreen: "admin", anchor: "adm-pro", title: wantsPro ? "Pro is on ✨" : "Unlock more with Pro", body: wantsPro ? "Awards & voting, Trip Wrapped, custom round backgrounds, and the Clubhouse are all unlocked." : "Tap Upgrade to Pro here to add awards & voting, Trip Wrapped, custom backgrounds, and the Clubhouse." },
-                { path: trn, appScreen: "admin", title: "You're all set!", body: `Invite your crew with code ${createdCode} and start Round 1. Everything's reachable from Admin.` },
+                { path: "/home", title: `"${name}" is live! 🎉`, body: "This is your home base - every tournament you run or join lives here. I'll walk you through setup: first managing members & teams, then running the tournament itself." },
+                { path: mng, anchor: "mng-invite", title: "Invite players", body: "Invite people by username and they'll see it on their dashboard. Anyone can also just enter your join code to request in." },
+                { path: mng, anchor: "mng-requests", title: "Approve who joins", body: "When someone requests to join, they land here - approve or decline with one tap. Approved players move into your roster." },
+                { path: mng, anchor: "mng-roster", title: "Assign teams", body: "Your roster lives here. Add each player and tap a team to put them on it - keep the two sides even so scoring stays fair." },
+                { path: mng, anchor: "mng-makeadmin", title: "Make a member an admin", body: "On any player's card, tap 'Make admin' to share control - admins can edit rounds, enter scores, and manage settings alongside you. Only you, the owner, can delete the tournament." },
+                { path: mng, anchor: "mng-teams", title: "Name your teams", body: "Rename your two teams whatever you like - these names show up all over the leaderboard and scorecards." },
+                { path: mng, anchor: "mng-delete", title: "Delete tournament", body: "The red Danger Zone permanently deletes the tournament and everything in it. It's owner-only and always asks you to confirm first." },
+                { path: trn, appScreen: "admin", anchor: "adm-managelink", title: "Now - inside the tournament", body: "This is the in-tournament Admin. That button jumps you straight back to Manage members & teams whenever you need it." },
+                { path: trn, appScreen: "admin", anchor: "adm-tabs", title: "Three tabs to run it", body: "Everything you do during the tournament is under these tabs: Setup, Rounds, and Scoring. Let me flip through each." },
+                { path: trn, appScreen: "admin", adminTab: "setup", anchor: "adm-pro", title: "Setup tab - your plan", body: wantsPro ? "Pro is on ✨ - awards & voting, Trip Wrapped, custom backgrounds and the Clubhouse are all unlocked." : "Setup starts with your plan. Tap Upgrade to Pro to add awards & voting, Trip Wrapped, custom backgrounds, and the Clubhouse." },
+                { path: trn, appScreen: "admin", adminTab: "setup", anchor: "adm-backgrounds", title: "Change your backgrounds", body: "Still in Setup: set your tournament banner and the scenery behind each screen here. Pick from the scene library (custom uploads are a Pro perk)." },
+                { path: trn, appScreen: "admin", adminTab: "rounds", anchor: "adm-rounds", title: "Rounds tab", body: "This is where you add rounds, choose each one's course and format, and set arrival and tee times. Start a round when you're on the course." },
+                { path: trn, appScreen: "admin", adminTab: "scoring", anchor: "adm-scoring", title: "Scoring tab", body: "Fine-tune how scoring works and - on Pro - toggle post-round awards & voting so players can vote on superlatives after each round." },
+                { path: trn, appScreen: "admin", adminTab: "setup", title: "You're all set!", body: `Invite your crew with code ${createdCode}, assign teams as they arrive, and start Round 1. Everything's reachable right here in Admin.` },
               ];
               startSpotlightTour(steps);
               router.push("/home");

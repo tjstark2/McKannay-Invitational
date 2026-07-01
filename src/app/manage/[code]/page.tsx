@@ -347,6 +347,7 @@ export default function ManagePage() {
                   </button>
                 ) : (
                   <button
+                    data-tour="mng-makeadmin"
                     onClick={() => setRole(m.membershipId, "admin")}
                     className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1.5 text-xs font-extrabold text-accent-dark"
                   >
