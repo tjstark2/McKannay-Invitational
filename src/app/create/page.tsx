@@ -12,6 +12,7 @@ import { BackgroundPicker } from "@/features/trip/components/BackgroundPicker";
 import { STOCK_BACKGROUNDS } from "@/lib/backgrounds";
 import { setHeaderBackground } from "@/lib/supabase/backgrounds";
 import { StateSelect } from "@/features/account/identity";
+import { loadFriendsData } from "@/lib/supabase/friends";
 
 type FmtOpt = {
   id: string;
@@ -33,11 +34,59 @@ const FORMATS: FmtOpt[] = [
   { id: "net_score", label: "Net Stroke Play", format: "net_score", groupSize: null, teePer: 4, increment: 1, desc: "Individual net leaderboard." },
 ];
 
-type CourseDraft = { name: string; par: string; bg?: string | null };
+type CourseDraft = { name: string; par: string; tees?: string; yardage?: string; rating?: string; slope?: string; bg?: string | null };
 type RoundDraft = { presetId: string; courseIdx: number; arrival: string; teeTimes: string[] };
 
 function teeCountFor(roster: number, teePer: number) {
   return Math.max(1, Math.ceil((roster || 4) / teePer));
+}
+
+// Celebration: a short WebAudio fanfare + a DOM confetti burst.
+function playChime() {
+  try {
+    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ac = new Ctx();
+    const notes = [523, 659, 784, 1047];
+    let t = ac.currentTime;
+    notes.forEach((f) => {
+      const o = ac.createOscillator();
+      const g = ac.createGain();
+      o.type = "triangle";
+      o.frequency.value = f;
+      o.connect(g);
+      g.connect(ac.destination);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.22, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+      o.start(t);
+      o.stop(t + 0.3);
+      t += 0.1;
+    });
+  } catch {
+    /* audio unavailable */
+  }
+}
+
+function fireConfetti(count = 90) {
+  if (typeof document === "undefined") return;
+  const cols = ["#e7c869", "#34d399", "#3b82f6", "#e5484d", "#f3b50a"];
+  const wrap = document.createElement("div");
+  wrap.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:200;overflow:hidden";
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement("div");
+    const size = 6 + Math.random() * 6;
+    p.style.cssText = `position:absolute;top:-20px;left:${Math.random() * 100}%;width:${size}px;height:${size * 1.5}px;background:${cols[i % cols.length]};border-radius:2px;opacity:.9;transform:rotate(${Math.random() * 360}deg);transition:transform ${1.6 + Math.random()}s linear, top ${1.6 + Math.random()}s linear, opacity 2s`;
+    wrap.appendChild(p);
+  }
+  document.body.appendChild(wrap);
+  requestAnimationFrame(() => {
+    wrap.querySelectorAll("div").forEach((el) => {
+      (el as HTMLElement).style.top = "110%";
+      (el as HTMLElement).style.transform = `rotate(${Math.random() * 720}deg)`;
+      (el as HTMLElement).style.opacity = "0";
+    });
+  });
+  setTimeout(() => wrap.remove(), 3000);
 }
 
 // Build a friendly display string from two yyyy-mm-dd values, e.g. "Sep 10 - 13, 2026".
@@ -117,11 +166,13 @@ export default function CreatePage() {
   const [oddConfirm, setOddConfirm] = useState(false);
   const [postStep, setPostStep] = useState<0 | 1>(0);
   const [upgradedNow, setUpgradedNow] = useState(false);
+  const [invitePeople, setInvitePeople] = useState<{ id: string; name: string; sub: string }[]>([]);
+  const [invited, setInvited] = useState<Set<string>>(new Set());
   const [teamAName, setTeamAName] = useState("Team A");
   const [teamBName, setTeamBName] = useState("Team B");
   const [rosterSize, setRosterSize] = useState("12");
   const [courses, setCourses] = useState<CourseDraft[]>([{ name: "", par: "72", bg: null }]);
-  const [setRoundsNow, setSetRoundsNow] = useState<boolean | null>(null);
+  const [setRoundsNow, setSetRoundsNow] = useState<boolean>(true);
   const [rounds, setRounds] = useState<RoundDraft[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -129,6 +180,56 @@ export default function CreatePage() {
   useEffect(() => {
     if (!loading && !user) router.replace("/");
   }, [user, loading, router]);
+
+  useEffect(() => {
+    if (step === 7 && setRoundsNow && rounds.length === 0) {
+      setRounds([newRound()]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, setRoundsNow]);
+
+  useEffect(() => {
+    if (createdCode) {
+      playChime();
+      fireConfetti(130);
+    }
+  }, [createdCode]);
+
+  useEffect(() => {
+    if (!createdCode || postStep !== 1 || !user) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    let active = true;
+    (async () => {
+      const people = new Map<string, { id: string; name: string; sub: string }>();
+      const nameOf = (p: { first_name: string | null; last_name: string | null; username: string | null }) =>
+        [p.first_name, p.last_name].filter(Boolean).join(" ") || p.username || "Player";
+      try {
+        const fd = await loadFriendsData(supabase, user.id);
+        fd.friends.forEach((f) =>
+          people.set(f.profile.id, { id: f.profile.id, name: nameOf(f.profile), sub: f.profile.username ? `@${f.profile.username}` : "Friend" })
+        );
+      } catch { /* ignore */ }
+      try {
+        const { data: myTrips } = await supabase.from("trip_members").select("trip_id").eq("user_id", user.id);
+        const tripIds = (myTrips ?? []).map((r) => (r as { trip_id: string }).trip_id).filter(Boolean);
+        if (tripIds.length) {
+          const { data: pls } = await supabase.from("players").select("account_id").in("trip_id", tripIds).not("account_id", "is", null);
+          const accts = Array.from(new Set((pls ?? []).map((r) => (r as { account_id: string }).account_id)))
+            .filter((a) => a && a !== user.id && !people.has(a));
+          if (accts.length) {
+            const { data: profs } = await supabase.from("public_profiles").select("id,username,first_name,last_name").in("id", accts);
+            (profs ?? []).forEach((p) => {
+              const pr = p as { id: string; username: string | null; first_name: string | null; last_name: string | null };
+              if (!people.has(pr.id)) people.set(pr.id, { id: pr.id, name: nameOf(pr), sub: "Played before" });
+            });
+          }
+        }
+      } catch { /* ignore */ }
+      if (active) setInvitePeople(Array.from(people.values()).slice(0, 12));
+    })();
+    return () => { active = false; };
+  }, [createdCode, postStep, user]);
 
   const roster = Number(rosterSize) || 12;
   const realCourses = useMemo(() => courses.filter((c) => c.name.trim()), [courses]);
@@ -159,7 +260,10 @@ export default function CreatePage() {
 
   const step1Valid = name.trim() && joinCode.trim();
   const step2Valid = stateAbbr.trim() && location.trim();
-  const step3Valid = Boolean(startDate && endDate && endDate >= startDate);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const step3Valid = Boolean(
+    startDate && endDate && startDate >= todayStr && endDate >= startDate
+  );
   const step4Valid = teamAName.trim() && teamBName.trim();
   const step5Valid = roster >= 2 && (roster % 2 === 0 || oddConfirm);
 
@@ -220,7 +324,15 @@ export default function CreatePage() {
 
       const courseIds: string[] = [];
       for (const c of realCourses) {
-        const id = await insertCourse(supabase, tripId, { name: c.name.trim(), par: Number(c.par) || 72, rating: 72, slope: 113, imageUrl: c.bg ?? undefined });
+        const id = await insertCourse(supabase, tripId, {
+          name: c.name.trim(),
+          par: Number(c.par) || 72,
+          rating: Number(c.rating) || 72,
+          slope: Number(c.slope) || 113,
+          teeName: c.tees?.trim() || undefined,
+          yardage: c.yardage ? Number(c.yardage) : undefined,
+          imageUrl: c.bg ?? undefined,
+        });
         courseIds.push(id);
       }
 
@@ -330,8 +442,39 @@ export default function CreatePage() {
               <div className="text-4xl font-black tracking-[4px] text-fairway-900">{createdCode}</div>
               <button onClick={share} className="mt-3 w-full rounded-2xl border-[1.5px] border-fairway-900 px-4 py-2.5 font-black text-fairway-900">📋 Copy / Share</button>
             </div>
+
+            {invitePeople.length > 0 ? (
+              <div className="mt-4">
+                <p className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">Invite friends &amp; past players</p>
+                <div className="space-y-2">
+                  {invitePeople.map((person) => (
+                    <div key={person.id} className="flex items-center justify-between rounded-2xl border-[1.5px] border-sand-200 bg-white p-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-black text-ink">{person.name}</p>
+                        <p className="text-xs text-slate-400">{person.sub}</p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          const supabase = getSupabaseClient();
+                          if (supabase && createdTripId) {
+                            try {
+                              await supabase.from("trip_members").insert({ trip_id: createdTripId, user_id: person.id, role: "member", status: "invited" });
+                            } catch { /* best effort */ }
+                          }
+                          setInvited((prev) => new Set(prev).add(person.id));
+                        }}
+                        disabled={invited.has(person.id)}
+                        className="ml-3 shrink-0 rounded-xl bg-fairway-900 px-3 py-1.5 text-sm font-black text-white disabled:bg-emerald-100 disabled:text-emerald-700"
+                      >
+                        {invited.has(person.id) ? "Invited ✓" : "Invite"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             <button onClick={() => router.push(`/t/${createdCode}`)} className="mt-6 w-full rounded-2xl bg-fairway-900 px-4 py-4 font-black text-white">Go to tournament →</button>
-            <button onClick={() => router.push(`/t/${createdCode}`)} className="mt-2 w-full text-center text-sm font-bold text-slate-500">Skip - I&apos;ll invite later</button>
           </div>
         )}
       </AuthShell>
@@ -383,10 +526,12 @@ export default function CreatePage() {
             <StepHead n="3" title="When's the trip?" />
             <div className="mt-4 space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                <Field label="From"><input className={inp} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></Field>
-                <Field label="To"><input className={inp} type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></Field>
+                <Field label="From"><input className={inp} type="date" min={todayStr} value={startDate} onChange={(e) => setStartDate(e.target.value)} /></Field>
+                <Field label="To"><input className={inp} type="date" min={startDate || todayStr} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></Field>
               </div>
-              {startDate && endDate && endDate < startDate ? (
+              {startDate && startDate < todayStr ? (
+                <p className="text-[13px] font-bold text-red-600">Start date can&apos;t be in the past.</p>
+              ) : startDate && endDate && endDate < startDate ? (
                 <p className="text-[13px] font-bold text-red-600">End date must be on or after the start date.</p>
               ) : null}
             </div>
@@ -471,6 +616,13 @@ export default function CreatePage() {
                     </div>
                     {courses.length > 1 ? <button onClick={() => setCourses((p) => p.filter((_, j) => j !== i))} className="rounded-lg px-2 py-1 text-sm font-bold text-slate-400">✕</button> : null}
                   </div>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <input className="rounded-xl border-[1.5px] border-sand-200 px-3 py-2 text-sm outline-none focus:border-fairway-900" value={c.tees ?? ""} onChange={(e) => setCourses((p) => p.map((x, j) => (j === i ? { ...x, tees: e.target.value } : x)))} placeholder="Tees (e.g. Blue)" />
+                    <input className="rounded-xl border-[1.5px] border-sand-200 px-3 py-2 text-sm outline-none focus:border-fairway-900" inputMode="numeric" value={c.yardage ?? ""} onChange={(e) => setCourses((p) => p.map((x, j) => (j === i ? { ...x, yardage: e.target.value.replace(/[^0-9]/g, "").slice(0, 5) } : x)))} placeholder="Yardage (e.g. 6800)" />
+                    <input className="rounded-xl border-[1.5px] border-sand-200 px-3 py-2 text-sm outline-none focus:border-fairway-900" inputMode="decimal" value={c.rating ?? ""} onChange={(e) => setCourses((p) => p.map((x, j) => (j === i ? { ...x, rating: e.target.value.replace(/[^0-9.]/g, "").slice(0, 5) } : x)))} placeholder="Rating (e.g. 72.3)" />
+                    <input className="rounded-xl border-[1.5px] border-sand-200 px-3 py-2 text-sm outline-none focus:border-fairway-900" inputMode="numeric" value={c.slope ?? ""} onChange={(e) => setCourses((p) => p.map((x, j) => (j === i ? { ...x, slope: e.target.value.replace(/[^0-9]/g, "").slice(0, 3) } : x)))} placeholder="Slope (e.g. 131)" />
+                  </div>
+                  <p className="mt-1 text-[11px] text-slate-400">Tees, yardage, rating & slope are optional - add or edit them anytime in Admin.</p>
                   <button
                     type="button"
                     onClick={() => setBgPickerIdx(i)}
@@ -499,16 +651,11 @@ export default function CreatePage() {
         {step === 7 ? (
           <div>
             <StepHead n="7" title="Rounds" />
-            <p className="mt-1 text-sm text-slate-500">Set up your rounds now, or do it later in Admin.</p>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <button onClick={() => { setSetRoundsNow(true); if (rounds.length === 0) setRounds([newRound()]); }} className={`rounded-2xl border-[1.5px] p-3 text-sm font-black ${setRoundsNow === true ? "border-fairway-900 bg-fairway-900/5" : "border-sand-200 bg-white"}`}>Set up now</button>
-              <button onClick={() => setSetRoundsNow(false)} className={`rounded-2xl border-[1.5px] p-3 text-sm font-black ${setRoundsNow === false ? "border-fairway-900 bg-fairway-900/5" : "border-sand-200 bg-white"}`}>Later in Admin</button>
-            </div>
+            <p className="mt-1 text-sm text-slate-500">Add a round for each day - pick the course, format, and tee times. You can change anything later in Admin.</p>
 
-            {setRoundsNow === false ? <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">No problem - add rounds anytime in Admin. We&apos;d still encourage setting up at least one now so your tournament is ready the moment everyone joins.</div> : null}
-            {setRoundsNow === true && realCourses.length === 0 ? <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Add at least one course first (Back) - every round needs a course so scores can be calculated.</div> : null}
+            {realCourses.length === 0 ? <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Add at least one course first (Back) - every round needs a course so scores can be calculated.</div> : null}
 
-            {setRoundsNow === true && realCourses.length > 0 ? (
+            {realCourses.length > 0 ? (
               <div className="mt-4 space-y-3">
                 {rounds.map((r, i) => {
                   const p = presetById(r.presetId);
@@ -526,7 +673,13 @@ export default function CreatePage() {
                           {availableFormats.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
                         </select>
                         <p className="text-[12px] text-slate-400">{p.desc}</p>
-                        <input type="time" className={inp} value={r.arrival} onChange={(e) => setRounds((pr) => pr.map((x, j) => (j === i ? { ...x, arrival: e.target.value } : x)))} />
+                        <div>
+                          <div className="mb-1 flex items-baseline justify-between">
+                            <span className="text-xs font-bold text-slate-500">Arrival time</span>
+                            <span className="text-[11px] text-slate-400">e.g. 8:00 AM</span>
+                          </div>
+                          <input type="time" className={inp} value={r.arrival} onChange={(e) => setRounds((pr) => pr.map((x, j) => (j === i ? { ...x, arrival: e.target.value } : x)))} />
+                        </div>
                         <div className="rounded-xl bg-slate-50 p-2.5">
                           <div className="mb-1 flex items-center justify-between">
                             <span className="text-xs font-bold text-slate-500">Tee times ({r.teeTimes.length})</span>
@@ -535,6 +688,7 @@ export default function CreatePage() {
                               <button onClick={() => setRounds((pr) => pr.map((x, j) => (j === i ? { ...x, teeTimes: [...x.teeTimes, ""] } : x)))} className="h-7 w-7 rounded-lg bg-white text-sm font-black text-slate-500">+</button>
                             </div>
                           </div>
+                          <p className="mb-1.5 text-[11px] text-slate-400">Format is like 8:00 AM. Leave blank and we&apos;ll fill in staggered sample times.</p>
                           <div className="space-y-1.5">
                             {r.teeTimes.map((t, ti) => (
                               <input key={ti} type="time" className="w-full rounded-lg border-[1.5px] border-sand-200 bg-white px-3 py-2 text-sm outline-none focus:border-fairway-900" value={t} onChange={(e) => setRounds((pr) => pr.map((x, j) => (j === i ? { ...x, teeTimes: x.teeTimes.map((v, k) => (k === ti ? e.target.value : v)) } : x)))} />
@@ -553,8 +707,9 @@ export default function CreatePage() {
             {error ? <p className="mt-4 text-sm font-bold text-red-600">{error}</p> : null}
             <div className="mt-6 flex items-center gap-2">
               <button onClick={() => setStep(6)} className="rounded-2xl px-4 py-3 text-sm font-bold text-slate-500">Back</button>
-              <button onClick={finish} disabled={busy || setRoundsNow === null || (setRoundsNow === true && realCourses.length === 0)} className="flex-1 rounded-2xl bg-accent px-4 py-4 font-black text-ink disabled:opacity-50">{busy ? "Creating…" : "Create Tournament"}</button>
+              <button onClick={finish} disabled={busy || (setRoundsNow && realCourses.length === 0)} className="flex-1 rounded-2xl bg-accent px-4 py-4 font-black text-ink disabled:opacity-50">{busy ? "Creating…" : "Create Tournament"}</button>
             </div>
+            <button onClick={() => { setSetRoundsNow(false); finish(); }} disabled={busy} className="mt-2 w-full text-center text-sm font-bold text-slate-500 disabled:opacity-50">I&apos;ll set up rounds later in Admin</button>
           </div>
         ) : null}
       </div>
@@ -609,7 +764,7 @@ function Paywall({
       <div className="relative mt-4 flex rounded-full bg-black/25 p-1">
         <span className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-accent transition-all ${wantsPro ? "left-[calc(50%)]" : "left-1"}`} />
         <button onClick={() => setWantsPro(false)} className={`relative z-10 flex-1 rounded-full py-2.5 text-sm font-black ${wantsPro ? "text-emerald-50" : "text-ink"}`}>Free</button>
-        <button onClick={() => setWantsPro(true)} className={`relative z-10 flex-1 rounded-full py-2.5 text-sm font-black ${wantsPro ? "text-ink" : "text-emerald-50"}`}>Pro ✨</button>
+        <button onClick={() => { setWantsPro(true); playChime(); fireConfetti(70); }} className={`relative z-10 flex-1 rounded-full py-2.5 text-sm font-black ${wantsPro ? "text-ink" : "text-emerald-50"}`}>Pro ✨</button>
       </div>
 
       <div className="mt-4 space-y-0">
