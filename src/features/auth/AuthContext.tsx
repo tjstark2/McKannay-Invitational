@@ -20,8 +20,8 @@ export type SignUpInput = {
   email: string;
   phone: string;
   password: string;
+  tournamentUpdatesOptIn: boolean;
   marketingOptIn: boolean;
-  smsOptIn: boolean;
 };
 
 type AuthResult = {
@@ -78,10 +78,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = useCallback(
     async (input: SignUpInput): Promise<AuthResult> => {
       if (!supabase) return { ok: false, error: "Accounts aren't available yet." };
-      const redirectTo =
-        typeof window !== "undefined"
-          ? `${window.location.origin}/signin`
-          : undefined;
+      // Use a canonical, always-resolvable site URL for the confirmation link
+      // so it never points at a host that doesn't resolve (e.g. the bare apex).
+      // Set NEXT_PUBLIC_SITE_URL in Vercel to https://www.tourneybirdie.com.
+      const base =
+        process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+        (typeof window !== "undefined" ? window.location.origin : "");
+      const redirectTo = base ? `${base}/signin` : undefined;
 
       const { data, error } = await supabase.auth.signUp({
         email: input.email.trim(),
@@ -95,8 +98,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             city: input.city.trim(),
             state: input.state.trim().toUpperCase(),
             phone: input.phone.trim(),
+            tournament_updates_opt_in: input.tournamentUpdatesOptIn,
             marketing_opt_in: input.marketingOptIn,
-            sms_opt_in: input.smsOptIn,
           },
         },
       });
