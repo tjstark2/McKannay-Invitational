@@ -1,3 +1,4 @@
+import { displayTime } from "@/lib/time";
 import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import { ChevronRight } from "lucide-react";
 import { formatRoundFormat } from "@/lib/format";
@@ -78,7 +79,7 @@ export function ScheduleScreen({
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                    {round.dateLabel} · Be there {round.arrivalTime}
+                    {round.dateLabel} · Be there {displayTime(round.arrivalTime)}
                   </p>
                   <h2 className="mt-1 text-lg font-black">{course.name}</h2>
                   <p className="text-sm text-slate-500">{course.location}</p>
@@ -112,7 +113,7 @@ export function ScheduleScreen({
                   <div key={tee.id} className="rounded-xl bg-[#f3efe6] p-3 text-sm">
                     <div className="flex items-center justify-between">
                       <p className="font-black">Tee Time {index + 1}</p>
-                      <p className="font-bold text-fairway-900">{tee.time}</p>
+                      <p className="font-bold text-fairway-900">{displayTime(tee.time)}</p>
                     </div>
                     <div className="mt-2 flex flex-col gap-1 text-slate-600">
                       {tee.players.map((pid) => {

@@ -1,3 +1,4 @@
+import { displayTime } from "@/lib/time";
 import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import { CourseBackground } from "@/features/trip/components/CourseBackground";
 import { formatRoundFormat } from "@/lib/format";
@@ -114,7 +115,7 @@ export function NextRoundCard({
                 <p className="text-[10px] font-bold uppercase text-fairway-100">
                   Arrive
                 </p>
-                <p className="mt-0.5 font-black">{round.arrivalTime || "-"}</p>
+                <p className="mt-0.5 font-black">{displayTime(round.arrivalTime) || "-"}</p>
               </div>
             </div>
           </div>
@@ -127,7 +128,7 @@ export function NextRoundCard({
                 <p className="text-sm font-black text-fairway-900">
                   Tee {index + 1}
                 </p>
-                <p className="mt-1 text-sm font-semibold">{tee.time || "-"}</p>
+                <p className="mt-1 text-sm font-semibold">{displayTime(tee.time) || "-"}</p>
                 <div className="mt-2 flex flex-col gap-1 text-xs text-slate-600">
                   {tee.players.map((pid) => {
                     const p = players.find((x) => x.id === pid);

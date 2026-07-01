@@ -56,6 +56,25 @@ function formatDateRange(from: string, to: string): string {
   return `${mon(f)} ${f.getDate()} - ${mon(t)} ${t.getDate()}, ${yr}`;
 }
 
+// "08:00" -> "8:00 AM"; "13:30" -> "1:30 PM"; "" -> "".
+function to12h(hhmm: string): string {
+  const m = /^(\d{1,2}):(\d{2})$/.exec((hhmm || "").trim());
+  if (!m) return "";
+  let h = parseInt(m[1], 10);
+  const min = m[2];
+  const ampm = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${h}:${min} ${ampm}`;
+}
+
+// Sensible dummy tee times when left blank: 8:00, 8:10, 8:20, ...
+function staggerTee(index: number): string {
+  const total = 8 * 60 + index * 10;
+  const hh = Math.floor(total / 60) % 24;
+  const mm = total % 60;
+  return to12h(`${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`);
+}
+
 export default function CreatePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -138,18 +157,11 @@ export default function CreatePage() {
     );
   }
 
-  const basicsValid =
-    name.trim() &&
-    joinCode.trim() &&
-    teamAName.trim() &&
-    teamBName.trim() &&
-    stateAbbr.trim() &&
-    location.trim() &&
-    startDate &&
-    endDate &&
-    endDate >= startDate &&
-    roster >= 2 &&
-    (roster % 2 === 0 || oddConfirm);
+  const step1Valid = name.trim() && joinCode.trim();
+  const step2Valid = stateAbbr.trim() && location.trim();
+  const step3Valid = Boolean(startDate && endDate && endDate >= startDate);
+  const step4Valid = teamAName.trim() && teamBName.trim();
+  const step5Valid = roster >= 2 && (roster % 2 === 0 || oddConfirm);
 
   async function finish() {
     if (!user) return;
@@ -217,6 +229,8 @@ export default function CreatePage() {
         for (const r of rounds) {
           n += 1;
           const p = presetById(r.presetId);
+          const teeTimes = r.teeTimes.map((t, idx) => to12h(t) || staggerTee(idx));
+          const arrival = to12h(r.arrival) || teeTimes[0] || staggerTee(0);
           const roundId = await insertRound(supabase, tripId, {
             roundNumber: n,
             title: `Round ${n}`,
@@ -225,12 +239,12 @@ export default function CreatePage() {
             format: p.format,
             groupSize: p.groupSize,
             pointsAvailable: 1,
-            arrivalTime: r.arrival.trim(),
+            arrivalTime: arrival,
           });
           let order = 0;
-          for (const t of r.teeTimes) {
+          for (const t of teeTimes) {
             order += 1;
-            await insertTeeTime(supabase, roundId, t.trim() || "TBD", order);
+            await insertTeeTime(supabase, roundId, t, order);
           }
         }
       }
@@ -252,11 +266,12 @@ export default function CreatePage() {
 
   if (createdCode) {
     const isPro = wantsPro || upgradedNow;
+    const joinUrl = `https://www.tourneybirdie.com/t/${createdCode}`;
     const share = async () => {
-      const text = `Join my tournament "${name}" on TourneyBirdie - code ${createdCode}`;
+      const text = `Join my tournament "${name}" on TourneyBirdie - code ${createdCode}\n${joinUrl}`;
       try {
-        if (navigator.share) await navigator.share({ title: "TourneyBirdie", text });
-        else { await navigator.clipboard.writeText(createdCode); }
+        if (navigator.share) await navigator.share({ title: "TourneyBirdie", text, url: joinUrl });
+        else await navigator.clipboard.writeText(text);
       } catch { /* ignore */ }
     };
     const upgradeNow = async () => {
@@ -327,7 +342,7 @@ export default function CreatePage() {
     <AuthShell>
       <div>
         <div className="mb-4 flex items-center gap-1.5">
-          {[0, 1, 2, 3].map((s) => (
+          {[0, 1, 2, 3, 4, 5, 6, 7].map((s) => (
             <span key={s} className={`h-1.5 flex-1 rounded-full ${s <= step ? "bg-fairway-900" : "bg-sand-200"}`} />
           ))}
         </div>
@@ -336,7 +351,7 @@ export default function CreatePage() {
 
         {step === 1 ? (
           <div>
-            <StepHead n="2" title="The Basics" />
+            <StepHead n="1" title="Name your tournament" />
             <div className="mt-4 space-y-4">
               <Field label="Tournament name">
                 <input className={inp} value={name} onChange={(e) => setName(e.target.value)} placeholder="3rd Annual McKannay Invitational" />
@@ -344,10 +359,29 @@ export default function CreatePage() {
               <Field label="Join code" hint="players type this to join">
                 <input className={inp} value={joinCode} onChange={(e) => { setJoinCode(e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()); setError(null); }} placeholder="MCK2027" autoCapitalize="characters" />
               </Field>
+            </div>
+            {error ? (<p className="mt-3 text-sm font-bold text-team-north">{error}</p>) : null}
+            <NavRow onBack={() => setStep(0)} onNext={goFromBasics} nextDisabled={!step1Valid || checkingCode} nextLabel={checkingCode ? "Checking…" : "Next"} />
+          </div>
+        ) : null}
+
+        {step === 2 ? (
+          <div>
+            <StepHead n="2" title="Where are you playing?" />
+            <div className="mt-4 space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <Field label="State"><StateSelect value={stateAbbr} onChange={setStateAbbr} /></Field>
                 <Field label="Location"><input className={inp} value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Hilton Head" /></Field>
               </div>
+            </div>
+            <NavRow onBack={() => setStep(1)} onNext={() => setStep(3)} nextDisabled={!step2Valid} />
+          </div>
+        ) : null}
+
+        {step === 3 ? (
+          <div>
+            <StepHead n="3" title="When's the trip?" />
+            <div className="mt-4 space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <Field label="From"><input className={inp} type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></Field>
                 <Field label="To"><input className={inp} type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></Field>
@@ -355,10 +389,28 @@ export default function CreatePage() {
               {startDate && endDate && endDate < startDate ? (
                 <p className="text-[13px] font-bold text-red-600">End date must be on or after the start date.</p>
               ) : null}
+            </div>
+            <NavRow onBack={() => setStep(2)} onNext={() => setStep(4)} nextDisabled={!step3Valid} />
+          </div>
+        ) : null}
+
+        {step === 4 ? (
+          <div>
+            <StepHead n="4" title="Name your teams" />
+            <div className="mt-4 space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Team A name"><input className={inp} value={teamAName} onChange={(e) => setTeamAName(e.target.value)} /></Field>
                 <Field label="Team B name"><input className={inp} value={teamBName} onChange={(e) => setTeamBName(e.target.value)} /></Field>
               </div>
+            </div>
+            <NavRow onBack={() => setStep(3)} onNext={() => setStep(5)} nextDisabled={!step4Valid} />
+          </div>
+        ) : null}
+
+        {step === 5 ? (
+          <div>
+            <StepHead n="5" title="How many players?" />
+            <div className="mt-4 space-y-4">
               <Field label="Number of players" hint="spots on the roster">
                 <input className={inp} inputMode="numeric" value={rosterSize} onChange={(e) => { setRosterSize(e.target.value.replace(/[^0-9]/g, "").slice(0, 3)); setOddConfirm(false); }} placeholder="8" />
                 {roster < 2 ? (
@@ -383,16 +435,13 @@ export default function CreatePage() {
                 )}
               </Field>
             </div>
-            {error ? (
-              <p className="mt-3 text-sm font-bold text-team-north">{error}</p>
-            ) : null}
-            <NavRow onBack={() => setStep(0)} onNext={goFromBasics} nextDisabled={!basicsValid || checkingCode} nextLabel={checkingCode ? "Checking…" : "Next"} />
+            <NavRow onBack={() => setStep(4)} onNext={() => setStep(6)} nextDisabled={!step5Valid} />
           </div>
         ) : null}
 
-        {step === 2 ? (
+        {step === 6 ? (
           <div>
-            <StepHead n="3" title="Courses" />
+            <StepHead n="6" title="Courses" />
             <p className="mt-1 text-sm text-slate-500">Add the course(s) you&apos;re playing - just a name and par for now. Every round links to a course.</p>
 
             <div className="mt-4 rounded-2xl border-[1.5px] border-sand-200 bg-white p-3">
@@ -443,13 +492,13 @@ export default function CreatePage() {
               </p>
               {realCourses.length === 0 ? <p className="text-sm text-slate-400">You can skip this and add courses later in Admin, but you&apos;ll need at least one before setting up rounds.</p> : null}
             </div>
-            <NavRow onBack={() => setStep(1)} onNext={() => setStep(3)} />
+            <NavRow onBack={() => setStep(5)} onNext={() => setStep(7)} />
           </div>
         ) : null}
 
-        {step === 3 ? (
+        {step === 7 ? (
           <div>
-            <StepHead n="4" title="Rounds" />
+            <StepHead n="7" title="Rounds" />
             <p className="mt-1 text-sm text-slate-500">Set up your rounds now, or do it later in Admin.</p>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <button onClick={() => { setSetRoundsNow(true); if (rounds.length === 0) setRounds([newRound()]); }} className={`rounded-2xl border-[1.5px] p-3 text-sm font-black ${setRoundsNow === true ? "border-fairway-900 bg-fairway-900/5" : "border-sand-200 bg-white"}`}>Set up now</button>
@@ -477,7 +526,7 @@ export default function CreatePage() {
                           {availableFormats.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
                         </select>
                         <p className="text-[12px] text-slate-400">{p.desc}</p>
-                        <input className={inp} value={r.arrival} onChange={(e) => setRounds((pr) => pr.map((x, j) => (j === i ? { ...x, arrival: e.target.value } : x)))} placeholder="Arrival time (optional, e.g. 8:15 AM)" />
+                        <input type="time" className={inp} value={r.arrival} onChange={(e) => setRounds((pr) => pr.map((x, j) => (j === i ? { ...x, arrival: e.target.value } : x)))} />
                         <div className="rounded-xl bg-slate-50 p-2.5">
                           <div className="mb-1 flex items-center justify-between">
                             <span className="text-xs font-bold text-slate-500">Tee times ({r.teeTimes.length})</span>
@@ -503,7 +552,7 @@ export default function CreatePage() {
 
             {error ? <p className="mt-4 text-sm font-bold text-red-600">{error}</p> : null}
             <div className="mt-6 flex items-center gap-2">
-              <button onClick={() => setStep(2)} className="rounded-2xl px-4 py-3 text-sm font-bold text-slate-500">Back</button>
+              <button onClick={() => setStep(6)} className="rounded-2xl px-4 py-3 text-sm font-bold text-slate-500">Back</button>
               <button onClick={finish} disabled={busy || setRoundsNow === null || (setRoundsNow === true && realCourses.length === 0)} className="flex-1 rounded-2xl bg-accent px-4 py-4 font-black text-ink disabled:opacity-50">{busy ? "Creating…" : "Create Tournament"}</button>
             </div>
           </div>
@@ -588,7 +637,7 @@ function Paywall({
 function StepHead({ n, title }: { n: string; title: string }) {
   return (
     <div>
-      <div className="text-xs font-extrabold uppercase tracking-wide text-fairway-900">Step {n} of 4</div>
+      <div className="text-xs font-extrabold uppercase tracking-wide text-fairway-900">Step {n} of 7</div>
       <h1 className="mt-0.5 text-2xl font-black text-ink">{title}</h1>
     </div>
   );
