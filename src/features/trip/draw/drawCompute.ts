@@ -1,0 +1,284 @@
+// Matchup Draw — pure outcome engine.
+//
+// CRITICAL INVARIANT (see brief §8): the OUTCOME is decided up front, once, on
+// Start. Every animation (slot / hat / wheel / draft) is purely presentational
+// and replays this stored result. So all randomness lives here and nowhere else.
+//
+// This module is pure + framework-free so it can be unit-tested and reused by
+// the setup screen, the run animations, the results board, and the recap.
+
+import type { Player, Round, TeamId } from "@/types";
+
+export type DrawMethod =
+  | "manual"
+  | "autobalance"
+  | "slot"
+  | "hat"
+  | "wheel"
+  | "draft"
+  | "fieldmanual"
+  | "fieldrandom";
+
+export type RoundShape = "singles" | "pairs" | "field";
+
+/** One matchup: player ids on each side. 1 per side for singles, 2 for pairs. */
+export type DrawMatch = { a: string[]; b: string[] };
+
+/** A field-round tee-time group (mixed teams, no head-to-head). */
+export type DrawGroup = { tee: string; players: string[] };
+
+export type DraftLogEntry = {
+  captainTeamId: TeamId;
+  verb: "sends out" | "counters with";
+  playerId: string;
+  matchNo: number;
+  locks: boolean;
+};
+
+// ---------------------------------------------------------------------------
+// Round classification
+// ---------------------------------------------------------------------------
+
+/** Field formats have no head-to-head opponent; they produce tee-time groups. */
+export function roundShape(round: Pick<Round, "format" | "groupSize">): RoundShape {
+  if (round.format === "net_score" || round.format === "casual") return "field";
+  const gs =
+    round.groupSize ?? (round.format === "match_play" ? 1 : 2);
+  return gs >= 2 ? "pairs" : "singles";
+}
+
+export function isFieldRound(round: Pick<Round, "format" | "groupSize">): boolean {
+  return roundShape(round) === "field";
+}
+
+/** Methods valid for a given round shape (field rounds hide the deciders). */
+export function methodsForShape(shape: RoundShape): DrawMethod[] {
+  if (shape === "field") return ["fieldmanual", "fieldrandom"];
+  return ["manual", "autobalance", "slot", "hat", "wheel", "draft"];
+}
+
+/** Only Manual (and the free field methods) are free; the rest are Pro. */
+export function isProMethod(method: DrawMethod): boolean {
+  return method !== "manual" && method !== "fieldmanual" && method !== "fieldrandom";
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function shuffle<T>(arr: readonly T[]): T[] {
+  const out = arr.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+const hcpOf = (hcp: Record<string, number>) => (id: string) => hcp[id] ?? 0;
+
+/**
+ * High + low pairing within one team (brief §3.1): sort by handicap ascending,
+ * then pair the lowest with the highest working inward. An odd roster leaves a
+ * final single-element "pair" (the leftover) — callers must resolve it (§12).
+ */
+export function buildPairs(ids: string[], hcp: Record<string, number>): string[][] {
+  const sorted = [...ids].sort((x, y) => hcpOf(hcp)(x) - hcpOf(hcp)(y));
+  const pairs: string[][] = [];
+  let i = 0;
+  let j = sorted.length - 1;
+  while (i < j) {
+    pairs.push([sorted[i], sorted[j]]);
+    i++;
+    j--;
+  }
+  if (i === j) pairs.push([sorted[i]]); // leftover (odd team)
+  return pairs;
+}
+
+const teamIds = (players: Player[], team: TeamId) =>
+  players.filter((p) => p.team === team).map((p) => p.id);
+
+// ---------------------------------------------------------------------------
+// Outcome computation (the one place randomness happens)
+// ---------------------------------------------------------------------------
+
+export type ComputeInput = {
+  round: Pick<Round, "format" | "groupSize">;
+  players: Player[];
+  hcp: Record<string, number>; // course handicaps keyed by player id
+  method: DrawMethod;
+};
+
+/**
+ * Compute the final matchups for a head-to-head round. Auto-Balance pairs by
+ * closest handicap; the chance methods (slot/hat/wheel) and the initial Manual
+ * board are a random cross-team pairing. Draft's ordering is built separately
+ * (buildDraftLog) but its resulting matches are computed here too.
+ */
+export function computeMatches(input: ComputeInput): DrawMatch[] {
+  const { players, hcp, method } = input;
+  const shape = roundShape(input.round);
+  const aIds = teamIds(players, "A");
+  const bIds = teamIds(players, "B");
+
+  if (shape === "singles") {
+    if (method === "autobalance") {
+      const a = [...aIds].sort((x, y) => hcpOf(hcp)(x) - hcpOf(hcp)(y));
+      const b = [...bIds].sort((x, y) => hcpOf(hcp)(x) - hcpOf(hcp)(y));
+      return a.map((id, i) => ({ a: [id], b: b[i] ? [b[i]] : [] }));
+    }
+    // manual / slot / hat / wheel / draft: random cross-team pairing
+    const a = aIds;
+    const b = shuffle(bIds);
+    return a.map((id, i) => ({ a: [id], b: b[i] ? [b[i]] : [] }));
+  }
+
+  // pairs
+  const aPairs = buildPairs(aIds, hcp).filter((p) => p.length === 2);
+  const bPairsRaw = buildPairs(bIds, hcp).filter((p) => p.length === 2);
+  if (method === "autobalance") {
+    const byCombined = (arr: string[][]) =>
+      [...arr].sort(
+        (p, q) =>
+          hcpOf(hcp)(p[0]) + hcpOf(hcp)(p[1]) - (hcpOf(hcp)(q[0]) + hcpOf(hcp)(q[1]))
+      );
+    const a = byCombined(aPairs);
+    const b = byCombined(bPairsRaw);
+    return a.map((pair, i) => ({ a: pair, b: b[i] ?? [] }));
+  }
+  const b = shuffle(bPairsRaw);
+  return aPairs.map((pair, i) => ({ a: pair, b: b[i] ?? [] }));
+}
+
+/**
+ * Field round: chunk players into tee-time groups of 4 (a final group of 2–3 is
+ * allowed — never padded). fieldrandom shuffles; fieldmanual keeps roster order
+ * for the admin to rearrange. Tee times start at 8:00 AM in 10-minute steps.
+ */
+export function computeGroups(
+  playerIds: string[],
+  method: "fieldmanual" | "fieldrandom" = "fieldrandom",
+  startMinutes = 8 * 60,
+  stepMinutes = 10,
+  groupSize = 4
+): DrawGroup[] {
+  const ordered = method === "fieldrandom" ? shuffle(playerIds) : [...playerIds];
+  const groups: DrawGroup[] = [];
+  for (let i = 0; i < ordered.length; i += groupSize) {
+    const total = startMinutes + (groups.length * stepMinutes);
+    groups.push({ tee: minutesToClock(total), players: ordered.slice(i, i + groupSize) });
+  }
+  return groups;
+}
+
+function minutesToClock(total: number): string {
+  const h24 = Math.floor(total / 60) % 24;
+  const m = total % 60;
+  const ampm = h24 >= 12 ? "PM" : "AM";
+  const h = h24 % 12 || 12;
+  return `${h}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
+// ---------------------------------------------------------------------------
+// Captain's Draft timeline (brief §4.6) — story preserved for the recap
+// ---------------------------------------------------------------------------
+
+/**
+ * Build the ordered pick timeline for a computed set of matches. The toss
+ * winner throws first; the thrower alternates each match. Each match pushes the
+ * thrower's side as "sends out", then the opponent's as "counters with"; the
+ * final counter entry carries locks:true.
+ */
+export function buildDraftLog(
+  matches: DrawMatch[],
+  first: TeamId
+): DraftLogEntry[] {
+  const other: TeamId = first === "A" ? "B" : "A";
+  const log: DraftLogEntry[] = [];
+  matches.forEach((m, i) => {
+    const throwerIsA = first === "A" ? i % 2 === 0 : i % 2 === 1;
+    const throwerTeam: TeamId = throwerIsA ? "A" : "B";
+    const counterTeam: TeamId = throwerIsA ? "B" : "A";
+    const throwerSide = throwerIsA ? m.a : m.b;
+    const counterSide = throwerIsA ? m.b : m.a;
+    throwerSide.forEach((pid) =>
+      log.push({ captainTeamId: throwerTeam, verb: "sends out", playerId: pid, matchNo: i + 1, locks: false })
+    );
+    counterSide.forEach((pid, k) =>
+      log.push({
+        captainTeamId: counterTeam,
+        verb: "counters with",
+        playerId: pid,
+        matchNo: i + 1,
+        locks: k === counterSide.length - 1,
+      })
+    );
+  });
+  void other;
+  return log;
+}
+
+/** Coin toss winner for the draft (decided up front like everything else). */
+export function flipCoin(): TeamId {
+  return Math.random() < 0.5 ? "A" : "B";
+}
+
+// ---------------------------------------------------------------------------
+// Fairness (Auto-Balance Δ chip, brief §4.2)
+// ---------------------------------------------------------------------------
+
+export function fairnessDelta(match: DrawMatch, hcp: Record<string, number>): number {
+  const sum = (ids: string[]) => ids.reduce((t, id) => t + hcpOf(hcp)(id), 0);
+  return Math.abs(sum(match.a) - sum(match.b));
+}
+
+export function fairnessTone(diff: number): "even" | "close" | "wide" {
+  if (diff <= 3) return "even";
+  if (diff <= 6) return "close";
+  return "wide";
+}
+
+// ---------------------------------------------------------------------------
+// Validation / edge cases (brief §12)
+// ---------------------------------------------------------------------------
+
+export type DrawIssue = { code: string; message: string };
+
+/** Returns blocking issues that must be resolved before a draw can run. */
+export function validateDraw(
+  round: Pick<Round, "format" | "groupSize">,
+  players: Player[]
+): DrawIssue[] {
+  const issues: DrawIssue[] = [];
+  const shape = roundShape(round);
+  const a = teamIds(players, "A").length;
+  const b = teamIds(players, "B").length;
+
+  if (shape === "field") {
+    if (a + b < 2) issues.push({ code: "empty", message: "Add players before drawing tee-time groups." });
+    return issues;
+  }
+  if (a === 0 || b === 0) {
+    issues.push({ code: "empty_team", message: "Both teams need players before you can set matchups." });
+    return issues;
+  }
+  if (shape === "pairs") {
+    if (a % 2 !== 0 || b % 2 !== 0) {
+      issues.push({
+        code: "odd_team",
+        message: "This is a 2-person format, so each team needs an even number of players. Add, remove, or sit someone out.",
+      });
+    }
+    if (a !== b) {
+      issues.push({ code: "uneven_pairs", message: `Teams are uneven (${a} vs ${b}). Even them up so every pair has an opponent.` });
+    }
+  }
+  if (shape === "singles" && a !== b) {
+    issues.push({
+      code: "uneven_singles",
+      message: `Teams are uneven (${a} vs ${b}). Assign a bye or sit someone out so everyone has a match.`,
+    });
+  }
+  return issues;
+}
