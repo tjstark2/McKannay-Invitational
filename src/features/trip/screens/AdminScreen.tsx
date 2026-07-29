@@ -7,6 +7,7 @@ import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useViewer } from "@/features/trip/state/ViewerContext";
 import { BackgroundsAdmin } from "@/features/trip/screens/admin/BackgroundsAdmin";
 import { ProUpgradeAdmin } from "@/features/trip/screens/admin/ProUpgradeAdmin";
+import { SetMatchupsModal } from "@/features/trip/screens/admin/SetMatchupsModal";
 import type { Round, TeamId, Winner } from "@/types";
 
 type AdminTab = "setup" | "rounds" | "scoring";
@@ -79,6 +80,7 @@ export function AdminScreen() {
   } = useTripState();
   const { isOwner } = useViewer();
   const [endConfirm, setEndConfirm] = useState(false);
+  const [matchupRound, setMatchupRound] = useState<string | null>(null);
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<AdminTab>("setup");
@@ -245,6 +247,9 @@ export function AdminScreen() {
 
   return (
     <div className="space-y-4">
+      {matchupRound ? (
+        <SetMatchupsModal roundId={matchupRound} onClose={() => setMatchupRound(null)} />
+      ) : null}
       {saving || toast ? (
         <div className="fixed bottom-24 left-1/2 z-50 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-fairway-900 px-5 py-2 text-sm font-black text-white shadow-lg">
           {saving ? (
@@ -591,6 +596,14 @@ export function AdminScreen() {
 
                   {isOpen ? (
                     <div className="space-y-4 border-t border-slate-100 p-4">
+                      {roundMatches.length > 0 ? (
+                        <button
+                          onClick={() => setMatchupRound(round.id)}
+                          className="w-full rounded-2xl border-[1.5px] border-accent bg-accent/10 px-4 py-3 text-sm font-black text-accent-dark"
+                        >
+                          🎲 Set the Matchups ▸
+                        </button>
+                      ) : null}
                       {/* details */}
                       <div>
                         <label className={labelClass}>Round Title</label>
