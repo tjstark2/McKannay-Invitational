@@ -596,14 +596,12 @@ export function AdminScreen() {
 
                   {isOpen ? (
                     <div className="space-y-4 border-t border-slate-100 p-4">
-                      {roundMatches.length > 0 ? (
-                        <button
-                          onClick={() => setMatchupRound(round.id)}
-                          className="w-full rounded-2xl border-[1.5px] border-accent bg-accent/10 px-4 py-3 text-sm font-black text-accent-dark"
-                        >
-                          🎲 Set the Matchups ▸
-                        </button>
-                      ) : null}
+                      <button
+                        onClick={() => setMatchupRound(round.id)}
+                        className="w-full rounded-2xl border-[1.5px] border-accent bg-accent/10 px-4 py-3 text-sm font-black text-accent-dark"
+                      >
+                        🎲 Set the Matchups ▸
+                      </button>
                       {/* details */}
                       <div>
                         <label className={labelClass}>Round Title</label>
