@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -45,6 +45,14 @@ export function SetMatchupsModal({
   const [sel, setSel] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // If the modal mounted before matches finished loading, backfill the board
+  // once they're here — without clobbering swaps the user already made.
+  useEffect(() => {
+    setBSides((prev) =>
+      prev.length === roundMatches.length ? prev : roundMatches.map((m) => m.bPlayers ?? [])
+    );
+  }, [roundMatches]);
 
   const nameOf = (id: string) => players.find((p) => p.id === id)?.name ?? "—";
   const teamA = teams.find((t) => t.id === "A")?.name ?? "Team A";
@@ -119,10 +127,18 @@ export function SetMatchupsModal({
               swap sides
             </p>
           </div>
-          <button onClick={onClose} aria-label="Close" className="rounded-lg p-1 text-slate-400">
+          <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1 text-slate-400">
             ✕
           </button>
         </div>
+
+        {roundMatches.length > 0 ? (
+          <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-center text-[13px] font-bold text-slate-500">
+            {sel === null
+              ? "Tap a match to pick it up"
+              : "Now tap another match to swap the blue side"}
+          </div>
+        ) : null}
 
         {roundMatches.length === 0 ? (
           <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
@@ -135,15 +151,16 @@ export function SetMatchupsModal({
               return (
                 <button
                   key={m.id}
+                  type="button"
                   onClick={() => tapMatch(i)}
-                  className={`w-full rounded-2xl border-[1.5px] p-3 text-left transition ${
+                  className={`w-full rounded-2xl border-2 p-3 text-left transition ${
                     selected
-                      ? "border-accent bg-accent/10"
+                      ? "border-accent bg-accent/20 ring-2 ring-accent"
                       : "border-sand-200 bg-white"
                   }`}
                 >
                   <p className="mb-1 text-center text-[11px] font-black uppercase tracking-wide text-slate-400">
-                    Match {i + 1}
+                    {selected ? "Selected — tap another to swap" : `Match ${i + 1}`}
                   </p>
                   <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                     <div className="text-right">
@@ -153,7 +170,7 @@ export function SetMatchupsModal({
                     </div>
                     <span className="font-anton text-sm text-slate-400">VS</span>
                     <div>
-                      {bSides[i].map((pid) => (
+                      {(bSides[i] ?? []).map((pid) => (
                         <p key={pid} className="font-bold text-team-south">{nameOf(pid)}</p>
                       ))}
                     </div>
@@ -169,6 +186,7 @@ export function SetMatchupsModal({
         {roundMatches.length > 0 ? (
           <div className="mt-5 flex items-center gap-2">
             <button
+              type="button"
               onClick={reshuffle}
               disabled={busy}
               className="rounded-2xl border-[1.5px] border-fairway-900 px-4 py-3 text-sm font-black text-fairway-900 disabled:opacity-50"
@@ -176,6 +194,7 @@ export function SetMatchupsModal({
               🎲 Shuffle
             </button>
             <button
+              type="button"
               onClick={lock}
               disabled={busy}
               className="flex-1 rounded-2xl bg-fairway-900 px-4 py-3.5 font-black text-white disabled:opacity-50"
