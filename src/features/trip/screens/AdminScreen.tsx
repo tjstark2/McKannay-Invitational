@@ -7,7 +7,7 @@ import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useViewer } from "@/features/trip/state/ViewerContext";
 import { BackgroundsAdmin } from "@/features/trip/screens/admin/BackgroundsAdmin";
 import { ProUpgradeAdmin } from "@/features/trip/screens/admin/ProUpgradeAdmin";
-import { SetMatchupsModal } from "@/features/trip/screens/admin/SetMatchupsModal";
+import { SetMatchupsScreen } from "@/features/trip/screens/admin/SetMatchupsScreen";
 import type { Round, TeamId, Winner } from "@/types";
 
 type AdminTab = "setup" | "rounds" | "scoring";
@@ -248,7 +248,7 @@ export function AdminScreen() {
   return (
     <div className="space-y-4">
       {matchupRound ? (
-        <SetMatchupsModal roundId={matchupRound} onClose={() => setMatchupRound(null)} />
+        <SetMatchupsScreen initialRoundId={matchupRound} onClose={() => setMatchupRound(null)} />
       ) : null}
       {saving || toast ? (
         <div className="fixed bottom-24 left-1/2 z-50 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-fairway-900 px-5 py-2 text-sm font-black text-white shadow-lg">
@@ -315,6 +315,83 @@ export function AdminScreen() {
         <>
           <div data-tour="adm-pro"><ProUpgradeAdmin /></div>
           <div data-tour="adm-backgrounds"><BackgroundsAdmin /></div>
+          <Card className="p-4">
+            <h2 className="font-black">Players</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-500">
+              Add anyone by name - subs, guests, or friends who haven&apos;t signed up for the app.
+              (People with accounts can also join with your code via Manage members.)
+            </p>
+            <div className="mt-3 flex flex-wrap items-stretch gap-2">
+              <input
+                className={`${inputClass} min-w-[8rem] flex-1`}
+                value={newPlayerName}
+                onChange={(e) => setNewPlayerName(e.target.value)}
+                placeholder="Player name"
+              />
+              <input
+                className={`${inputClass} w-20`}
+                value={newPlayerHandicap}
+                onChange={(e) => setNewPlayerHandicap(e.target.value.replace(/[^0-9.]/g, ""))}
+                inputMode="decimal"
+                placeholder="Hcp"
+              />
+              <div className="flex overflow-hidden rounded-xl border-[1.5px] border-sand-200">
+                <button
+                  type="button"
+                  onClick={() => setNewPlayerTeam("A")}
+                  className={`px-3 text-sm font-black ${newPlayerTeam === "A" ? "bg-team-north text-white" : "text-slate-500"}`}
+                >
+                  {teams.find((t) => t.id === "A")?.name ?? "A"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewPlayerTeam("B")}
+                  className={`px-3 text-sm font-black ${newPlayerTeam === "B" ? "bg-team-south text-white" : "text-slate-500"}`}
+                >
+                  {teams.find((t) => t.id === "B")?.name ?? "B"}
+                </button>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleAddPlayer}
+              disabled={!newPlayerName.trim()}
+              className="mt-2 w-full rounded-2xl bg-fairway-900 px-4 py-2.5 font-black text-white disabled:opacity-50"
+            >
+              Add player
+            </button>
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {(["A", "B"] as const).map((tid) => {
+                const list = players.filter((p) => p.team === tid);
+                return (
+                  <div key={tid}>
+                    <p className="mb-1 text-xs font-black uppercase tracking-wide text-slate-500">
+                      {teams.find((t) => t.id === tid)?.name ?? tid} ({list.length})
+                    </p>
+                    <div className="space-y-1">
+                      {list.map((p) => (
+                        <div key={p.id} className="flex items-center justify-between rounded-lg bg-[#f7f6f1] px-2.5 py-1.5 text-sm">
+                          <span className="font-bold text-ink">
+                            {p.name} <span className="font-normal text-slate-400">({p.handicapIndex})</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removePlayer(p.id)}
+                            aria-label={`Remove ${p.name}`}
+                            className="text-slate-400"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                      {list.length === 0 ? <p className="text-xs text-slate-400">No players yet</p> : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
           <Card className="p-4">
             <h2 className="font-black">Trip Setup</h2>
 
