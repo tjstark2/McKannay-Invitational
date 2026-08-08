@@ -73,12 +73,6 @@ export function buildAdminSpotlight(code: string, isPro: boolean): SpotStep[] {
     { path: p, tourneyTab: "schedule", anchor: "tab-schedule", title: "Check the Schedule", body: "Rounds, courses, tee times, and when to arrive live under Schedule." },
     { path: p, anchor: "nav-addScore", title: "Enter scores", body: "Tap 'Tee It Up' to log scores - submit after the front 9, then again after 18. In 2v2 best ball only one person per pair submits." },
     { path: p, tourneyTab: "leaderboard", anchor: "tab-leaderboard", title: "Watch the standings", body: "The Leaders tab shows live net standings and team points." },
-    { path: p, appScreen: "admin", anchor: "adm-managelink", title: "Admin: manage members & teams", body: "As an admin you can run the tournament. This opens member & team management - approve players, set handicaps, assign teams." },
-    { path: p, appScreen: "admin", adminTab: "setup", anchor: "adm-pro", title: "Setup tab", body: isPro ? "Pro is on - awards & voting, Trip Wrapped, custom backgrounds and the Clubhouse are unlocked." : "Setup starts with your plan and perks." },
-    { path: p, appScreen: "admin", adminTab: "setup", anchor: "adm-backgrounds", title: "Change backgrounds", body: "Set the tournament banner and each screen's scenery here." },
-    { path: p, appScreen: "admin", adminTab: "rounds", anchor: "adm-rounds", title: "Rounds tab", body: "Add rounds, pick courses and formats, and set arrival & tee times. Start a round when you're on the course." },
-    { path: p, appScreen: "admin", adminTab: "scoring", anchor: "adm-scoring", title: "Scoring tab", body: "Fine-tune scoring and, on Pro, toggle post-round awards & voting." },
-    { path: p, appScreen: "admin", adminTab: "setup", title: "You're all set!", body: "Everything's reachable from these tabs. Have fun out there." },
   ];
   return steps;
 }

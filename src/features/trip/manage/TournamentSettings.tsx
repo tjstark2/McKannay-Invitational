@@ -12,6 +12,7 @@ import {
 } from "@/lib/supabase/tripSettings";
 import { CourseHolesTab } from "@/features/trip/manage/CourseHolesTab";
 import { RoundsTab } from "@/features/trip/manage/RoundsTab";
+import { loadVotingEnabled, setVotingEnabled as persistVoting, setTournamentWrapped } from "@/lib/supabase/roundsAdmin";
 
 export type ManageTab = "basics" | "players" | "courses" | "rounds" | "pro";
 
@@ -34,11 +35,13 @@ export function TournamentSettings({
   canManage,
   onUpsell,
   tab: externalTab,
+  joinCode,
 }: {
   tripId: string;
   canManage: boolean;
   onUpsell: (topic: "hole_by_hole") => void;
   tab?: ManageTab;
+  joinCode?: string;
 }) {
   const [innerTab, setInnerTab] = useState<Tab>("basics");
   const tab: Tab = externalTab ?? innerTab;
@@ -49,6 +52,7 @@ export function TournamentSettings({
   const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmMode, setConfirmMode] = useState<ScoringMode | null>(null);
+  const [voting, setVoting] = useState(true);
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -62,6 +66,7 @@ export function TournamentSettings({
       if (!alive) return;
       setS(settings);
       setProgress(prog);
+      setVoting(await loadVotingEnabled(supabase, tripId));
     })();
     return () => {
       alive = false;
@@ -190,6 +195,48 @@ export function TournamentSettings({
             </div>
           </div>
 
+          <div className="rounded-2xl border border-sand-200 p-3">
+            <p className="text-xs font-black uppercase tracking-wide text-slate-500">Tournament status</p>
+            {s.wrappedAt ? (
+              <>
+                <p className="mt-1 text-[13px] leading-5 text-slate-600">
+                  This tournament is finished and wrapped. Reopen it if you need to fix scores.
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const supabase = getSupabaseClient();
+                    if (!supabase) return;
+                    await setTournamentWrapped(supabase, tripId, false);
+                    set("wrappedAt", null);
+                  }}
+                  className="mt-2 w-full rounded-2xl border-[1.5px] border-fairway-900 px-4 py-2.5 font-black text-fairway-900"
+                >
+                  Reopen tournament
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="mt-1 text-[13px] leading-5 text-slate-600">
+                  Ending the tournament locks scoring and generates Trip Wrapped. You can reopen it after.
+                </p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const supabase = getSupabaseClient();
+                    if (!supabase) return;
+                    if (!confirm("End the tournament? Scoring locks and Trip Wrapped is generated.")) return;
+                    await setTournamentWrapped(supabase, tripId, true);
+                    set("wrappedAt", new Date().toISOString());
+                  }}
+                  className="mt-2 w-full rounded-2xl bg-fairway-900 px-4 py-2.5 font-black text-white"
+                >
+                  End tournament
+                </button>
+              </>
+            )}
+          </div>
+
           <div className="rounded-2xl bg-[#f7f6f1] p-3">
             <p className="text-xs font-black uppercase tracking-wide text-slate-500">Win / Retain</p>
             <p className="mt-1 text-[13px] leading-5 text-slate-600">
@@ -285,9 +332,9 @@ export function TournamentSettings({
         </div>
       ) : null}
 
-      {tab === "courses" ? <CourseHolesTab tripId={tripId} /> : null}
+      {tab === "courses" ? <CourseHolesTab tripId={tripId} joinCode={joinCode} /> : null}
 
-      {tab === "rounds" ? <RoundsTab tripId={tripId} /> : null}
+      {tab === "rounds" ? <RoundsTab tripId={tripId} joinCode={joinCode} /> : null}
 
       {tab === "pro" ? (
         <div className="mb-3 space-y-3">
@@ -314,9 +361,38 @@ export function TournamentSettings({
             </div>
           )}
           <div className="rounded-2xl border border-sand-200 p-3">
+            <div className="flex items-start gap-3">
+              <span className="flex-1">
+                <span className="block font-black text-ink">Post-round awards &amp; voting</span>
+                <span className="block text-[13px] leading-5 text-slate-500">
+                  After each round players vote for MVP, three-putt king and the rest.
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={async () => {
+                  const supabase = getSupabaseClient();
+                  if (!supabase) return;
+                  const next = !voting;
+                  setVoting(next);
+                  await persistVoting(supabase, tripId, next);
+                }}
+                className={`h-8 w-14 shrink-0 rounded-full border-2 transition ${
+                  voting ? "border-fairway-900 bg-fairway-900" : "border-sand-200 bg-white"
+                }`}
+                aria-label="Toggle voting"
+              >
+                <span
+                  className={`block h-5 w-5 rounded-full bg-white transition ${voting ? "ml-7" : "ml-1"}`}
+                  style={{ boxShadow: "0 1px 3px rgba(0,0,0,.25)" }}
+                />
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-sand-200 p-3">
             <p className="text-xs font-black uppercase tracking-wide text-slate-500">More Pro settings</p>
             {[
-              ["Post-round awards & voting", "Vote for MVP, three-putt king and the rest after each round"],
               ["Push notifications", "Night before, morning of, tee times and live callouts - per player"],
               ["Clubhouse", "Photos and group chat for the trip"],
               ["Round backgrounds", "Custom images behind each round"],

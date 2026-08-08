@@ -497,13 +497,6 @@ export default function CreatePage() {
                 { path: mng, anchor: "mng-makeadmin", title: "Make a member an admin", body: "On any player's card, tap 'Make admin' to share control - admins can edit rounds, enter scores, and manage settings alongside you. Only you, the owner, can delete the tournament." },
                 { path: mng, anchor: "mng-teams", title: "Name your teams", body: "Rename your two teams whatever you like - these names show up all over the leaderboard and scorecards." },
                 { path: mng, anchor: "mng-delete", title: "Delete tournament", body: "The red Danger Zone permanently deletes the tournament and everything in it. It's owner-only and always asks you to confirm first." },
-                { path: trn, appScreen: "admin", anchor: "adm-managelink", title: "Now - inside the tournament", body: "This is the in-tournament Admin. That button jumps you straight back to Manage My Tournament whenever you need it." },
-                { path: trn, appScreen: "admin", anchor: "adm-tabs", title: "Three tabs to run it", body: "Everything you do during the tournament is under these tabs: Setup, Rounds, and Scoring. Let me flip through each." },
-                { path: trn, appScreen: "admin", adminTab: "setup", anchor: "adm-pro", title: "Setup tab - your plan", body: wantsPro ? "Pro is on ✨ - awards & voting, Trip Wrapped, custom backgrounds and the Clubhouse are all unlocked." : "Setup starts with your plan. Tap Upgrade to Pro to add awards & voting, Trip Wrapped, custom backgrounds, and the Clubhouse." },
-                { path: trn, appScreen: "admin", adminTab: "setup", anchor: "adm-backgrounds", title: "Change your backgrounds", body: "Still in Setup: set your tournament banner and the scenery behind each screen here. Pick from the scene library (custom uploads are a Pro perk)." },
-                { path: trn, appScreen: "admin", adminTab: "rounds", anchor: "adm-rounds", title: "Rounds tab", body: "This is where you add rounds, choose each one's course and format, and set arrival and tee times. Start a round when you're on the course." },
-                { path: trn, appScreen: "admin", adminTab: "scoring", anchor: "adm-scoring", title: "Scoring tab", body: "Fine-tune how scoring works and - on Pro - toggle post-round awards & voting so players can vote on superlatives after each round." },
-                { path: trn, appScreen: "admin", adminTab: "setup", title: "You're all set!", body: `Invite your crew with code ${createdCode}, assign teams as they arrive, and start Round 1. Everything's reachable right here in Admin.` },
               ];
               startSpotlightTour(steps);
               router.push("/home");

@@ -21,6 +21,7 @@ export type TripSettings = {
   retainNumber: number | null;
   isPro: boolean;
   scoringMode: ScoringMode;
+  wrappedAt: string | null;
 };
 
 /** Round progress - drives the scoring-mode toggle guardrails. */
@@ -37,7 +38,7 @@ export async function loadTripSettings(
   const { data } = await supabase
     .from("trips")
     .select(
-      "id,name,join_code,location,state,dates,lodging_name,lodging_address,logistics_notes,total_points,winning_number,retain_number,is_pro,scoring_mode"
+      "id,name,join_code,location,state,dates,lodging_name,lodging_address,logistics_notes,total_points,winning_number,retain_number,is_pro,scoring_mode,wrapped_at"
     )
     .eq("id", tripId)
     .maybeSingle();
@@ -58,6 +59,7 @@ export async function loadTripSettings(
     retainNumber: (t.retain_number as number) ?? null,
     isPro: Boolean(t.is_pro),
     scoringMode: ((t.scoring_mode as string) ?? "basic_918") as ScoringMode,
+    wrappedAt: (t.wrapped_at as string) ?? null,
   };
 }
 

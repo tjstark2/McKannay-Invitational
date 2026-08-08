@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { TripStateProvider } from "@/features/trip/state/TripStateContext";
+import { BackgroundsAdmin } from "@/features/trip/screens/admin/BackgroundsAdmin";
 import {
   loadCoursesWithHoleStatus,
   loadCourseHoles,
@@ -26,7 +28,7 @@ type Row = { hole: number; par: string; si: string };
 const blankRows = (): Row[] =>
   Array.from({ length: 18 }, (_, i) => ({ hole: i + 1, par: "", si: "" }));
 
-export function CourseHolesTab({ tripId }: { tripId: string }) {
+export function CourseHolesTab({ tripId, joinCode }: { tripId: string; joinCode?: string }) {
   const [courses, setCourses] = useState<CourseLite[]>([]);
   const [active, setActive] = useState<CourseLite | null>(null);
   const [rows, setRows] = useState<Row[]>(blankRows());
@@ -296,6 +298,15 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
             + Add a course
           </button>
         )}
+
+        {joinCode ? (
+          <div className="mt-4">
+            <p className="mb-1 text-xs font-black uppercase tracking-wide text-slate-500">Backgrounds</p>
+            <TripStateProvider initialJoinCode={joinCode}>
+              <BackgroundsAdmin />
+            </TripStateProvider>
+          </div>
+        ) : null}
 
         {missing.length > 0 && courses.length > 0 ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[13px] text-amber-900">

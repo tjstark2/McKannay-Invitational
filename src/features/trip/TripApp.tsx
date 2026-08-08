@@ -5,7 +5,6 @@ import { RoundTodayBanner } from "@/features/trip/components/RoundTodayBanner";
 import { PostRoundGate } from "@/features/voting/PostRoundGate";
 import { WrappedBanner } from "@/features/voting/WrappedBanner";
 import { AddScoreScreen } from "@/features/trip/screens/AddScoreScreen";
-import { AdminScreen } from "@/features/trip/screens/AdminScreen";
 import { TourHost, startSpotlightTour, buildMemberSpotlight, buildAdminSpotlight } from "@/features/trip/tour/spotlight";
 import { BottomNav } from "@/features/trip/components/BottomNav";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -382,17 +381,13 @@ function TripAppInner() {
           {activeScreen === "rules" ? <RulesScreen /> : null}
 
           {activeScreen === "admin" ? (
-            canManage ? (
-              <AdminScreen />
-            ) : (
-              <div className="rounded-2xl border border-sand-100 bg-white p-8 text-center">
-                <p className="text-3xl">🔒</p>
-                <p className="mt-3 font-black text-ink">Admins only</p>
-                <p className="mt-1 text-sm text-slate-500">
-                  Only the organizer and admins can manage this tournament.
-                </p>
-              </div>
-            )
+            <div className="rounded-2xl border border-sand-100 bg-white p-8 text-center">
+              <p className="text-3xl">🛠️</p>
+              <p className="mt-3 font-black text-ink">Setup moved</p>
+              <p className="mt-1 text-sm text-slate-500">
+                Everything for setting up the tournament now lives in Manage My Tournament.
+              </p>
+            </div>
           ) : null}
 
           {activeScreen === "more" ? (

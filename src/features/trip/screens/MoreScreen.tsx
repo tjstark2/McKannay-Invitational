@@ -34,15 +34,6 @@ export function MoreScreen({
       screen: "courseDetail",
       description: "View course information and trip schedule",
     },
-    ...(canManage
-      ? [
-          {
-            label: "Admin Setup",
-            screen: "admin" as Screen,
-            description: "Rounds, courses, and scoring",
-          },
-        ]
-      : []),
   ];
 
   return (

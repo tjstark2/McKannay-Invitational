@@ -448,6 +448,7 @@ export default function ManagePage() {
             tripId={trip.id}
             canManage={isOwnerViewer}
             tab={mtab}
+            joinCode={trip.joinCode}
             onUpsell={(topic) => setUpsell(topic)}
           />
         </div>

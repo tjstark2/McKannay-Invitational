@@ -18,6 +18,7 @@ export type TeeTimeLite = {
   id: string;
   time: string;
   playerCount: number;
+  playerIds: string[];
 };
 
 export type Segment = {
@@ -32,6 +33,14 @@ export type RoundSetup = {
   id: string;
   roundNumber: number;
   title: string;
+  courseId: string | null;
+  teeId: string | null;
+  dateLabel: string;
+  arrivalTime: string;
+  format: string;
+  groupSize: number | null;
+  startedAt: string | null;
+  finishedAt: string | null;
   holesCount: number;         // 9 or 18
   nine: "front" | "back" | null;
   teeTimes: TeeTimeLite[];
@@ -44,7 +53,7 @@ export async function loadRoundSetups(
 ): Promise<RoundSetup[]> {
   const { data: rounds } = await supabase
     .from("rounds")
-    .select("id,round_number,title,holes_count,nine,tee_times(id,tee_time,tee_time_players(player_id))")
+    .select("id,round_number,title,holes_count,nine,course_id,tee_id,tee_times(id,tee_time,tee_time_players(player_id))")
     .eq("trip_id", tripId)
     .order("round_number");
   const list = (rounds ?? []) as Record<string, unknown>[];
@@ -75,12 +84,21 @@ export async function loadRoundSetups(
         id: t.id as string,
         time: (t.tee_time as string) ?? "",
         playerCount: ((t.tee_time_players ?? []) as unknown[]).length,
+        playerIds: ((t.tee_time_players ?? []) as { player_id: string }[]).map((x) => x.player_id),
       }))
       .sort((a, b) => a.time.localeCompare(b.time));
     return {
       id: r.id as string,
       roundNumber: r.round_number as number,
       title: (r.title as string) ?? `Round ${r.round_number}`,
+      courseId: (r.course_id as string) ?? null,
+      teeId: (r.tee_id as string) ?? null,
+      dateLabel: (r.date_label as string) ?? "",
+      arrivalTime: (r.arrival_time as string) ?? "",
+      format: (r.format as string) ?? "best_ball",
+      groupSize: (r.group_size as number) ?? null,
+      startedAt: (r.started_at as string) ?? null,
+      finishedAt: (r.finished_at as string) ?? null,
       holesCount: (r.holes_count as number) ?? 18,
       nine: ((r.nine as string) ?? null) as "front" | "back" | null,
       teeTimes: tts,
@@ -120,5 +138,14 @@ export async function saveSegments(
     sort_order: i + 1,
   }));
   const { error } = await supabase.from("round_segments").insert(rows);
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+export async function saveRoundTee(
+  supabase: SupabaseClient,
+  roundId: string,
+  teeId: string | null
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.from("rounds").update({ tee_id: teeId }).eq("id", roundId);
   return error ? { ok: false, error: error.message } : { ok: true };
 }
