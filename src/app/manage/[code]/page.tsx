@@ -510,7 +510,20 @@ export default function ManagePage() {
           />
         </div>
       ) : null}
-      {upsell ? <ProUpsellModal topic={upsell} onClose={() => setUpsell(null)} /> : null}
+      {upsell ? (
+        <ProUpsellModal
+          topic={upsell}
+          onClose={() => setUpsell(null)}
+          onUpgrade={async () => {
+            const supabase = getSupabaseClient();
+            if (supabase && trip) {
+              await supabase.from("trips").update({ is_pro: true }).eq("id", trip.id);
+            }
+            setUpsell(null);
+            window.location.reload();
+          }}
+        />
+      ) : null}
 
       {/* requests */}
       <section data-tour="mng-requests" className="mt-8">

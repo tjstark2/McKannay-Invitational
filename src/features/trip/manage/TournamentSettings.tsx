@@ -10,8 +10,9 @@ import {
   type RoundProgress,
   type ScoringMode,
 } from "@/lib/supabase/tripSettings";
+import { CourseHolesTab } from "@/features/trip/manage/CourseHolesTab";
 
-type Tab = "basics" | "scoring" | "logistics";
+type Tab = "basics" | "scoring" | "courses" | "logistics";
 
 const inputClass =
   "w-full rounded-xl border-[1.5px] border-sand-200 bg-white px-3 py-2 text-ink outline-none focus:border-fairway-900";
@@ -96,6 +97,7 @@ export function TournamentSettings({
   const tabs: { id: Tab; label: string }[] = [
     { id: "basics", label: "Basics" },
     { id: "scoring", label: "Scoring" },
+    { id: "courses", label: "Courses" },
     { id: "logistics", label: "Logistics" },
   ];
 
@@ -263,11 +265,13 @@ export function TournamentSettings({
           {s.scoringMode === "hole_by_hole" ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[13px] text-amber-900">
               Hole by hole needs each course&apos;s <b>par and stroke index</b> for all 18 holes. Add it in the
-              Courses area before a round starts.
+              <b> Courses</b> tab before a round starts.
             </div>
           ) : null}
         </div>
       ) : null}
+
+      {tab === "courses" ? <CourseHolesTab tripId={tripId} /> : null}
 
       {/* ---------------- LOGISTICS ---------------- */}
       {tab === "logistics" ? (

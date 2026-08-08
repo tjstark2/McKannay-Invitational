@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.116.0",
     "@fontsource/anton": "^5.2.7",
     "@fontsource/archivo": "^5.2.8",
     "@fontsource/inter": "^5.2.8",
