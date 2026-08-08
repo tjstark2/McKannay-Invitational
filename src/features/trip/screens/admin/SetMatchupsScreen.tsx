@@ -8,12 +8,17 @@ import { saveDraw } from "@/lib/supabase/draws";
 import { courseHandicap } from "@/lib/scoring";
 import {
   computeMatches,
+  buildDraftLog,
+  flipCoin,
   fairnessDelta,
   fairnessTone,
   roundShape,
   type DrawMatch,
   type DrawMethod,
+  type DraftLogEntry,
 } from "@/features/trip/draw/drawCompute";
+import { DrawReveal } from "@/features/trip/screens/admin/DrawReveal";
+import type { TeamId } from "@/types";
 
 function shuffle<T>(arr: readonly T[]): T[] {
   const out = arr.slice();
@@ -36,10 +41,10 @@ type MethodMeta = {
 const H2H_METHODS: MethodMeta[] = [
   { id: "manual", name: "Manual Pick", desc: "Set the board yourself", icon: "✍️", pro: false, ready: true },
   { id: "autobalance", name: "Handicap Auto-Balance", desc: "Fairest matchups by handicap", icon: "⚖️", pro: true, ready: true },
-  { id: "slot", name: "Slot Machine", desc: "Spin the reels", icon: "🎰", pro: true, ready: false },
-  { id: "hat", name: "Blind Hat Draw", desc: "Pull names from a hat", icon: "🎩", pro: true, ready: false },
-  { id: "wheel", name: "Spin the Wheel", desc: "Two wheels decide", icon: "🎡", pro: true, ready: false },
-  { id: "draft", name: "Captain's Draft", desc: "Coin toss, then captains pick", icon: "🪙", pro: true, ready: false },
+  { id: "slot", name: "Slot Machine", desc: "Spin the reels", icon: "🎰", pro: true, ready: true },
+  { id: "hat", name: "Blind Hat Draw", desc: "Pull names from a hat", icon: "🎩", pro: true, ready: true },
+  { id: "wheel", name: "Spin the Wheel", desc: "Two wheels decide", icon: "🎡", pro: true, ready: true },
+  { id: "draft", name: "Captain's Draft", desc: "Coin toss, then captains pick", icon: "🪙", pro: true, ready: true },
 ];
 
 const FIELD_METHODS: MethodMeta[] = [
@@ -61,6 +66,9 @@ export function SetMatchupsScreen({
   const [method, setMethod] = useState<DrawMethod | null>(null);
   const [board, setBoard] = useState<DrawMatch[]>([]);
   const [sel, setSel] = useState<number | null>(null);
+  const [revealing, setRevealing] = useState(false);
+  const [coinWinner, setCoinWinner] = useState<TeamId>("A");
+  const [draftLog, setDraftLog] = useState<DraftLogEntry[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -93,11 +101,26 @@ export function SetMatchupsScreen({
     setMethod(m.id);
     setSel(null);
     setError(null);
+    setRevealing(false);
     if (m.id === "manual") {
       setBoard(roundMatches.map((mm) => ({ a: mm.aPlayers, b: mm.bPlayers })));
     } else if (m.id === "autobalance") {
       setBoard(computeMatches({ round: round!, players, hcp, method: "autobalance" }));
+    } else {
+      // Slot / Hat / Wheel / Draft: outcome decided now, animation reveals it.
+      runAnimated(m.id);
     }
+  }
+
+  function runAnimated(id: DrawMethod) {
+    const b = computeMatches({ round: round!, players, hcp, method: id });
+    setBoard(b);
+    if (id === "draft") {
+      const cw = flipCoin();
+      setCoinWinner(cw);
+      setDraftLog(buildDraftLog(b, cw));
+    }
+    setRevealing(true);
   }
 
   // Manual: tap two matches to swap their B sides.
@@ -242,6 +265,28 @@ export function SetMatchupsScreen({
               );
             })}
           </div>
+        ) : revealing && method ? (
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                setRevealing(false);
+                setMethod(null);
+              }}
+              className="mb-3 text-sm font-bold text-slate-500"
+            >
+              ‹ Methods
+            </button>
+            <DrawReveal
+              method={method}
+              board={board}
+              players={players}
+              teams={teams}
+              coinWinner={coinWinner}
+              draftLog={draftLog}
+              onDone={() => setRevealing(false)}
+            />
+          </div>
         ) : (
           /* Run step: the board */
           <div>
@@ -327,7 +372,7 @@ export function SetMatchupsScreen({
                 >
                   🎲 Shuffle
                 </button>
-              ) : (
+              ) : method === "autobalance" ? (
                 <button
                   type="button"
                   onClick={() => setBoard(computeMatches({ round: round!, players, hcp, method: "autobalance" }))}
@@ -335,6 +380,15 @@ export function SetMatchupsScreen({
                   className="rounded-2xl border-[1.5px] border-fairway-900 px-4 py-3 text-sm font-black text-fairway-900 disabled:opacity-50"
                 >
                   ↻ Recompute
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => method && runAnimated(method)}
+                  disabled={busy}
+                  className="rounded-2xl border-[1.5px] border-fairway-900 px-4 py-3 text-sm font-black text-fairway-900 disabled:opacity-50"
+                >
+                  ↻ Re-draw
                 </button>
               )}
               <button
