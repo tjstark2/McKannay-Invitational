@@ -316,95 +316,12 @@ export function AdminScreen() {
           <div data-tour="adm-pro"><ProUpgradeAdmin /></div>
           <div data-tour="adm-backgrounds"><BackgroundsAdmin /></div>
           <Card className="p-4">
-            <h2 className="font-black">Trip Setup</h2>
-
-            <label className={`mt-4 ${labelClass}`}>Trip Name</label>
-            <input
-              value={trip.name}
-              onChange={(event) => updateTrip({ name: event.target.value })}
-              className={inputClass}
-            />
-
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <div>
-                <label className={labelClass}>Dates</label>
-                <input
-                  value={trip.dates}
-                  onChange={(event) => updateTrip({ dates: event.target.value })}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Location</label>
-                <input
-                  value={trip.location}
-                  onChange={(event) =>
-                    updateTrip({ location: event.target.value })
-                  }
-                  className={inputClass}
-                />
-              </div>
-            </div>
-
-            <div className="mt-4 grid grid-cols-3 gap-3">
-              <div>
-                <label className={labelClass}>Join Code</label>
-                <input
-                  value={trip.joinCode}
-                  onChange={(event) =>
-                    updateTrip({ joinCode: event.target.value })
-                  }
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Win</label>
-                <input
-                  value={trip.winningNumber}
-                  onChange={(event) =>
-                    updateTrip({
-                      winningNumber: Number(event.target.value) || 0,
-                    })
-                  }
-                  className={inputClass}
-                  inputMode="decimal"
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Retain</label>
-                <input
-                  value={trip.retainNumber}
-                  onChange={(event) =>
-                    updateTrip({
-                      retainNumber: Number(event.target.value) || 0,
-                    })
-                  }
-                  className={inputClass}
-                  inputMode="decimal"
-                />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <h2 className="font-black">Lodging</h2>
-            <label className={`mt-4 ${labelClass}`}>Lodging Name</label>
-            <input
-              value={trip.lodgingName}
-              onChange={(event) =>
-                updateTrip({ lodgingName: event.target.value })
-              }
-              className={inputClass}
-            />
-            <label className={`mt-4 ${labelClass}`}>Lodging Address</label>
-            <input
-              value={trip.lodgingAddress}
-              onChange={(event) =>
-                updateTrip({ lodgingAddress: event.target.value })
-              }
-              className={inputClass}
-              placeholder="Add house or resort address"
-            />
+            <h2 className="font-black">Trip Setup &amp; Lodging</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-500">
+              Name, dates, location, join code, win/retain and lodging now live in
+              <span className="font-black"> Manage Tournament</span>, alongside players, courses and rounds.
+              Head there to set the trip up.
+            </p>
           </Card>
 
           <Card className="p-4">

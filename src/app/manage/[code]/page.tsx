@@ -35,7 +35,7 @@ import {
 } from "@/lib/supabase/memberships";
 import { handleAndLocation, searchUsers, type PublicProfile } from "@/lib/supabase/friends";
 import { TourHost } from "@/features/trip/tour/spotlight";
-import { TournamentSettings } from "@/features/trip/manage/TournamentSettings";
+import { TournamentSettings, type ManageTab, MANAGE_TABS } from "@/features/trip/manage/TournamentSettings";
 import { ProUpsellModal, type UpsellTopic } from "@/features/trip/manage/ProUpsellModal";
 
 export default function ManagePage() {
@@ -62,6 +62,7 @@ export default function ManagePage() {
   const [editingSize, setEditingSize] = useState(false);
   const [sizeDraft, setSizeDraft] = useState("12");
   const [upsell, setUpsell] = useState<UpsellTopic | null>(null);
+  const [mtab, setMtab] = useState<ManageTab>("basics");
 
   const refresh = useCallback(async (t: TripRef) => {
     const supabase = getSupabaseClient();
@@ -414,6 +415,36 @@ export default function ManagePage() {
         who gets in.
       </p>
 
+      {trip && isOwnerViewer ? (
+        <div className="mt-7 flex gap-1.5 overflow-x-auto pb-1">
+          {MANAGE_TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setMtab(t.id)}
+              className={`whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-black ${
+                mtab === t.id ? "bg-fairway-900 text-white" : "bg-[#f3efe6] text-slate-600"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {trip && isOwnerViewer && mtab !== "players" ? (
+        <div className="mt-4">
+          <TournamentSettings
+            tripId={trip.id}
+            canManage={isOwnerViewer}
+            tab={mtab}
+            onUpsell={(topic) => setUpsell(topic)}
+          />
+        </div>
+      ) : null}
+
+      {!isOwnerViewer || mtab === "players" ? (
+        <>
       {/* invite by username */}
       <section data-tour="mng-invite" className="mt-7">
         <h2 className="font-anton text-2xl tracking-tight text-ink">Invite a Player</h2>
@@ -501,15 +532,6 @@ export default function ManagePage() {
         ) : null}
       </section>
 
-      {trip && isOwnerViewer ? (
-        <div className="mt-8">
-          <TournamentSettings
-            tripId={trip.id}
-            canManage={isOwnerViewer}
-            onUpsell={(topic) => setUpsell(topic)}
-          />
-        </div>
-      ) : null}
       {upsell ? (
         <ProUpsellModal
           topic={upsell}
@@ -649,6 +671,8 @@ export default function ManagePage() {
           ))}
         </div>
       </section>
+        </>
+      ) : null}
 
       <div className="mt-10 grid gap-2">
         <button

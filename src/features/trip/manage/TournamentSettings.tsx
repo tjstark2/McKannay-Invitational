@@ -13,7 +13,18 @@ import {
 import { CourseHolesTab } from "@/features/trip/manage/CourseHolesTab";
 import { RoundsTab } from "@/features/trip/manage/RoundsTab";
 
-type Tab = "basics" | "scoring" | "courses" | "rounds" | "logistics";
+export type ManageTab = "basics" | "players" | "courses" | "rounds" | "logistics" | "pro";
+
+export const MANAGE_TABS: { id: ManageTab; label: string }[] = [
+  { id: "basics", label: "Basics" },
+  { id: "players", label: "Players & Teams" },
+  { id: "courses", label: "Courses" },
+  { id: "rounds", label: "Rounds" },
+  { id: "logistics", label: "Logistics" },
+  { id: "pro", label: "Pro" },
+];
+
+type Tab = ManageTab;
 
 const inputClass =
   "w-full rounded-xl border-[1.5px] border-sand-200 bg-white px-3 py-2 text-ink outline-none focus:border-fairway-900";
@@ -23,12 +34,16 @@ export function TournamentSettings({
   tripId,
   canManage,
   onUpsell,
+  tab: externalTab,
 }: {
   tripId: string;
   canManage: boolean;
   onUpsell: (topic: "hole_by_hole") => void;
+  tab?: ManageTab;
 }) {
-  const [tab, setTab] = useState<Tab>("basics");
+  const [innerTab, setInnerTab] = useState<Tab>("basics");
+  const tab: Tab = externalTab ?? innerTab;
+  const setTab = setInnerTab;
   const [s, setS] = useState<TripSettings | null>(null);
   const [progress, setProgress] = useState<RoundProgress>({ completed: 0, inProgress: 0, total: 0 });
   const [busy, setBusy] = useState(false);
@@ -95,18 +110,15 @@ export function TournamentSettings({
   const turningOff = confirmMode === "basic_918";
   const hardWarning = turningOff && progress.completed > 0;
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: "basics", label: "Basics" },
-    { id: "scoring", label: "Scoring" },
-    { id: "courses", label: "Courses" },
-    { id: "rounds", label: "Rounds" },
-    { id: "logistics", label: "Logistics" },
-  ];
+  const tabs = MANAGE_TABS.filter((t) => t.id !== "players");
 
   return (
     <section className="mb-5 rounded-3xl border border-sand-200 bg-white p-4 shadow-sm">
-      <h2 className="mb-3 font-anton text-2xl tracking-tight text-ink">Tournament Settings</h2>
+      {externalTab ? null : (
+        <h2 className="mb-3 font-anton text-2xl tracking-tight text-ink">Tournament Settings</h2>
+      )}
 
+      {externalTab ? null : (
       <div className="mb-4 flex gap-1.5 overflow-x-auto">
         {tabs.map((t) => (
           <button
@@ -121,6 +133,7 @@ export function TournamentSettings({
           </button>
         ))}
       </div>
+      )}
 
       {/* ---------------- BASICS ---------------- */}
       {tab === "basics" ? (
@@ -225,8 +238,8 @@ export function TournamentSettings({
         </div>
       ) : null}
 
-      {/* ---------------- SCORING ---------------- */}
-      {tab === "scoring" ? (
+      {/* ---------------- SCORING MODE (inside Basics) ---------------- */}
+      {tab === "basics" ? (
         <div className="space-y-3">
           <p className="text-[13px] leading-5 text-slate-600">
             How players put scores in. This drives handicaps, stats and what the group sees during a round.
@@ -276,6 +289,36 @@ export function TournamentSettings({
       {tab === "courses" ? <CourseHolesTab tripId={tripId} /> : null}
 
       {tab === "rounds" ? <RoundsTab tripId={tripId} /> : null}
+
+      {tab === "pro" ? (
+        <div className="space-y-3">
+          {s.isPro ? (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+              <p className="font-black text-emerald-800">This is a Pro tournament</p>
+              <p className="mt-1 text-[13px] leading-5 text-emerald-900">
+                Hole-by-hole scoring, the Clubhouse, matchup draws and Trip Wrapped are all unlocked.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-sand-200 p-4">
+              <p className="font-black text-ink">Free tournament</p>
+              <p className="mt-1 text-[13px] leading-5 text-slate-500">
+                Upgrade to unlock hole-by-hole live scoring, the Clubhouse, matchup draws and Trip Wrapped.
+              </p>
+              <button
+                type="button"
+                onClick={() => onUpsell("hole_by_hole")}
+                className="mt-3 w-full rounded-2xl bg-accent px-4 py-3 font-black text-ink"
+              >
+                See what Pro unlocks
+              </button>
+            </div>
+          )}
+          <p className="text-[12px] leading-5 text-slate-400">
+            Round backgrounds and appearance settings live in the tournament&apos;s Admin area for now.
+          </p>
+        </div>
+      ) : null}
 
       {/* ---------------- LOGISTICS ---------------- */}
       {tab === "logistics" ? (
