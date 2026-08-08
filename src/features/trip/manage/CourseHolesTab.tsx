@@ -18,7 +18,7 @@ const labelClass = "block text-xs font-black uppercase tracking-wide text-slate-
 type Row = { hole: number; par: string; si: string };
 
 const blankRows = (): Row[] =>
-  Array.from({ length: 18 }, (_, i) => ({ hole: i + 1, par: "4", si: "" }));
+  Array.from({ length: 18 }, (_, i) => ({ hole: i + 1, par: "", si: "" }));
 
 export function CourseHolesTab({ tripId }: { tripId: string }) {
   const [courses, setCourses] = useState<CourseLite[]>([]);
@@ -51,7 +51,7 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
     rows.forEach((r) => {
       const p = Number(r.par);
       const s = Number(r.si);
-      if (r.par === "" || ![3, 4, 5].includes(p)) parErr.add(r.hole);
+      if (r.par === "" || !(p >= 2 && p <= 8)) parErr.add(r.hole);
       if (r.si === "" || !(s >= 1 && s <= 18)) siErr.add(r.hole);
       else siCount.set(s, (siCount.get(s) ?? 0) + 1);
     });
@@ -86,9 +86,23 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
     }
   }
 
+  const cellId = (hole: number, key: "par" | "si") => `ch-${key}-${hole}`;
+
+  function focusNext(hole: number, key: "par" | "si") {
+    const next = key === "par" ? cellId(hole, "si") : hole < 18 ? cellId(hole + 1, "par") : null;
+    if (!next) return;
+    const el = document.getElementById(next) as HTMLInputElement | null;
+    el?.focus();
+    el?.select();
+  }
+
   function setCell(hole: number, key: "par" | "si", value: string) {
     const clean = value.replace(/[^0-9]/g, "").slice(0, 2);
     setRows((prev) => prev.map((r) => (r.hole === hole ? { ...r, [key]: clean } : r)));
+    // Jump ahead as soon as the answer can't get any longer, so you can type
+    // straight down the scorecard without tapping between boxes.
+    if (key === "par" && clean.length === 1) focusNext(hole, "par");
+    if (key === "si" && (clean.length === 2 || Number(clean) >= 2)) focusNext(hole, "si");
   }
 
   async function readPhoto(file: File) {
@@ -156,8 +170,8 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
     return (
       <div className="space-y-3">
         <p className="text-[13px] leading-5 text-slate-600">
-          Hole-by-hole scoring needs the par and stroke index for all 18 holes of each course. That is what
-          decides who gets strokes on which holes.
+          Hole-by-hole scoring needs the par and course handicap number for all 18 holes of each course. The
+          course handicap number is the hole ranking from 1 to 18, and it decides who gets strokes where.
         </p>
 
         {saved ? (
@@ -190,7 +204,7 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
                       ? "All 18 holes set"
                       : c.holeCount > 0
                       ? `${c.holeCount} of 18 holes`
-                      : "Needs par and stroke index"}
+                      : "Needs par and course handicap numbers"}
                     {c.rating && c.slope ? ` \u00b7 ${c.rating}/${c.slope}` : " \u00b7 rating/slope missing"}
                   </span>
                 </span>
@@ -220,7 +234,7 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
         <div className="grid grid-cols-[44px_1fr_1fr] bg-[#f3efe6] px-2 py-1.5 text-[11px] font-black uppercase tracking-wide text-slate-500">
           <span>Hole</span>
           <span className="text-center">Par</span>
-          <span className="text-center">Stroke Index</span>
+          <span className="text-center">Course Hcp #</span>
         </div>
         {list.map((r) => {
           const badPar = check.parErr.has(r.hole);
@@ -229,16 +243,20 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
             <div key={r.hole} className="grid grid-cols-[44px_1fr_1fr] items-center gap-1 border-t border-sand-200 px-2 py-1">
               <span className="text-[13px] font-black text-slate-500">{r.hole}</span>
               <input
+                id={cellId(r.hole, "par")}
                 inputMode="numeric"
                 value={r.par}
+                onFocus={(e) => e.currentTarget.select()}
                 onChange={(e) => setCell(r.hole, "par", e.target.value)}
                 className={`mx-auto w-14 rounded-lg border-2 px-2 py-1.5 text-center font-bold outline-none ${
                   badPar ? "border-red-400 bg-red-50" : "border-sand-200"
                 }`}
               />
               <input
+                id={cellId(r.hole, "si")}
                 inputMode="numeric"
                 value={r.si}
+                onFocus={(e) => e.currentTarget.select()}
                 onChange={(e) => setCell(r.hole, "si", e.target.value)}
                 className={`mx-auto w-14 rounded-lg border-2 px-2 py-1.5 text-center font-bold outline-none ${
                   badSi ? "border-red-400 bg-red-50" : "border-sand-200"
@@ -286,17 +304,34 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
         <p className="rounded-xl bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-900">{parsedNote}</p>
       ) : null}
 
+      <div className="rounded-2xl bg-[#f7f6f1] p-3">
+        <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+          Course handicap numbers left to use
+        </p>
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {check.missingSi.length === 0 ? (
+            <span className="text-[13px] font-bold text-emerald-700">All 18 used.</span>
+          ) : (
+            check.missingSi.map((n) => (
+              <span key={n} className="rounded-md bg-white px-2 py-0.5 text-[13px] font-black text-slate-600">
+                {n}
+              </span>
+            ))
+          )}
+        </div>
+      </div>
+
       <Grid title="Front 9" list={nine(1, 9)} />
       <Grid title="Back 9" list={nine(10, 18)} />
 
       {!check.ok ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[13px] text-amber-900">
-          {check.parErr.size > 0 ? <p>Par must be 3, 4 or 5. Check the red boxes.</p> : null}
-          {check.dupes.size > 0 ? <p>Two holes share a stroke index. Each number 1-18 is used once.</p> : null}
+          {check.parErr.size > 0 ? <p>Par must be between 2 and 8. Check the red boxes.</p> : null}
+          {check.dupes.size > 0 ? <p>Two holes share a course handicap number. Each number 1-18 is used exactly once.</p> : null}
           {check.missingSi.length > 0 && check.missingSi.length < 18 ? (
             <p>Still unused: {check.missingSi.join(", ")}</p>
           ) : null}
-          {check.siErr.size > 0 && check.missingSi.length === 18 ? <p>Add a stroke index for every hole.</p> : null}
+          {check.siErr.size > 0 && check.missingSi.length === 18 ? <p>Add a course handicap number for every hole.</p> : null}
         </div>
       ) : (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-[13px] font-bold text-emerald-800">
@@ -321,7 +356,7 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
             <h3 className="font-anton text-2xl tracking-tight text-ink">Are you sure it is right?</h3>
             <p className="mt-2 text-[14px] leading-6 text-slate-600">
               This drives every stat in the tournament: who gets strokes on which holes, net scores, match
-              results, awards and the final standings. A wrong stroke index quietly changes who wins.
+              results, awards and the final standings. A wrong course handicap number quietly changes who wins.
             </p>
             <div className="mt-4 flex gap-2">
               <button
