@@ -152,3 +152,39 @@ export async function updateCourse(
   const { error } = await supabase.from("courses").update(row).eq("id", courseId);
   return error ? { ok: false, error: error.message } : { ok: true };
 }
+
+export type CourseTee = {
+  id: string;
+  name: string;
+  yardage: number | null;
+  rating: number | null;
+  slope: number | null;
+};
+
+export async function loadCourseTees(supabase: SupabaseClient, courseId: string): Promise<CourseTee[]> {
+  const { data } = await supabase
+    .from("course_tees")
+    .select("id,name,yardage,rating,slope")
+    .eq("course_id", courseId)
+    .order("sort_order");
+  return ((data ?? []) as Record<string, unknown>[]).map((t) => ({
+    id: t.id as string,
+    name: (t.name as string) ?? "",
+    yardage: (t.yardage as number) ?? null,
+    rating: (t.rating as number) ?? null,
+    slope: (t.slope as number) ?? null,
+  }));
+}
+
+export async function addCourseTee(
+  supabase: SupabaseClient,
+  courseId: string,
+  tee: { name: string; yardage: number | null; rating: number | null; slope: number | null }
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.from("course_tees").insert({ course_id: courseId, ...tee });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+export async function deleteCourseTee(supabase: SupabaseClient, teeId: string): Promise<void> {
+  await supabase.from("course_tees").delete().eq("id", teeId);
+}

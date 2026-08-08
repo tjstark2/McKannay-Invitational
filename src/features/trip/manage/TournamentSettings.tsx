@@ -13,14 +13,13 @@ import {
 import { CourseHolesTab } from "@/features/trip/manage/CourseHolesTab";
 import { RoundsTab } from "@/features/trip/manage/RoundsTab";
 
-export type ManageTab = "basics" | "players" | "courses" | "rounds" | "logistics" | "pro";
+export type ManageTab = "basics" | "players" | "courses" | "rounds" | "pro";
 
 export const MANAGE_TABS: { id: ManageTab; label: string }[] = [
   { id: "basics", label: "Basics" },
   { id: "players", label: "Players & Teams" },
   { id: "courses", label: "Courses" },
   { id: "rounds", label: "Rounds" },
-  { id: "logistics", label: "Logistics" },
   { id: "pro", label: "Pro" },
 ];
 
@@ -314,14 +313,33 @@ export function TournamentSettings({
               </button>
             </div>
           )}
-          <p className="text-[12px] leading-5 text-slate-400">
-            Round backgrounds and appearance settings live in the tournament&apos;s Admin area for now.
-          </p>
+          <div className="rounded-2xl border border-sand-200 p-3">
+            <p className="text-xs font-black uppercase tracking-wide text-slate-500">More Pro settings</p>
+            {[
+              ["Post-round awards & voting", "Vote for MVP, three-putt king and the rest after each round"],
+              ["Push notifications", "Night before, morning of, tee times and live callouts - per player"],
+              ["Clubhouse", "Photos and group chat for the trip"],
+              ["Round backgrounds", "Custom images behind each round"],
+            ].map(([t, d]) => (
+              <div key={t} className="mt-2 flex items-start gap-2">
+                <span className="mt-0.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-black uppercase text-slate-500">
+                  Soon
+                </span>
+                <span className="flex-1">
+                  <span className="block text-[13px] font-black text-ink">{t}</span>
+                  <span className="block text-[12px] leading-5 text-slate-500">{d}</span>
+                </span>
+              </div>
+            ))}
+            <p className="mt-3 text-[12px] leading-5 text-slate-400">
+              These are managed in the tournament&apos;s Admin area today and are moving here.
+            </p>
+          </div>
         </div>
       ) : null}
 
       {/* ---------------- LOGISTICS ---------------- */}
-      {tab === "logistics" ? (
+      {tab === "basics" ? (
         <div className="space-y-3">
           <p className="text-[13px] leading-5 text-slate-600">
             Where everyone&apos;s staying and anything else the group needs. Players see this when they first
