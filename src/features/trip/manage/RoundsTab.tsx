@@ -153,6 +153,27 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
         const course = courses.find((c) => c.id === r.courseId);
         const tees = r.courseId ? teesByCourse[r.courseId] ?? [] : [];
         const status = r.finishedAt ? "Finished" : r.startedAt ? "In progress" : "Not started";
+        // A group holds at most 4, so 10 players needs 3 tee times, 8 needs 2.
+        const neededTeeTimes = Math.ceil(roster.length / 4);
+        const assigned = new Set(r.teeTimes.flatMap((t) => t.playerIds));
+        const unassigned = roster.filter((p) => !assigned.has(p.id));
+        const missingTimes = r.teeTimes.filter((t) => !t.time.trim()).length;
+        const matchupBlockers: string[] = [];
+        if (roster.length === 0) matchupBlockers.push("Add players first.");
+        else {
+          if (r.teeTimes.length < neededTeeTimes)
+            matchupBlockers.push(
+              `${roster.length} players needs at least ${neededTeeTimes} tee times - you have ${r.teeTimes.length}.`
+            );
+          if (missingTimes > 0) matchupBlockers.push(`${missingTimes} tee time${missingTimes === 1 ? "" : "s"} still need a time.`);
+          if (unassigned.length > 0)
+            matchupBlockers.push(
+              `${unassigned.length} player${unassigned.length === 1 ? " is" : "s are"} not in a tee time: ${unassigned
+                .map((p) => p.name)
+                .join(", ")}.`
+            );
+        }
+        const matchupsReady = matchupBlockers.length === 0;
         return (
           <div key={r.id} className="overflow-hidden rounded-2xl border border-sand-200 bg-white">
             <button
@@ -202,12 +223,23 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
                     )}
                     <button
                       type="button"
+                      disabled={!matchupsReady}
                       onClick={() => setMatchupRound(r.id)}
-                      className="rounded-xl border-[1.5px] border-accent bg-accent/10 px-3 py-2 text-sm font-black text-accent-dark"
+                      className="rounded-xl border-[1.5px] border-accent bg-accent/10 px-3 py-2 text-sm font-black text-accent-dark disabled:border-sand-200 disabled:bg-white disabled:text-slate-400"
                     >
                       🎲 Set the Matchups
                     </button>
                   </div>
+                  {!matchupsReady ? (
+                    <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] leading-5 text-amber-900">
+                      <b>Finish the tee times before drawing matchups.</b>
+                      {matchupBlockers.map((b) => (
+                        <span key={b} className="mt-0.5 block">
+                          • {b}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* --- details --- */}

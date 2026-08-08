@@ -125,10 +125,10 @@ export function CourseHolesTab({ tripId, joinCode }: { tripId: string; joinCode?
     setRows((prev) => prev.map((r) => (r.hole === hole ? { ...r, [key]: clean } : r)));
     // Par is always one digit, so jump straight on. Course handicap can be two
     // digits, so only jump when it can't grow (2-9, or already two digits).
+    // Par is one digit, so move on immediately. Course handicap can be two
+    // digits (1 might become 11-18), so it waits for Enter instead of guessing.
     if (key === "par" && clean.length >= 1) advanceFrom(hole, "par");
-    if (key === "si" && (clean.length === 2 || (clean.length === 1 && Number(clean) >= 2))) {
-      advanceFrom(hole, "si");
-    }
+    if (key === "si" && clean.length === 2) advanceFrom(hole, "si");
   }
 
   async function readPhoto(file: File) {
@@ -459,7 +459,7 @@ export function CourseHolesTab({ tripId, joinCode }: { tripId: string; joinCode?
         </div>
         <button
           type="button"
-          disabled={!newTee.name.trim() || busy}
+          disabled={!newTee.name.trim() || !newTee.yardage.trim() || !newTee.rating.trim() || !newTee.slope.trim() || busy}
           onClick={async () => {
             const supabase = getSupabaseClient();
             if (!supabase || !active) return;
@@ -479,6 +479,12 @@ export function CourseHolesTab({ tripId, joinCode }: { tripId: string; joinCode?
         >
           Add tee set
         </button>
+        {!newTee.name.trim() || !newTee.yardage.trim() || !newTee.rating.trim() || !newTee.slope.trim() ? (
+          <p className="mt-1 text-[12px] leading-5 text-slate-500">
+            All four are needed. Rating and slope are what turn a handicap into strokes, so a tee set without
+            them would score wrong.
+          </p>
+        ) : null}
       </div>
 
       <input
@@ -503,6 +509,11 @@ export function CourseHolesTab({ tripId, joinCode }: { tripId: string; joinCode?
       {parsedNote ? (
         <p className="rounded-xl bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-900">{parsedNote}</p>
       ) : null}
+
+      <p className="rounded-xl bg-[#f3efe6] px-3 py-2 text-[12px] leading-5 text-slate-600">
+        Type the par and it jumps to the course handicap. Course handicap can be two digits, so hit
+        <b> enter</b> to drop to the next hole.
+      </p>
 
       <div className="rounded-2xl bg-[#f7f6f1] p-3">
         <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
