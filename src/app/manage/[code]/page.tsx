@@ -35,6 +35,8 @@ import {
 } from "@/lib/supabase/memberships";
 import { handleAndLocation, searchUsers, type PublicProfile } from "@/lib/supabase/friends";
 import { TourHost } from "@/features/trip/tour/spotlight";
+import { TournamentSettings } from "@/features/trip/manage/TournamentSettings";
+import { ProUpsellModal, type UpsellTopic } from "@/features/trip/manage/ProUpsellModal";
 
 export default function ManagePage() {
   const params = useParams();
@@ -59,6 +61,7 @@ export default function ManagePage() {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [editingSize, setEditingSize] = useState(false);
   const [sizeDraft, setSizeDraft] = useState("12");
+  const [upsell, setUpsell] = useState<UpsellTopic | null>(null);
 
   const refresh = useCallback(async (t: TripRef) => {
     const supabase = getSupabaseClient();
@@ -497,6 +500,17 @@ export default function ManagePage() {
           </div>
         ) : null}
       </section>
+
+      {trip && isOwnerViewer ? (
+        <div className="mt-8">
+          <TournamentSettings
+            tripId={trip.id}
+            canManage={isOwnerViewer}
+            onUpsell={(topic) => setUpsell(topic)}
+          />
+        </div>
+      ) : null}
+      {upsell ? <ProUpsellModal topic={upsell} onClose={() => setUpsell(null)} /> : null}
 
       {/* requests */}
       <section data-tour="mng-requests" className="mt-8">
