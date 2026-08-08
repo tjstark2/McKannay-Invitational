@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { saveDraw } from "@/lib/supabase/draws";
+import { uploadPhoto } from "@/lib/supabase/clubhouse";
+import { toJpeg } from "html-to-image";
 import { courseHandicap } from "@/lib/scoring";
 import {
   computeMatches,
@@ -69,6 +71,11 @@ export function SetMatchupsScreen({
   const [revealing, setRevealing] = useState(false);
   const [coinWinner, setCoinWinner] = useState<TeamId>("A");
   const [draftLog, setDraftLog] = useState<DraftLogEntry[]>([]);
+  const [locked, setLocked] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [posted, setPosted] = useState(false);
+  const [postError, setPostError] = useState<string | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -174,13 +181,121 @@ export function SetMatchupsScreen({
       }
     }
     setBusy(false);
-    onClose();
+    setLocked(true);
+  }
+
+  const methodLabel = (H2H_METHODS.concat(FIELD_METHODS)).find((mm) => mm.id === method);
+
+  async function shareToClubhouse() {
+    if (posting || posted || !cardRef.current) return;
+    setPosting(true);
+    setPostError(null);
+    try {
+      const node = cardRef.current;
+      const dataUrl = await toJpeg(node, { quality: 0.92, pixelRatio: 2, backgroundColor: "#0b3b2e" });
+      const blob = await (await fetch(dataUrl)).blob();
+      const supabase = getSupabaseClient();
+      if (!supabase) throw new Error("No connection.");
+      await uploadPhoto(supabase, {
+        tripId: trip.id,
+        userId: user?.id ?? "",
+        blob,
+        width: node.offsetWidth,
+        height: node.offsetHeight,
+        caption: `Matchups are in - ${round?.title}${methodLabel ? ` (set by ${methodLabel.name})` : ""}`,
+      });
+      if (round) {
+        const supabase2 = getSupabaseClient();
+        if (supabase2) {
+          await saveDraw(supabase2, {
+            tripId: trip.id,
+            roundId: round.id,
+            method: method ?? "manual",
+            runBy: user?.id ?? null,
+            matches: board,
+            posted: true,
+          });
+        }
+      }
+      setPosted(true);
+    } catch (e) {
+      setPostError(e instanceof Error ? e.message : "Couldn't post to Clubhouse.");
+    } finally {
+      setPosting(false);
+    }
   }
 
   const proLocked = (m: MethodMeta) => m.pro && !trip.isPro;
 
   return (
     <div className="fixed inset-0 z-[120] overflow-y-auto bg-[#f7f6f1]">
+      {locked ? (
+        <div className="mx-auto max-w-lg p-5">
+          <div className="mb-4 text-center">
+            <p className="text-xs font-extrabold uppercase tracking-wide text-accent-dark">Locked in</p>
+            <h1 className="font-anton text-3xl tracking-tight text-ink">Matchups are set!</h1>
+            <p className="mt-1 text-sm text-slate-500">Share the board to the Clubhouse so everyone sees it.</p>
+          </div>
+
+          {/* Shareable card (rendered to an image) */}
+          <div className="flex justify-center">
+            <div
+              ref={cardRef}
+              style={{
+                width: 360,
+                background: "linear-gradient(160deg,#0b3b2e,#0b2418)",
+                color: "#fff",
+                padding: 20,
+                borderRadius: 20,
+              }}
+            >
+              <div style={{ textAlign: "center", marginBottom: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: "#f3b50a", textTransform: "uppercase" }}>
+                  {methodLabel ? `Set by ${methodLabel.name} ${methodLabel.icon}` : "Matchups"}
+                </div>
+                <div style={{ fontSize: 22, fontWeight: 900 }}>{round?.title}</div>
+                <div style={{ fontSize: 12, opacity: 0.8 }}>
+                  {teamAName} vs {teamBName}
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {board.map((m, i) => (
+                  <div key={i} style={{ background: "rgba(255,255,255,.08)", borderRadius: 12, padding: "8px 10px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                      <div style={{ flex: 1, textAlign: "right", color: "#f2a3a3", fontWeight: 800, fontSize: 13 }}>
+                        {m.a.map((id) => nameOf(id)).join(" & ")}
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 900, opacity: 0.7 }}>VS</div>
+                      <div style={{ flex: 1, color: "#a3c4f2", fontWeight: 800, fontSize: 13 }}>
+                        {m.b.map((id) => nameOf(id)).join(" & ")}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ textAlign: "center", marginTop: 12, fontSize: 10, fontWeight: 800, letterSpacing: 1, color: "#f3b50a" }}>
+                TOURNEYBIRDIE
+              </div>
+            </div>
+          </div>
+
+          {postError ? <p className="mt-3 text-center text-sm font-bold text-red-600">{postError}</p> : null}
+
+          <div className="mt-5 space-y-2 pb-8">
+            <button
+              type="button"
+              onClick={shareToClubhouse}
+              disabled={posting || posted}
+              className="w-full rounded-2xl bg-fairway-900 px-4 py-3.5 font-black text-white disabled:opacity-60"
+            >
+              {posted ? "Posted to Clubhouse ✓" : posting ? "Posting…" : "📣 Share to Clubhouse"}
+            </button>
+            <button type="button" onClick={onClose} className="w-full rounded-2xl border-[1.5px] border-slate-300 px-4 py-3 font-black text-slate-600">
+              Done
+            </button>
+          </div>
+        </div>
+      ) : (
       <div className="mx-auto max-w-lg p-5">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
@@ -403,6 +518,7 @@ export function SetMatchupsScreen({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
