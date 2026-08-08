@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import {
   loadCoursesWithHoleStatus,
   loadCourseHoles,
   saveCourseHoles,
-  parseHoleText,
   imageToBase64,
   type CourseLite,
   type CourseHole,
@@ -16,19 +15,21 @@ const inputClass =
   "w-full rounded-xl border-[1.5px] border-sand-200 bg-white px-3 py-2 text-ink outline-none focus:border-fairway-900";
 const labelClass = "block text-xs font-black uppercase tracking-wide text-slate-500";
 
-const HELPER = "(hole1,par4,hc1),(hole2,par3,hc9),(hole3,par5,hc4), ... all 18";
+type Row = { hole: number; par: string; si: string };
+
+const blankRows = (): Row[] =>
+  Array.from({ length: 18 }, (_, i) => ({ hole: i + 1, par: "4", si: "" }));
 
 export function CourseHolesTab({ tripId }: { tripId: string }) {
   const [courses, setCourses] = useState<CourseLite[]>([]);
   const [active, setActive] = useState<CourseLite | null>(null);
-  const [mode, setMode] = useState<"text" | "photo">("text");
-  const [text, setText] = useState("");
+  const [rows, setRows] = useState<Row[]>(blankRows());
   const [tee, setTee] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [review, setReview] = useState<{ holes: CourseHole[]; issues: string[] } | null>(null);
   const [finalConfirm, setFinalConfirm] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
+  const [parsedNote, setParsedNote] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const refresh = async () => {
@@ -42,36 +43,58 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tripId]);
 
-  const missing = courses.filter((c) => c.holeCount < 18);
+  // ---- live validation --------------------------------------------------
+  const check = useMemo(() => {
+    const parErr = new Set<number>();
+    const siErr = new Set<number>();
+    const siCount = new Map<number, number>();
+    rows.forEach((r) => {
+      const p = Number(r.par);
+      const s = Number(r.si);
+      if (r.par === "" || ![3, 4, 5].includes(p)) parErr.add(r.hole);
+      if (r.si === "" || !(s >= 1 && s <= 18)) siErr.add(r.hole);
+      else siCount.set(s, (siCount.get(s) ?? 0) + 1);
+    });
+    const dupes = new Set<number>();
+    rows.forEach((r) => {
+      const s = Number(r.si);
+      if (r.si !== "" && (siCount.get(s) ?? 0) > 1) dupes.add(r.hole);
+    });
+    const missingSi = [...Array(18)].map((_, i) => i + 1).filter((n) => !siCount.has(n));
+    const ok = parErr.size === 0 && siErr.size === 0 && dupes.size === 0;
+    return { parErr, siErr, dupes, missingSi, ok };
+  }, [rows]);
 
   async function openCourse(c: CourseLite) {
     setActive(c);
     setError(null);
-    setReview(null);
     setSaved(null);
+    setParsedNote(null);
     setTee(c.teeName ?? "");
     const supabase = getSupabaseClient();
     if (supabase && c.holeCount > 0) {
       const existing = await loadCourseHoles(supabase, c.id);
-      setText(existing.map((h) => `(hole${h.hole},par${h.par},hc${h.si})`).join(","));
+      const map = new Map(existing.map((h) => [h.hole, h]));
+      setRows(
+        blankRows().map((r) => {
+          const e = map.get(r.hole);
+          return e ? { hole: r.hole, par: String(e.par), si: String(e.si) } : r;
+        })
+      );
     } else {
-      setText("");
+      setRows(blankRows());
     }
   }
 
-  function reviewText() {
-    setError(null);
-    const res = parseHoleText(text);
-    if (res.holes.length === 0) {
-      setError("Couldn't read any holes from that. Check the format in the hint below.");
-      return;
-    }
-    setReview(res);
+  function setCell(hole: number, key: "par" | "si", value: string) {
+    const clean = value.replace(/[^0-9]/g, "").slice(0, 2);
+    setRows((prev) => prev.map((r) => (r.hole === hole ? { ...r, [key]: clean } : r)));
   }
 
-  async function reviewPhoto(file: File) {
+  async function readPhoto(file: File) {
     setBusy(true);
     setError(null);
+    setParsedNote(null);
     try {
       const { base64, mediaType } = await imageToBase64(file);
       const res = await fetch("/api/parse-scorecard", {
@@ -81,8 +104,23 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "Couldn't read that scorecard.");
+      const map = new Map(
+        ((data.holes as CourseHole[]) ?? []).map((h) => [Number(h.hole), h])
+      );
+      setRows(
+        blankRows().map((r) => {
+          const h = map.get(r.hole);
+          return h
+            ? {
+                hole: r.hole,
+                par: Number.isFinite(h.par) ? String(h.par) : "",
+                si: Number.isFinite(h.si) ? String(h.si) : "",
+              }
+            : { ...r, par: "", si: "" };
+        })
+      );
       if (data.tee && !tee) setTee(String(data.tee));
-      setReview({ holes: data.holes as CourseHole[], issues: (data.issues as string[]) ?? [] });
+      setParsedNote("Filled in from the photo. Check every hole before you save.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't read that scorecard.");
     } finally {
@@ -91,11 +129,16 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
   }
 
   async function commit() {
-    if (!active || !review) return;
+    if (!active) return;
     const supabase = getSupabaseClient();
     if (!supabase) return;
     setBusy(true);
-    const res = await saveCourseHoles(supabase, active.id, review.holes);
+    const holes: CourseHole[] = rows.map((r) => ({
+      hole: r.hole,
+      par: Number(r.par),
+      si: Number(r.si),
+    }));
+    const res = await saveCourseHoles(supabase, active.id, holes);
     setBusy(false);
     setFinalConfirm(false);
     if (!res.ok) {
@@ -103,23 +146,23 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
       return;
     }
     setSaved(`${active.name} is set - all 18 holes saved.`);
-    setReview(null);
     setActive(null);
     refresh();
   }
 
   // ---------------- course list ----------------
   if (!active) {
+    const missing = courses.filter((c) => c.holeCount < 18);
     return (
       <div className="space-y-3">
         <p className="text-[13px] leading-5 text-slate-600">
-          Hole-by-hole scoring needs each course&apos;s <b>par</b> and <b>stroke index</b> for all 18 holes.
-          That&apos;s what decides who gets strokes on which holes.
+          Hole-by-hole scoring needs the par and stroke index for all 18 holes of each course. That is what
+          decides who gets strokes on which holes.
         </p>
 
         {saved ? (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-800">
-            ✓ {saved}
+            {saved}
           </div>
         ) : null}
 
@@ -139,15 +182,19 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
                   done ? "border-emerald-200 bg-emerald-50/50" : "border-amber-200 bg-amber-50/60"
                 }`}
               >
-                <span className="text-xl">{done ? "✓" : "!"}</span>
+                <span className="text-xl">{done ? "\u2713" : "!"}</span>
                 <span className="flex-1">
                   <span className="block font-black text-ink">{c.name}</span>
                   <span className="block text-[13px] text-slate-500">
-                    {done ? "All 18 holes set" : c.holeCount > 0 ? `${c.holeCount} of 18 holes` : "Needs par + stroke index"}
-                    {c.rating && c.slope ? ` · ${c.rating}/${c.slope}` : " · rating/slope missing"}
+                    {done
+                      ? "All 18 holes set"
+                      : c.holeCount > 0
+                      ? `${c.holeCount} of 18 holes`
+                      : "Needs par and stroke index"}
+                    {c.rating && c.slope ? ` \u00b7 ${c.rating}/${c.slope}` : " \u00b7 rating/slope missing"}
                   </span>
                 </span>
-                <span className="font-black text-slate-300">›</span>
+                <span className="font-black text-slate-300">&rsaquo;</span>
               </button>
             );
           })}
@@ -155,19 +202,59 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
 
         {missing.length > 0 && courses.length > 0 ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[13px] text-amber-900">
-            <b>{missing.length} course{missing.length === 1 ? "" : "s"} still need hole data.</b> Rounds on those
-            courses can&apos;t start in hole-by-hole mode until it&apos;s added.
+            {missing.length} course{missing.length === 1 ? "" : "s"} still need hole data. Rounds on those
+            courses cannot start in hole-by-hole mode until it is added.
           </div>
         ) : null}
       </div>
     );
   }
 
-  // ---------------- single course editor ----------------
+  // ---------------- grid editor ----------------
+  const nine = (from: number, to: number) => rows.filter((r) => r.hole >= from && r.hole <= to);
+
+  const Grid = ({ title, list }: { title: string; list: Row[] }) => (
+    <div>
+      <p className="mb-1 text-xs font-black uppercase tracking-wide text-slate-500">{title}</p>
+      <div className="overflow-hidden rounded-2xl border border-sand-200">
+        <div className="grid grid-cols-[44px_1fr_1fr] bg-[#f3efe6] px-2 py-1.5 text-[11px] font-black uppercase tracking-wide text-slate-500">
+          <span>Hole</span>
+          <span className="text-center">Par</span>
+          <span className="text-center">Stroke Index</span>
+        </div>
+        {list.map((r) => {
+          const badPar = check.parErr.has(r.hole);
+          const badSi = check.siErr.has(r.hole) || check.dupes.has(r.hole);
+          return (
+            <div key={r.hole} className="grid grid-cols-[44px_1fr_1fr] items-center gap-1 border-t border-sand-200 px-2 py-1">
+              <span className="text-[13px] font-black text-slate-500">{r.hole}</span>
+              <input
+                inputMode="numeric"
+                value={r.par}
+                onChange={(e) => setCell(r.hole, "par", e.target.value)}
+                className={`mx-auto w-14 rounded-lg border-2 px-2 py-1.5 text-center font-bold outline-none ${
+                  badPar ? "border-red-400 bg-red-50" : "border-sand-200"
+                }`}
+              />
+              <input
+                inputMode="numeric"
+                value={r.si}
+                onChange={(e) => setCell(r.hole, "si", e.target.value)}
+                className={`mx-auto w-14 rounded-lg border-2 px-2 py-1.5 text-center font-bold outline-none ${
+                  badSi ? "border-red-400 bg-red-50" : "border-sand-200"
+                }`}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-3">
       <button type="button" onClick={() => setActive(null)} className="text-sm font-bold text-slate-500">
-        ‹ All courses
+        &lsaquo; All courses
       </button>
       <h3 className="font-anton text-2xl tracking-tight text-ink">{active.name}</h3>
 
@@ -176,130 +263,65 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
         <input className={inputClass} value={tee} onChange={(e) => setTee(e.target.value)} placeholder="Blue" />
       </div>
 
-      <div className="flex gap-1.5">
-        <button
-          type="button"
-          onClick={() => setMode("text")}
-          className={`rounded-full px-3.5 py-1.5 text-sm font-black ${mode === "text" ? "bg-fairway-900 text-white" : "bg-[#f3efe6] text-slate-600"}`}
-        >
-          Type it
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("photo")}
-          className={`rounded-full px-3.5 py-1.5 text-sm font-black ${mode === "photo" ? "bg-fairway-900 text-white" : "bg-[#f3efe6] text-slate-600"}`}
-        >
-          📷 Scorecard photo
-        </button>
-      </div>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) readPhoto(f);
+        }}
+      />
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => fileRef.current?.click()}
+        className="w-full rounded-2xl border-2 border-dashed border-sand-200 px-4 py-3 text-center font-black text-slate-500 disabled:opacity-50"
+      >
+        {busy ? "Reading the scorecard\u2026" : "\ud83d\udcf7 Fill from a scorecard photo"}
+      </button>
+      {parsedNote ? (
+        <p className="rounded-xl bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-900">{parsedNote}</p>
+      ) : null}
 
-      {mode === "text" ? (
-        <div>
-          <textarea
-            className={`${inputClass} min-h-[130px] font-mono text-[13px]`}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder={HELPER}
-          />
-          <p className="mt-1 text-[12px] leading-5 text-slate-500">
-            Format: <span className="font-mono">{HELPER}</span>
-            <br />
-            par is 3, 4 or 5. hc is the hole&apos;s stroke index, 1-18, each used once.
-          </p>
-          <button
-            type="button"
-            onClick={reviewText}
-            className="mt-2 w-full rounded-2xl bg-fairway-900 px-4 py-3 font-black text-white"
-          >
-            Review
-          </button>
+      <Grid title="Front 9" list={nine(1, 9)} />
+      <Grid title="Back 9" list={nine(10, 18)} />
+
+      {!check.ok ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[13px] text-amber-900">
+          {check.parErr.size > 0 ? <p>Par must be 3, 4 or 5. Check the red boxes.</p> : null}
+          {check.dupes.size > 0 ? <p>Two holes share a stroke index. Each number 1-18 is used once.</p> : null}
+          {check.missingSi.length > 0 && check.missingSi.length < 18 ? (
+            <p>Still unused: {check.missingSi.join(", ")}</p>
+          ) : null}
+          {check.siErr.size > 0 && check.missingSi.length === 18 ? <p>Add a stroke index for every hole.</p> : null}
         </div>
       ) : (
-        <div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) reviewPhoto(f);
-            }}
-          />
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => fileRef.current?.click()}
-            className="w-full rounded-2xl border-2 border-dashed border-sand-200 px-4 py-8 text-center font-black text-slate-500 disabled:opacity-50"
-          >
-            {busy ? "Reading the scorecard…" : "Take or choose a scorecard photo"}
-          </button>
-          <p className="mt-1 text-[12px] leading-5 text-slate-500">
-            Get the whole card in frame, especially the handicap/stroke-index row. You&apos;ll check what it
-            read before anything saves.
-          </p>
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-[13px] font-bold text-emerald-800">
+          All 18 holes look good.
         </div>
       )}
 
       {error ? <p className="text-sm font-bold text-red-600">{error}</p> : null}
 
-      {/* ---- popup 1: recap of what was read ---- */}
-      {review ? (
-        <div className="fixed inset-0 z-[150] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-5">
-          <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white p-5 sm:rounded-3xl">
-            <h3 className="font-anton text-2xl tracking-tight text-ink">Check this over</h3>
-            <p className="mt-1 text-[13px] text-slate-500">
-              {active.name}
-              {tee ? ` · ${tee} tees` : ""} · {review.holes.length} holes read
-            </p>
+      <button
+        type="button"
+        disabled={!check.ok || busy}
+        onClick={() => setFinalConfirm(true)}
+        className="w-full rounded-2xl bg-fairway-900 px-4 py-3.5 font-black text-white disabled:opacity-50"
+      >
+        Save these 18 holes
+      </button>
 
-            {review.issues.length > 0 ? (
-              <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[13px] text-amber-900">
-                {review.issues.map((i) => (
-                  <p key={i}>• {i}</p>
-                ))}
-              </div>
-            ) : null}
-
-            <div className="mt-3 grid grid-cols-6 gap-1.5 text-center">
-              {review.holes.map((h) => (
-                <div key={h.hole} className="rounded-lg bg-[#f7f6f1] p-1.5">
-                  <p className="text-[10px] font-black uppercase text-slate-400">H{h.hole}</p>
-                  <p className="text-[13px] font-black text-ink">P{h.par}</p>
-                  <p className="text-[11px] font-bold text-slate-500">SI {h.si}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setReview(null)}
-                className="flex-1 rounded-2xl border-[1.5px] border-slate-300 px-4 py-3 font-black text-slate-600"
-              >
-                Go back
-              </button>
-              <button
-                type="button"
-                onClick={() => setFinalConfirm(true)}
-                className="flex-1 rounded-2xl bg-fairway-900 px-4 py-3 font-black text-white"
-              >
-                Looks right
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {/* ---- popup 2: the "this drives everything" gut check ---- */}
       {finalConfirm ? (
         <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/70 p-5">
           <div className="w-full max-w-sm rounded-3xl bg-white p-5">
-            <h3 className="font-anton text-2xl tracking-tight text-ink">Are you sure it&apos;s right?</h3>
+            <h3 className="font-anton text-2xl tracking-tight text-ink">Are you sure it is right?</h3>
             <p className="mt-2 text-[14px] leading-6 text-slate-600">
-              This drives <b>every stat in the tournament</b> - who gets strokes on which holes, net scores,
-              match results, awards and the final standings. A wrong stroke index quietly changes who wins.
+              This drives every stat in the tournament: who gets strokes on which holes, net scores, match
+              results, awards and the final standings. A wrong stroke index quietly changes who wins.
             </p>
             <div className="mt-4 flex gap-2">
               <button
@@ -315,7 +337,7 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
                 disabled={busy}
                 className="flex-1 rounded-2xl bg-fairway-900 px-4 py-3 font-black text-white disabled:opacity-50"
               >
-                {busy ? "Saving…" : "Yes, save it"}
+                {busy ? "Saving\u2026" : "Yes, save it"}
               </button>
             </div>
           </div>

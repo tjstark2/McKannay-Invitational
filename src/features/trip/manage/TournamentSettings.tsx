@@ -264,8 +264,8 @@ export function TournamentSettings({
 
           {s.scoringMode === "hole_by_hole" ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[13px] text-amber-900">
-              Hole by hole needs each course&apos;s <b>par and stroke index</b> for all 18 holes. Add it in the
-              <b> Courses</b> tab before a round starts.
+              Hole by hole needs the par and stroke index for all 18 holes of each course. Add it in the
+              Courses tab before a round starts.
             </div>
           ) : null}
         </div>
