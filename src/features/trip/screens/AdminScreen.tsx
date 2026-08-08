@@ -135,7 +135,7 @@ export function AdminScreen() {
   const tabs: { id: AdminTab; label: string }[] = [
     { id: "setup", label: "Setup" },
     { id: "rounds", label: "Rounds" },
-    { id: "scoring", label: "Scoring" },
+    { id: "scoring", label: "Status" },
   ];
 
   function getPlayerOptions(teamId: TeamId) {
@@ -284,7 +284,7 @@ export function AdminScreen() {
       >
         <span>
           <span className="block font-black text-fairway-900">
-            Manage members &amp; teams
+            Manage My Tournament
           </span>
           <span className="block text-xs text-slate-500">
             Approve players, set handicaps, assign teams, admins
@@ -326,93 +326,10 @@ export function AdminScreen() {
 
           <Card className="p-4">
             <h2 className="font-black">Courses</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Add any course, then assign it to a round. Rating and slope drive
-              the net-score handicap math.
+            <p className="mt-1 text-sm leading-6 text-slate-500">
+              Courses, tee sets (rating and slope) and each hole&apos;s par and course handicap number are set in
+              <span className="font-black"> Manage My Tournament</span> under Courses.
             </p>
-
-            <div className="mt-3 space-y-2">
-              {courses.map((course) => (
-                <div key={course.id} className="rounded-xl bg-[#f3efe6] p-3 text-sm">
-                  <p className="font-black">{course.name}</p>
-                  <p className="text-xs text-slate-500">
-                    {course.teeName} ·{" "}
-                    {course.yardage !== null
-                      ? `${course.yardage.toLocaleString()} yds · `
-                      : ""}
-                    {course.rating}/{course.slope} · Par {course.par}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-4 rounded-xl border border-dashed border-slate-300 p-3">
-              <h3 className="font-black">Add Course</h3>
-              <label className={`mt-3 ${labelClass}`}>Course Name</label>
-              <input
-                value={newCourseName}
-                onChange={(event) => setNewCourseName(event.target.value)}
-                className={inputClass}
-                placeholder="Course name"
-              />
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <div>
-                  <label className={labelClass}>Tee</label>
-                  <input
-                    value={newCourseTee}
-                    onChange={(event) => setNewCourseTee(event.target.value)}
-                    className={inputClass}
-                    placeholder="Blue"
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Yardage</label>
-                  <input
-                    value={newCourseYardage}
-                    onChange={(event) => setNewCourseYardage(event.target.value)}
-                    className={inputClass}
-                    inputMode="numeric"
-                    placeholder="6,800"
-                  />
-                </div>
-              </div>
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                <div>
-                  <label className={labelClass}>Par</label>
-                  <input
-                    value={newCoursePar}
-                    onChange={(event) => setNewCoursePar(event.target.value)}
-                    className={inputClass}
-                    inputMode="numeric"
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Rating</label>
-                  <input
-                    value={newCourseRating}
-                    onChange={(event) => setNewCourseRating(event.target.value)}
-                    className={inputClass}
-                    inputMode="decimal"
-                  />
-                </div>
-                <div>
-                  <label className={labelClass}>Slope</label>
-                  <input
-                    value={newCourseSlope}
-                    onChange={(event) => setNewCourseSlope(event.target.value)}
-                    className={inputClass}
-                    inputMode="numeric"
-                  />
-                </div>
-              </div>
-              <button
-                onClick={handleAddCourse}
-                disabled={newCourseName.trim() === ""}
-                className="mt-4 w-full rounded-xl bg-fairway-900 py-3 font-black text-white disabled:bg-slate-300"
-              >
-                Add Course
-              </button>
-            </div>
           </Card>
         </>
       ) : null}
@@ -1016,38 +933,6 @@ export function AdminScreen() {
       {/* ===================== SCORING ===================== */}
       {activeTab === "scoring" ? (
         <Card data-tour="adm-scoring" className="p-4">
-          <div className="mb-4 rounded-2xl border border-line bg-[#f7f6f1] p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="font-black">Post-Round Awards (Voting)</h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Players vote for fun superlatives after finishing a round.
-                  {trip.isPro
-                    ? " Turn off if you'd rather skip voting this trip."
-                    : " This is a Pro feature."}
-                </p>
-              </div>
-              {trip.isPro ? (
-                <button
-                  onClick={() => setVotingEnabled(!votingEnabled)}
-                  aria-label="Toggle voting"
-                  className={`mt-1 h-7 w-12 shrink-0 rounded-full p-1 transition-colors ${
-                    votingEnabled ? "bg-mint" : "bg-slate-300"
-                  }`}
-                >
-                  <span
-                    className={`block h-5 w-5 rounded-full bg-white transition-transform ${
-                      votingEnabled ? "translate-x-5" : ""
-                    }`}
-                  />
-                </button>
-              ) : (
-                <span className="mt-1 shrink-0 rounded-full bg-accent/20 px-2.5 py-1 text-[11px] font-black uppercase text-[#a07a06]">
-                  Pro
-                </span>
-              )}
-            </div>
-          </div>
 
           <div className="mb-4 rounded-2xl border border-line bg-[#f7f6f1] p-4">
             <h2 className="font-black">Tournament status</h2>
@@ -1101,75 +986,12 @@ export function AdminScreen() {
             )}
           </div>
 
-          <h2 className="font-black">Scoring Settings</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Handicap allowances by format. Best Ball uses manual result entry.
-          </p>
-
-          <div className="mt-4 grid grid-cols-1 gap-3">
-            <div>
-              <label className={labelClass}>Best Ball Handicap %</label>
-              <input
-                value={scoringSettings.bestBallHandicapAllowance}
-                onChange={(event) =>
-                  updateScoringSettings({
-                    bestBallHandicapAllowance: Number(event.target.value) || 0,
-                  })
-                }
-                className={inputClass}
-                inputMode="decimal"
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Singles Handicap %</label>
-              <input
-                value={scoringSettings.singlesHandicapAllowance}
-                onChange={(event) =>
-                  updateScoringSettings({
-                    singlesHandicapAllowance: Number(event.target.value) || 0,
-                  })
-                }
-                className={inputClass}
-                inputMode="decimal"
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Net Score Handicap %</label>
-              <input
-                value={scoringSettings.netScoreHandicapAllowance}
-                onChange={(event) =>
-                  updateScoringSettings({
-                    netScoreHandicapAllowance: Number(event.target.value) || 0,
-                  })
-                }
-                className={inputClass}
-                inputMode="decimal"
-              />
-            </div>
-            <div>
-              <label className={labelClass}>
-                Net Score Points (lowest N earn a point)
-              </label>
-              <input
-                value={scoringSettings.netScorePointsOverride ?? ""}
-                onChange={(event) =>
-                  updateScoringSettings({
-                    netScorePointsOverride:
-                      event.target.value === ""
-                        ? null
-                        : Number(event.target.value) || 0,
-                  })
-                }
-                className={inputClass}
-                inputMode="numeric"
-                placeholder={`Default: ${Math.floor(
-                  players.length / 2
-                )} (half the field)`}
-              />
-              <p className="mt-2 text-xs leading-5 text-slate-500">
-                Leave blank to use the top half of the field automatically.
-              </p>
-            </div>
+          <div className="rounded-2xl border border-line bg-[#f7f6f1] p-4">
+            <h2 className="font-black">Scoring settings &amp; awards</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-500">
+              Handicap allowances, post-round awards and voting now live in
+              <span className="font-black"> Manage My Tournament</span>, with players, courses and rounds.
+            </p>
           </div>
         </Card>
       ) : null}

@@ -359,7 +359,7 @@ export function AccountHome() {
                         : "border-sand-100 bg-sand-50 text-fairway-900"
                     }`}
                   >
-                    Manage members
+                    Manage my tournament
                     {requestCounts[t.id] ? (
                       <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-black text-white">
                         {requestCounts[t.id]}
