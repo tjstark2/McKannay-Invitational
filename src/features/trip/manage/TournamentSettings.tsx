@@ -11,8 +11,9 @@ import {
   type ScoringMode,
 } from "@/lib/supabase/tripSettings";
 import { CourseHolesTab } from "@/features/trip/manage/CourseHolesTab";
+import { RoundsTab } from "@/features/trip/manage/RoundsTab";
 
-type Tab = "basics" | "scoring" | "courses" | "logistics";
+type Tab = "basics" | "scoring" | "courses" | "rounds" | "logistics";
 
 const inputClass =
   "w-full rounded-xl border-[1.5px] border-sand-200 bg-white px-3 py-2 text-ink outline-none focus:border-fairway-900";
@@ -98,6 +99,7 @@ export function TournamentSettings({
     { id: "basics", label: "Basics" },
     { id: "scoring", label: "Scoring" },
     { id: "courses", label: "Courses" },
+    { id: "rounds", label: "Rounds" },
     { id: "logistics", label: "Logistics" },
   ];
 
@@ -272,6 +274,8 @@ export function TournamentSettings({
       ) : null}
 
       {tab === "courses" ? <CourseHolesTab tripId={tripId} /> : null}
+
+      {tab === "rounds" ? <RoundsTab tripId={tripId} /> : null}
 
       {/* ---------------- LOGISTICS ---------------- */}
       {tab === "logistics" ? (

@@ -88,21 +88,32 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
 
   const cellId = (hole: number, key: "par" | "si") => `ch-${key}-${hole}`;
 
-  function focusNext(hole: number, key: "par" | "si") {
-    const next = key === "par" ? cellId(hole, "si") : hole < 18 ? cellId(hole + 1, "par") : null;
-    if (!next) return;
-    const el = document.getElementById(next) as HTMLInputElement | null;
-    el?.focus();
-    el?.select();
+  // Move focus AFTER React has committed the new value, otherwise the re-render
+  // steals focus back and the jump looks like it did nothing.
+  function focusCell(hole: number, key: "par" | "si") {
+    if (hole < 1 || hole > 18) return;
+    requestAnimationFrame(() => {
+      const el = document.getElementById(cellId(hole, key)) as HTMLInputElement | null;
+      if (!el) return;
+      el.focus();
+      el.select();
+    });
+  }
+
+  function advanceFrom(hole: number, key: "par" | "si") {
+    if (key === "par") focusCell(hole, "si");
+    else focusCell(hole + 1, "par");
   }
 
   function setCell(hole: number, key: "par" | "si", value: string) {
     const clean = value.replace(/[^0-9]/g, "").slice(0, 2);
     setRows((prev) => prev.map((r) => (r.hole === hole ? { ...r, [key]: clean } : r)));
-    // Jump ahead as soon as the answer can't get any longer, so you can type
-    // straight down the scorecard without tapping between boxes.
-    if (key === "par" && clean.length === 1) focusNext(hole, "par");
-    if (key === "si" && (clean.length === 2 || Number(clean) >= 2)) focusNext(hole, "si");
+    // Par is always one digit, so jump straight on. Course handicap can be two
+    // digits, so only jump when it can't grow (2-9, or already two digits).
+    if (key === "par" && clean.length >= 1) advanceFrom(hole, "par");
+    if (key === "si" && (clean.length === 2 || (clean.length === 1 && Number(clean) >= 2))) {
+      advanceFrom(hole, "si");
+    }
   }
 
   async function readPhoto(file: File) {
@@ -246,7 +257,11 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
                 id={cellId(r.hole, "par")}
                 inputMode="numeric"
                 value={r.par}
+                enterKeyHint="next"
                 onFocus={(e) => e.currentTarget.select()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") advanceFrom(r.hole, "par");
+                }}
                 onChange={(e) => setCell(r.hole, "par", e.target.value)}
                 className={`mx-auto w-14 rounded-lg border-2 px-2 py-1.5 text-center font-bold outline-none ${
                   badPar ? "border-red-400 bg-red-50" : "border-sand-200"
@@ -256,7 +271,11 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
                 id={cellId(r.hole, "si")}
                 inputMode="numeric"
                 value={r.si}
+                enterKeyHint="next"
                 onFocus={(e) => e.currentTarget.select()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") advanceFrom(r.hole, "si");
+                }}
                 onChange={(e) => setCell(r.hole, "si", e.target.value)}
                 className={`mx-auto w-14 rounded-lg border-2 px-2 py-1.5 text-center font-bold outline-none ${
                   badSi ? "border-red-400 bg-red-50" : "border-sand-200"
