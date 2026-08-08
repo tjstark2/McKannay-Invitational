@@ -415,6 +415,16 @@ export default function ManagePage() {
         who gets in.
       </p>
 
+      {trip ? (
+        <button
+          type="button"
+          onClick={() => router.push(`/t/${trip.joinCode}`)}
+          className="mt-6 w-full rounded-2xl bg-fairway-900 px-4 py-3.5 font-black text-white"
+        >
+          Enter Tournament &rsaquo;
+        </button>
+      ) : null}
+
       {trip && isOwnerViewer ? (
         <div className="mt-7 flex gap-1.5 overflow-x-auto pb-1">
           {MANAGE_TABS.map((t) => (

@@ -72,10 +72,10 @@ export function MoreScreen({
         >
           <span>
             <span className="block font-black text-ink">
-              Manage Members &amp; Teams
+              Manage My Tournament
             </span>
             <span className="block text-xs text-slate-600">
-              Approve players, set handicaps, assign teams, admins
+              Trip basics, players, courses, rounds and Pro settings
             </span>
           </span>
           <ChevronRight className="h-4 w-4 shrink-0 text-accent-dark" />

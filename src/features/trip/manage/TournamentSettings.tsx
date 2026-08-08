@@ -238,8 +238,8 @@ export function TournamentSettings({
         </div>
       ) : null}
 
-      {/* ---------------- SCORING MODE (inside Basics) ---------------- */}
-      {tab === "basics" ? (
+      {/* ---------------- SCORING MODE (Pro tab) ---------------- */}
+      {tab === "pro" ? (
         <div className="space-y-3">
           <p className="text-[13px] leading-5 text-slate-600">
             How players put scores in. This drives handicaps, stats and what the group sees during a round.
@@ -291,7 +291,7 @@ export function TournamentSettings({
       {tab === "rounds" ? <RoundsTab tripId={tripId} /> : null}
 
       {tab === "pro" ? (
-        <div className="space-y-3">
+        <div className="mb-3 space-y-3">
           {s.isPro ? (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
               <p className="font-black text-emerald-800">This is a Pro tournament</p>

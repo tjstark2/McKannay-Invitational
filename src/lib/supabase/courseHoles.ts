@@ -8,6 +8,7 @@ export type CourseHole = { hole: number; par: number; si: number };
 export type CourseLite = {
   id: string;
   name: string;
+  yardage: number | null;
   par: number | null;
   rating: number | null;
   slope: number | null;
@@ -21,7 +22,7 @@ export async function loadCoursesWithHoleStatus(
 ): Promise<CourseLite[]> {
   const { data: courses } = await supabase
     .from("courses")
-    .select("id,name,par,course_rating,slope,tee_name")
+    .select("id,name,par,course_rating,slope,tee_name,yardage")
     .eq("trip_id", tripId)
     .order("name");
   const list = (courses ?? []) as Record<string, unknown>[];
@@ -40,6 +41,7 @@ export async function loadCoursesWithHoleStatus(
   return list.map((c) => ({
     id: c.id as string,
     name: (c.name as string) ?? "Course",
+    yardage: (c.yardage as number) ?? null,
     par: (c.par as number) ?? null,
     rating: (c.course_rating as number) ?? null,
     slope: (c.slope as number) ?? null,
@@ -116,4 +118,37 @@ export async function imageToBase64(file: File, maxEdge = 1600): Promise<{ base6
   canvas.getContext("2d")?.drawImage(bitmap, 0, 0, w, h);
   const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
   return { base64: dataUrl.split(",")[1], mediaType: "image/jpeg" };
+}
+
+export async function createCourse(
+  supabase: SupabaseClient,
+  tripId: string,
+  input: { name: string; par: number; teeName: string; yardage: number | null; rating: number | null; slope: number | null }
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.from("courses").insert({
+    trip_id: tripId,
+    name: input.name,
+    par: input.par,
+    tee_name: input.teeName,
+    yardage: input.yardage,
+    course_rating: input.rating,
+    slope: input.slope,
+  });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+export async function updateCourse(
+  supabase: SupabaseClient,
+  courseId: string,
+  patch: { name?: string; par?: number; teeName?: string; yardage?: number | null; rating?: number | null; slope?: number | null }
+): Promise<{ ok: boolean; error?: string }> {
+  const row: Record<string, unknown> = {};
+  if (patch.name !== undefined) row.name = patch.name;
+  if (patch.par !== undefined) row.par = patch.par;
+  if (patch.teeName !== undefined) row.tee_name = patch.teeName;
+  if (patch.yardage !== undefined) row.yardage = patch.yardage;
+  if (patch.rating !== undefined) row.course_rating = patch.rating;
+  if (patch.slope !== undefined) row.slope = patch.slope;
+  const { error } = await supabase.from("courses").update(row).eq("id", courseId);
+  return error ? { ok: false, error: error.message } : { ok: true };
 }

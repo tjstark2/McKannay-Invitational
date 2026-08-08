@@ -7,6 +7,8 @@ import {
   loadCourseHoles,
   saveCourseHoles,
   imageToBase64,
+  createCourse,
+  updateCourse,
   type CourseLite,
   type CourseHole,
 } from "@/lib/supabase/courseHoles";
@@ -30,6 +32,9 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
   const [finalConfirm, setFinalConfirm] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
   const [parsedNote, setParsedNote] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [nc, setNc] = useState({ name: "", par: "72", teeName: "Blue", yardage: "", rating: "", slope: "" });
+  const [details, setDetails] = useState({ name: "", par: "", teeName: "", yardage: "", rating: "", slope: "" });
   const fileRef = useRef<HTMLInputElement>(null);
 
   const refresh = async () => {
@@ -71,6 +76,14 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
     setSaved(null);
     setParsedNote(null);
     setTee(c.teeName ?? "");
+    setDetails({
+      name: c.name ?? "",
+      par: c.par != null ? String(c.par) : "",
+      teeName: c.teeName ?? "",
+      yardage: c.yardage != null ? String(c.yardage) : "",
+      rating: c.rating != null ? String(c.rating) : "",
+      slope: c.slope != null ? String(c.slope) : "",
+    });
     const supabase = getSupabaseClient();
     if (supabase && c.holeCount > 0) {
       const existing = await loadCourseHoles(supabase, c.id);
@@ -225,6 +238,65 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
           })}
         </div>
 
+        {adding ? (
+          <div className="rounded-2xl border-[1.5px] border-sand-200 p-3">
+            <p className="mb-2 font-black text-ink">New course</p>
+            <div className="space-y-2">
+              <input className={inputClass} placeholder="Course name" value={nc.name}
+                onChange={(e) => setNc({ ...nc, name: e.target.value })} />
+              <div className="grid grid-cols-2 gap-2">
+                <input className={inputClass} placeholder="Par (72)" inputMode="numeric" value={nc.par}
+                  onChange={(e) => setNc({ ...nc, par: e.target.value })} />
+                <input className={inputClass} placeholder="Tees (Blue)" value={nc.teeName}
+                  onChange={(e) => setNc({ ...nc, teeName: e.target.value })} />
+                <input className={inputClass} placeholder="Yardage" inputMode="numeric" value={nc.yardage}
+                  onChange={(e) => setNc({ ...nc, yardage: e.target.value })} />
+                <input className={inputClass} placeholder="Course rating" inputMode="decimal" value={nc.rating}
+                  onChange={(e) => setNc({ ...nc, rating: e.target.value })} />
+                <input className={inputClass} placeholder="Slope" inputMode="numeric" value={nc.slope}
+                  onChange={(e) => setNc({ ...nc, slope: e.target.value })} />
+              </div>
+              <p className="text-[12px] leading-5 text-slate-500">
+                Course rating and slope are what make net scoring work. Get them from the scorecard for the
+                tees you are playing.
+              </p>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setAdding(false)}
+                  className="flex-1 rounded-2xl border-[1.5px] border-slate-300 px-4 py-2.5 font-black text-slate-600">
+                  Cancel
+                </button>
+                <button type="button" disabled={!nc.name.trim() || busy}
+                  onClick={async () => {
+                    const supabase = getSupabaseClient();
+                    if (!supabase) return;
+                    setBusy(true);
+                    const res = await createCourse(supabase, tripId, {
+                      name: nc.name.trim(),
+                      par: Number(nc.par) || 72,
+                      teeName: nc.teeName.trim(),
+                      yardage: nc.yardage ? Number(nc.yardage) : null,
+                      rating: nc.rating ? Number(nc.rating) : null,
+                      slope: nc.slope ? Number(nc.slope) : null,
+                    });
+                    setBusy(false);
+                    if (!res.ok) { setError(res.error || "Couldn't add that course."); return; }
+                    setNc({ name: "", par: "72", teeName: "Blue", yardage: "", rating: "", slope: "" });
+                    setAdding(false);
+                    refresh();
+                  }}
+                  className="flex-1 rounded-2xl bg-fairway-900 px-4 py-2.5 font-black text-white disabled:opacity-50">
+                  Add course
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setAdding(true)}
+            className="w-full rounded-2xl border-2 border-dashed border-sand-200 px-4 py-3 font-black text-slate-500">
+            + Add a course
+          </button>
+        )}
+
         {missing.length > 0 && courses.length > 0 ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[13px] text-amber-900">
             {missing.length} course{missing.length === 1 ? "" : "s"} still need hole data. Rounds on those
@@ -294,6 +366,45 @@ export function CourseHolesTab({ tripId }: { tripId: string }) {
         &lsaquo; All courses
       </button>
       <h3 className="font-anton text-2xl tracking-tight text-ink">{active.name}</h3>
+
+      <div className="rounded-2xl bg-[#f7f6f1] p-3">
+        <p className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">Course details</p>
+        <div className="grid grid-cols-2 gap-2">
+          <input className={inputClass} placeholder="Name" value={details.name}
+            onChange={(e) => setDetails({ ...details, name: e.target.value })} />
+          <input className={inputClass} placeholder="Par" inputMode="numeric" value={details.par}
+            onChange={(e) => setDetails({ ...details, par: e.target.value })} />
+          <input className={inputClass} placeholder="Tees" value={details.teeName}
+            onChange={(e) => setDetails({ ...details, teeName: e.target.value })} />
+          <input className={inputClass} placeholder="Yardage" inputMode="numeric" value={details.yardage}
+            onChange={(e) => setDetails({ ...details, yardage: e.target.value })} />
+          <input className={inputClass} placeholder="Course rating" inputMode="decimal" value={details.rating}
+            onChange={(e) => setDetails({ ...details, rating: e.target.value })} />
+          <input className={inputClass} placeholder="Slope" inputMode="numeric" value={details.slope}
+            onChange={(e) => setDetails({ ...details, slope: e.target.value })} />
+        </div>
+        <button type="button" disabled={busy}
+          onClick={async () => {
+            const supabase = getSupabaseClient();
+            if (!supabase || !active) return;
+            setBusy(true);
+            const res = await updateCourse(supabase, active.id, {
+              name: details.name.trim(),
+              par: Number(details.par) || 72,
+              teeName: details.teeName.trim(),
+              yardage: details.yardage ? Number(details.yardage) : null,
+              rating: details.rating ? Number(details.rating) : null,
+              slope: details.slope ? Number(details.slope) : null,
+            });
+            setBusy(false);
+            if (!res.ok) { setError(res.error || "Couldn't save course details."); return; }
+            setParsedNote("Course details saved.");
+            refresh();
+          }}
+          className="mt-2 w-full rounded-xl bg-fairway-900 px-4 py-2 text-sm font-black text-white disabled:opacity-50">
+          Save course details
+        </button>
+      </div>
 
       <div>
         <label className={labelClass}>Tees being played</label>
