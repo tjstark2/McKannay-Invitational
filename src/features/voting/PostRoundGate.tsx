@@ -6,6 +6,7 @@ import { votingConcluded, votingOpen } from "@/features/voting/votingStatus";
 import { roundHasVotes } from "@/features/voting/tally";
 import { VotingModal } from "@/features/voting/VotingModal";
 import { RevealModal } from "@/features/voting/RevealModal";
+import { setOverlayOpen } from "@/features/trip/tour/overlayState";
 
 // One gate, one modal at a time. On open it first REVEALS any concluded round
 // whose results this person hasn't seen (everyone, voters and non-voters), then
@@ -27,6 +28,12 @@ export function PostRoundGate() {
   const [revealRoundId, setRevealRoundId] = useState<string | null>(null);
   const [voteRoundId, setVoteRoundId] = useState<string | null>(null);
   const [voteDismissed, setVoteDismissed] = useState<string[]>([]);
+
+  // Tell the guided tour to hold off while this is covering the screen.
+  useEffect(() => {
+    setOverlayOpen("postRoundGate", Boolean(revealRoundId || voteRoundId));
+    return () => setOverlayOpen("postRoundGate", false);
+  }, [revealRoundId, voteRoundId]);
 
   const me =
     user?.id != null

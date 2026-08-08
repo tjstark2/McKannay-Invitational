@@ -59,7 +59,7 @@ export function TopHero({
         {canManage ? (
           <button
             onClick={() => setPicking(true)}
-            className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-extrabold text-fairway-900 shadow backdrop-blur"
+            className="absolute right-4 top-[3.75rem] z-[60] inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-extrabold text-fairway-900 shadow backdrop-blur"
           >
             <ImagePlus size={14} /> Banner
           </button>

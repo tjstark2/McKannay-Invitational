@@ -6,6 +6,7 @@ import { PostRoundGate } from "@/features/voting/PostRoundGate";
 import { WrappedBanner } from "@/features/voting/WrappedBanner";
 import { AddScoreScreen } from "@/features/trip/screens/AddScoreScreen";
 import { TourHost, startSpotlightTour, buildMemberSpotlight, buildAdminSpotlight } from "@/features/trip/tour/spotlight";
+import { whenOverlaysClear } from "@/features/trip/tour/overlayState";
 import { BottomNav } from "@/features/trip/components/BottomNav";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { CourseDetailScreen } from "@/features/trip/screens/CourseDetailScreen";
@@ -57,6 +58,7 @@ function TripAppInner() {
   const { user } = useAuth();
 
   const [activeScreen, setActiveScreen] = useState<Screen>("overview");
+  const [screenStack, setScreenStack] = useState<Screen[]>([]);
   const [selectedPlayerId, setSelectedPlayerId] = useState(players[0]?.id ?? "");
   const [selectedCourseId, setSelectedCourseId] = useState(courses[0]?.id ?? "");
   const [selectedTeamId, setSelectedTeamId] = useState<TeamId>("A");
@@ -69,12 +71,16 @@ function TripAppInner() {
     try {
       const key = `tb_tour_v3_${trip.id}_member`;
       if (!localStorage.getItem(key)) {
-        localStorage.setItem(key, "1");
-        startSpotlightTour(
-          canManage
-            ? buildAdminSpotlight(trip.joinCode, Boolean(trip.isPro))
-            : buildMemberSpotlight(trip.joinCode, Boolean(trip.isPro))
-        );
+        // Wait for anything covering the screen (post-round awards, voting
+        // reveal) before spotlighting, and only mark it shown once it starts.
+        return whenOverlaysClear(() => {
+          localStorage.setItem(key, "1");
+          startSpotlightTour(
+            canManage
+              ? buildAdminSpotlight(trip.joinCode, Boolean(trip.isPro))
+              : buildMemberSpotlight(trip.joinCode, Boolean(trip.isPro))
+          );
+        });
       }
     } catch {
       /* storage unavailable */
@@ -250,7 +256,33 @@ function TripAppInner() {
     );
   }
 
+  // Screens you drill INTO. They get a Back bar so a quick link from the
+  // Locker doesn't dump you back at the top level.
+  const DRILL_IN: Screen[] = [
+    "rules",
+    "courseDetail",
+    "playerProfile",
+    "teamDetail",
+    "matchDetail",
+    "addScore",
+    "admin",
+  ];
+
+  function goBack() {
+    setScreenStack((prev) => {
+      const next = prev.slice();
+      const to = next.pop();
+      setActiveScreen(to ?? "more");
+      return next;
+    });
+  }
+
   function goToScreen(screen: Screen) {
+    if (DRILL_IN.includes(screen) && screen !== activeScreen) {
+      setScreenStack((prev) => [...prev, activeScreen]);
+    } else if (!DRILL_IN.includes(screen)) {
+      setScreenStack([]);
+    }
     if (
       screen === "scoreboard" ||
       screen === "matchCenter" ||
@@ -280,6 +312,18 @@ function TripAppInner() {
         <WrappedBanner />
         <PostRoundGate />
         <TourHost />
+
+        {DRILL_IN.includes(activeScreen) ? (
+          <div className="px-5 pt-4">
+            <button
+              type="button"
+              onClick={goBack}
+              className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-sm font-black text-slate-600 shadow-sm"
+            >
+              ‹ Back
+            </button>
+          </div>
+        ) : null}
 
         <main className="px-5 py-6">
           {activeScreen === "overview" ? (
