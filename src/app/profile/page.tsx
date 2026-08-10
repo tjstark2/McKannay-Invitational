@@ -12,6 +12,7 @@ import { useCosmetics } from "@/features/cosmetics/useCosmetics";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { BrandHeaderMark } from "@/features/trip/components/Brand";
 import { AccountMenu } from "@/features/account/AccountMenu";
+import { NotificationSettings } from "@/features/account/NotificationSettings";
 
 type Profile = {
   first_name: string | null;
@@ -241,21 +242,7 @@ export default function ProfilePage() {
 
         {/* Notifications */}
         <Section title="Notifications">
-          <div className="divide-y divide-sand-100 overflow-hidden rounded-2xl border border-line bg-white">
-            <Row
-              label="Tournament updates"
-              hint="Tee times, scores, results"
-              value={tournamentUpdatesOn ? "On" : "Off"}
-            />
-            <Row
-              label="News & offers"
-              hint="Tips, features, deals"
-              value={marketingOn ? "On" : "Off"}
-            />
-          </div>
-          <p className="mt-2 px-1 text-xs text-slate-400">
-            Change these any time from Edit Profile.
-          </p>
+          <NotificationSettings />
         </Section>
 
         {/* Actions */}

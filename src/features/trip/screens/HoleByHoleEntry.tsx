@@ -170,6 +170,29 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
         } catch {
           /* a callout failing must never block scoring */
         }
+        // Push the big ones to everyone else's phone.
+        if (c.level === "takeover") {
+          try {
+            const others = players
+              .map((p) => p.accountId)
+              .filter((id): id is string => Boolean(id) && id !== user?.id);
+            if (others.length > 0) {
+              await fetch("/api/push/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  userIds: others,
+                  title: trip.name,
+                  message: c.text,
+                  category: "live_callouts",
+                  url: `/t/${trip.joinCode}`,
+                }),
+              });
+            }
+          } catch {
+            /* never block scoring on a notification */
+          }
+        }
         // Persist the ones worth showing later, and the sticky snowman.
         if (c.level === "takeover" || c.snowman) {
           try {

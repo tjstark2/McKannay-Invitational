@@ -13,6 +13,8 @@ import "./globals.css";
 import { AuthProvider } from "@/features/auth/AuthContext";
 
 export const metadata: Metadata = {
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "TourneyBirdie" },
   title: "TourneyBirdie",
   description: "Create. Invite. Crown. Golf tournaments made easy.",
 };
