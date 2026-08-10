@@ -8,6 +8,9 @@ import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import { loadCourseHoles, loadCourseTees, type CourseHole } from "@/lib/supabase/courseHoles";
 import { loadRoundSetups, type RoundSetup } from "@/lib/supabase/roundSegments";
 import { RoundConfirm } from "@/features/trip/screens/RoundConfirm";
+import { detectCallouts, type Callout } from "@/features/trip/scoring/callouts";
+import { sendMessage } from "@/lib/supabase/clubhouse";
+import { LiveLeaderboard } from "@/features/trip/screens/LiveLeaderboard";
 import {
   allocateForMatch,
   holesInPlay,
@@ -29,6 +32,7 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [celebration, setCelebration] = useState<Callout | null>(null);
 
   const load = useCallback(async () => {
     const supabase = getSupabaseClient();
@@ -131,7 +135,36 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
       { onConflict: "round_id,player_id,hole_number" }
     );
     setBusy(false);
-    if (e) setError(e.message);
+    if (e) {
+      setError(e.message);
+      return;
+    }
+
+    // Trash talk. The board sees it in the Clubhouse; the big ones take over
+    // this screen too.
+    const par = playable.find((h) => h.hole === hole)?.par;
+    const who = players.find((p) => p.id === pid);
+    if (par && who) {
+      const mine = scores
+        .filter((s) => s.playerId === pid && s.hole !== hole)
+        .map((s) => ({ hole: s.hole, par: playable.find((h) => h.hole === s.hole)?.par ?? 4, strokes: s.strokes }));
+      const events = detectCallouts({
+        playerName: who.name,
+        hole,
+        par,
+        strokes,
+        roundScores: [...mine, { hole, par, strokes }],
+      });
+      const big = events.find((c) => c.level === "takeover") ?? events.find((c) => c.level === "celebrate");
+      if (big) setCelebration(big);
+      for (const c of events) {
+        try {
+          await sendMessage(supabase, { tripId: trip.id, userId: user?.id ?? "", body: c.text });
+        } catch {
+          /* a callout failing must never block scoring */
+        }
+      }
+    }
   }
 
   if (loading) return <p className="text-sm text-slate-400">Loading the card…</p>;
@@ -163,6 +196,10 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
             {a.summary}
           </p>
         ))}
+      </div>
+
+      <div className="rounded-2xl bg-[#f7f6f1] p-3">
+        <LiveLeaderboard roundId={roundId} />
       </div>
 
       {/* hole strip */}
@@ -258,6 +295,23 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
             >
               {canAdvance ? "Next hole ›" : "Everyone needs a score first"}
             </button>
+          </div>
+        </div>
+      ) : null}
+
+      {celebration ? (
+        <div
+          className="fixed inset-0 z-[180] flex items-center justify-center bg-black/80 p-6"
+          onClick={() => setCelebration(null)}
+        >
+          <div className="text-center">
+            <p className="text-[72px] leading-none">
+              {celebration.key === "ace" ? "🕳️" : celebration.key === "albatross" ? "🦅" : celebration.key === "eagle" ? "🦅" : "🐦"}
+            </p>
+            <p className="mt-4 font-anton text-3xl leading-tight tracking-tight text-white">
+              {celebration.text}
+            </p>
+            <p className="mt-4 text-sm font-bold text-white/60">Tap anywhere to keep scoring</p>
           </div>
         </div>
       ) : null}
