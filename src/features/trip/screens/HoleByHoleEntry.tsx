@@ -7,6 +7,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import { loadCourseHoles, loadCourseTees, type CourseHole } from "@/lib/supabase/courseHoles";
 import { loadRoundSetups, type RoundSetup } from "@/lib/supabase/roundSegments";
+import { RoundConfirm } from "@/features/trip/screens/RoundConfirm";
 import {
   allocateForMatch,
   holesInPlay,
@@ -269,9 +270,14 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
       </div>
 
       {completedHoles === playable.length ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-[13px] text-emerald-900">
-          Every hole is in. Once everyone in the group confirms the card it locks and the awards vote opens.
-        </div>
+        <RoundConfirm
+          roundId={roundId}
+          groupPlayers={groupPlayers}
+          holes={playable}
+          scores={scores}
+          strokesOn={strokesOn}
+          onLocked={load}
+        />
       ) : (
         <p className="text-[12px] leading-5 text-slate-500">
           Anyone in your tee time can enter scores for the group. When all {playable.length} holes are in,
