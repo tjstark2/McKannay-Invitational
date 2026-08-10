@@ -13,6 +13,7 @@ import {
 } from "@/lib/scoring";
 import { Card } from "@/components/ui/Card";
 import { NextRoundCard } from "@/features/trip/components/NextRoundCard";
+import { TripItineraryCard } from "@/features/trip/components/TripItineraryCard";
 import { StandingsCard } from "@/features/trip/components/StandingsCard";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import type { Screen } from "@/types";
@@ -247,6 +248,8 @@ export function OverviewScreen({
         status={dispStatus}
         setActiveScreen={setActiveScreen}
       />
+
+      <TripItineraryCard />
 
       {/* 1.5 - team momentum */}
       <section>

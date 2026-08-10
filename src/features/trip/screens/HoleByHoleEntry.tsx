@@ -1,14 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
-import { loadCourseHoles, loadCourseTees, type CourseHole } from "@/lib/supabase/courseHoles";
+import { loadCourseHoles, loadCourseTees, imageToBase64, type CourseHole } from "@/lib/supabase/courseHoles";
 import { loadRoundSetups, type RoundSetup } from "@/lib/supabase/roundSegments";
 import { RoundConfirm } from "@/features/trip/screens/RoundConfirm";
-import { detectCallouts, type Callout } from "@/features/trip/scoring/callouts";
+import { detectCallouts, clearsSnowman, type Callout } from "@/features/trip/scoring/callouts";
+import { recordMoment, clearSnowman } from "@/lib/supabase/moments";
 import { sendMessage } from "@/lib/supabase/clubhouse";
 import { LiveLeaderboard } from "@/features/trip/screens/LiveLeaderboard";
 import {
@@ -33,6 +34,12 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [celebration, setCelebration] = useState<Callout | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoReview, setPhotoReview] = useState<
+    { name: string; playerId: string; holes: { hole: number; strokes: number }[] }[] | null
+  >(null);
+  const [photoNote, setPhotoNote] = useState<string | null>(null);
+  const photoRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     const supabase = getSupabaseClient();
@@ -163,8 +170,79 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
         } catch {
           /* a callout failing must never block scoring */
         }
+        // Persist the ones worth showing later, and the sticky snowman.
+        if (c.level === "takeover" || c.snowman) {
+          try {
+            await recordMoment(supabase, {
+              tripId: trip.id,
+              roundId,
+              playerId: pid,
+              kind: c.key,
+              hole,
+              body: c.text,
+            });
+          } catch {
+            /* non-blocking */
+          }
+        }
+      }
+      // Play your way out of the snowman: tiered by handicap.
+      if (events.length === 0 || !events.some((c) => c.snowman)) {
+        if (clearsSnowman(who.handicapIndex, strokes, par)) {
+          try {
+            await clearSnowman(supabase, trip.id, pid);
+          } catch {
+            /* non-blocking */
+          }
+        }
       }
     }
+  }
+
+  async function readScorecard(file: File) {
+    setPhotoBusy(true);
+    setPhotoNote(null);
+    setError(null);
+    try {
+      const { base64, mediaType } = await imageToBase64(file);
+      const res = await fetch("/api/parse-scores", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageBase64: base64,
+          mediaType,
+          names: groupPlayers.map((p) => p.name),
+          holes: playable.map((h) => h.hole),
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Couldn't read that scorecard.");
+      const mapped = (data.players as { name: string; holes: { hole: number; strokes: number }[] }[])
+        .map((row) => {
+          const match = groupPlayers.find((p) => p.name.toLowerCase() === row.name.toLowerCase());
+          return match ? { name: match.name, playerId: match.id, holes: row.holes } : null;
+        })
+        .filter(Boolean) as { name: string; playerId: string; holes: { hole: number; strokes: number }[] }[];
+      if (mapped.length === 0) throw new Error("Couldn't match anyone in your group to that card.");
+      if ((data.unmatched as string[])?.length) {
+        setPhotoNote(`Ignored rows that are not in your group: ${(data.unmatched as string[]).join(", ")}.`);
+      }
+      setPhotoReview(mapped);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't read that scorecard.");
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  async function applyPhotoScores() {
+    if (!photoReview) return;
+    for (const row of photoReview) {
+      for (const h of row.holes) {
+        await saveScore(row.playerId, h.hole, h.strokes);
+      }
+    }
+    setPhotoReview(null);
   }
 
   if (loading) return <p className="text-sm text-slate-400">Loading the card…</p>;
@@ -200,6 +278,31 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
 
       <div className="rounded-2xl bg-[#f7f6f1] p-3">
         <LiveLeaderboard roundId={roundId} />
+      </div>
+
+      <div>
+        <input
+          ref={photoRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) readScorecard(f);
+          }}
+        />
+        <button
+          type="button"
+          disabled={photoBusy}
+          onClick={() => photoRef.current?.click()}
+          className="w-full rounded-2xl border-2 border-dashed border-sand-200 px-4 py-3 font-black text-slate-500 disabled:opacity-50"
+        >
+          {photoBusy ? "Reading the card…" : "📷 Fill from a scorecard photo"}
+        </button>
+        <p className="mt-1 text-center text-[12px] leading-5 text-slate-500">
+          Works on the paper card or a screenshot from whatever app you use. You check it before it saves.
+        </p>
       </div>
 
       {/* hole strip */}
@@ -295,6 +398,54 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
             >
               {canAdvance ? "Next hole ›" : "Everyone needs a score first"}
             </button>
+          </div>
+        </div>
+      ) : null}
+
+      {photoReview ? (
+        <div className="fixed inset-0 z-[175] flex items-end justify-center bg-black/70 sm:items-center">
+          <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white p-5 sm:rounded-3xl">
+            <p className="font-anton text-2xl tracking-tight text-ink">Check the card</p>
+            <p className="mt-1 text-[13px] text-slate-500">
+              Anything wrong here goes straight into the standings, so give it a look.
+            </p>
+            {photoNote ? (
+              <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-[12px] text-amber-900">{photoNote}</p>
+            ) : null}
+
+            <div className="mt-3 space-y-3">
+              {photoReview.map((row) => (
+                <div key={row.playerId}>
+                  <p className="text-[13px] font-black text-ink">{row.name}</p>
+                  <div className="mt-1 grid grid-cols-6 gap-1">
+                    {row.holes.map((h) => (
+                      <div key={h.hole} className="rounded-lg bg-[#f7f6f1] p-1 text-center">
+                        <p className="text-[10px] font-black uppercase text-slate-400">H{h.hole}</p>
+                        <p className="text-[14px] font-black text-ink">{h.strokes}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPhotoReview(null)}
+                className="flex-1 rounded-2xl border-[1.5px] border-slate-300 px-4 py-3 font-black text-slate-600"
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                onClick={applyPhotoScores}
+                disabled={busy}
+                className="flex-1 rounded-2xl bg-fairway-900 px-4 py-3 font-black text-white disabled:opacity-50"
+              >
+                {busy ? "Saving…" : "Save these scores"}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

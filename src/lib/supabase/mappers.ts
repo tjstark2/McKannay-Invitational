@@ -139,6 +139,7 @@ export function mapTrip(row: TripRow): Trip {
     joinCode: row.join_code,
     seriesId: row.series_id ?? null,
     lodgingName: row.lodging_name ?? "",
+    logisticsNotes: (row as unknown as { logistics_notes?: string }).logistics_notes ?? "",
     lodgingAddress: row.lodging_address ?? "",
     totalPoints: Number(row.total_points ?? 0),
     winningNumber: Number(row.winning_number ?? 0),

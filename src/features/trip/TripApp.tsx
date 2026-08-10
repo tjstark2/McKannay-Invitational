@@ -7,6 +7,7 @@ import { WrappedBanner } from "@/features/voting/WrappedBanner";
 import { AddScoreScreen } from "@/features/trip/screens/AddScoreScreen";
 import { TourHost, startSpotlightTour, buildMemberSpotlight, buildAdminSpotlight } from "@/features/trip/tour/spotlight";
 import { whenOverlaysClear } from "@/features/trip/tour/overlayState";
+import { MomentTakeover } from "@/features/trip/components/MomentTakeover";
 import { BottomNav } from "@/features/trip/components/BottomNav";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { CourseDetailScreen } from "@/features/trip/screens/CourseDetailScreen";
@@ -311,6 +312,7 @@ function TripAppInner() {
         <RoundTodayBanner />
         <WrappedBanner />
         <PostRoundGate />
+        <MomentTakeover />
         <TourHost />
 
         {DRILL_IN.includes(activeScreen) ? (
