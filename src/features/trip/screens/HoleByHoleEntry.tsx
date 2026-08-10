@@ -170,8 +170,9 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
         } catch {
           /* a callout failing must never block scoring */
         }
-        // Push the big ones to everyone else's phone.
-        if (c.level === "takeover") {
+        // Push it out. The category engine decides who actually gets it based
+        // on their intensity setting and quiet hours.
+        if (c.level === "takeover" || c.level === "celebrate" || c.snowman) {
           try {
             const others = players
               .map((p) => p.accountId)
@@ -184,7 +185,8 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
                   userIds: others,
                   title: trip.name,
                   message: c.text,
-                  category: "live_callouts",
+                  category: "live_action",
+                  kind: c.key,
                   url: `/t/${trip.joinCode}`,
                 }),
               });

@@ -4,14 +4,15 @@ import { useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useAuth } from "@/features/auth/AuthContext";
 
-type Prefs = { live_callouts: boolean; round_info: boolean; clubhouse: boolean };
+import { DEFAULT_PREFS, type Prefs } from "@/features/notifications/categories";
 
-const DEFAULTS: Prefs = { live_callouts: true, round_info: true, clubhouse: true };
+const DEFAULTS: Prefs = DEFAULT_PREFS;
 
-const LABELS: { key: keyof Prefs; title: string; blurb: string }[] = [
-  { key: "live_callouts", title: "Live callouts", blurb: "Birdies, eagles and the odd disaster, as they happen." },
-  { key: "round_info", title: "Round info", blurb: "Night before and morning of: tee times, matchups, where to be." },
-  { key: "clubhouse", title: "Clubhouse", blurb: "Photos and chat from the group." },
+const TOGGLES: { key: "round_day" | "my_card" | "awards" | "organizer"; title: string; blurb: string; adminOnly?: boolean }[] = [
+  { key: "round_day", title: "Round day", blurb: "Night before and matchups, plus any change to a tee time. Rounds starting and finishing." },
+  { key: "my_card", title: "My card", blurb: "Your group has gone quiet, your card is ready to sign, everyone else has signed." },
+  { key: "awards", title: "Awards and recap", blurb: "Voting opening and closing, results, and Trip Wrapped." },
+  { key: "organizer", title: "Organizer alerts", blurb: "Join requests and anything not set up before a round.", adminOnly: true },
 ];
 
 function urlBase64ToUint8Array(base64String: string) {
@@ -59,10 +60,10 @@ export function NotificationSettings() {
       if (supabase && user?.id) {
         const { data } = await supabase
           .from("notification_prefs")
-          .select("live_callouts,round_info,clubhouse")
+          .select("round_day,live_action,my_card,awards,clubhouse_level,organizer,quiet_start,quiet_end,time_zone")
           .eq("user_id", user.id)
           .maybeSingle();
-        if (data) setPrefs(data as Prefs);
+        if (data) setPrefs({ ...DEFAULTS, ...(data as Partial<Prefs>) });
       }
     })();
   }, [user?.id]);
@@ -104,13 +105,18 @@ export function NotificationSettings() {
     }
   }
 
-  async function savePref(key: keyof Prefs, value: boolean) {
+  async function savePref(key: keyof Prefs, value: boolean | string | number) {
     const next = { ...prefs, [key]: value };
     setPrefs(next);
     const supabase = getSupabaseClient();
     if (supabase && user?.id) {
       await supabase.from("notification_prefs").upsert(
-        { user_id: user.id, ...next, updated_at: new Date().toISOString() },
+        {
+          user_id: user.id,
+          ...next,
+          time_zone: next.time_zone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+          updated_at: new Date().toISOString(),
+        },
         { onConflict: "user_id" }
       );
     }
@@ -149,9 +155,78 @@ export function NotificationSettings() {
 
       {error ? <p className="text-sm font-bold text-red-600">{error}</p> : null}
 
+      <div className="rounded-2xl border border-sand-200 bg-[#f7f6f1] p-3">
+        <p className="text-xs font-black uppercase tracking-wide text-slate-500">Always sent</p>
+        <p className="mt-1 text-[12px] leading-5 text-slate-600">
+          Your tee time on the morning of, when you are the last signature on a card, if an admin changes a
+          locked score, and anything about your account. Miss these and you are on the wrong tee.
+        </p>
+      </div>
+
       <div className="rounded-2xl border border-sand-200 p-3">
-        <p className="text-xs font-black uppercase tracking-wide text-slate-500">What to send me</p>
-        {LABELS.map((l) => (
+        <p className="text-xs font-black uppercase tracking-wide text-slate-500">Live action</p>
+        <p className="mt-1 text-[12px] leading-5 text-slate-500">
+          How much of the on-course drama you want on your phone.
+        </p>
+        <div className="mt-2 flex gap-1.5">
+          {([
+            ["big", "Big moments"],
+            ["all", "Everything"],
+            ["off", "Off"],
+          ] as const).map(([val, label]) => (
+            <button
+              key={val}
+              type="button"
+              onClick={() => savePref("live_action", val)}
+              className={`flex-1 rounded-xl border-[1.5px] px-2 py-2 text-[12px] font-black ${
+                prefs.live_action === val
+                  ? "border-fairway-900 bg-fairway-900 text-white"
+                  : "border-sand-200 text-slate-500"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-1.5 text-[12px] leading-5 text-slate-500">
+          {prefs.live_action === "big"
+            ? "Eagles, aces, snowmen, lead changes and a tight race at the turn."
+            : prefs.live_action === "all"
+            ? "Adds every birdie, triple, bad streak and group finishing."
+            : "Nothing while the round is going."}
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-sand-200 p-3">
+        <p className="text-xs font-black uppercase tracking-wide text-slate-500">Clubhouse and friends</p>
+        <div className="mt-2 flex gap-1.5">
+          {([
+            ["all", "Everything"],
+            ["mentions", "Mentions only"],
+            ["off", "Off"],
+          ] as const).map(([val, label]) => (
+            <button
+              key={val}
+              type="button"
+              onClick={() => savePref("clubhouse_level", val)}
+              className={`flex-1 rounded-xl border-[1.5px] px-2 py-2 text-[12px] font-black ${
+                prefs.clubhouse_level === val
+                  ? "border-fairway-900 bg-fairway-900 text-white"
+                  : "border-sand-200 text-slate-500"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-1.5 text-[12px] leading-5 text-slate-500">
+          Chat arrives batched, never one buzz per message.
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-sand-200 p-3">
+        <p className="text-xs font-black uppercase tracking-wide text-slate-500">Everything else</p>
+        {TOGGLES.map((l) => (
           <div key={l.key} className="mt-2 flex items-start gap-3">
             <span className="flex-1">
               <span className="block text-[13px] font-black text-ink">{l.title}</span>
@@ -172,6 +247,40 @@ export function NotificationSettings() {
             </button>
           </div>
         ))}
+      </div>
+
+      <div className="rounded-2xl border border-sand-200 p-3">
+        <p className="text-xs font-black uppercase tracking-wide text-slate-500">Quiet hours</p>
+        <p className="mt-1 text-[12px] leading-5 text-slate-500">
+          Nothing buzzes between these times except the always-sent ones.
+        </p>
+        <div className="mt-2 flex items-center gap-2">
+          <select
+            value={prefs.quiet_start}
+            onChange={(e) => savePref("quiet_start", Number(e.target.value))}
+            className="flex-1 rounded-xl border-[1.5px] border-sand-200 px-2 py-2 font-bold"
+          >
+            {Array.from({ length: 24 }, (_, h) => (
+              <option key={h} value={h}>
+                {((h + 11) % 12) + 1}
+                {h < 12 ? "am" : "pm"}
+              </option>
+            ))}
+          </select>
+          <span className="text-[13px] font-bold text-slate-400">to</span>
+          <select
+            value={prefs.quiet_end}
+            onChange={(e) => savePref("quiet_end", Number(e.target.value))}
+            className="flex-1 rounded-xl border-[1.5px] border-sand-200 px-2 py-2 font-bold"
+          >
+            {Array.from({ length: 24 }, (_, h) => (
+              <option key={h} value={h}>
+                {((h + 11) % 12) + 1}
+                {h < 12 ? "am" : "pm"}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
     </div>
   );

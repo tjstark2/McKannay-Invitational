@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-type Category = "live_callouts" | "round_info" | "clubhouse";
+import { shouldDeliver, type Category, type Prefs } from "@/features/notifications/categories";
 
 /**
  * Sends a push to a set of users. Called from the app when something worth
@@ -27,7 +27,14 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: { userIds?: string[]; title?: string; message?: string; category?: Category; url?: string };
+  let body: {
+    userIds?: string[];
+    title?: string;
+    message?: string;
+    category?: Category;
+    kind?: string;
+    url?: string;
+  };
   try {
     body = await req.json();
   } catch {
@@ -46,21 +53,25 @@ export async function POST(req: Request) {
   );
 
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
-  const category: Category = body.category ?? "live_callouts";
+  const category: Category = body.category ?? "live_action";
 
-  // Respect each player's category preference (default on when no row exists).
+  // Category, intensity and quiet hours all decided in one shared place.
   const { data: prefs } = await admin
     .from("notification_prefs")
-    .select("user_id,live_callouts,round_info,clubhouse")
+    .select(
+      "user_id,round_day,live_action,my_card,awards,clubhouse_level,organizer,quiet_start,quiet_end,time_zone"
+    )
     .in("user_id", userIds);
   const prefById = new Map(
-    ((prefs ?? []) as Record<string, unknown>[]).map((p) => [p.user_id as string, p])
+    ((prefs ?? []) as Record<string, unknown>[]).map((p) => [p.user_id as string, p as unknown as Partial<Prefs>])
   );
-  const wanted = userIds.filter((id) => {
-    const p = prefById.get(id);
-    if (!p) return true;
-    return p[category] !== false;
-  });
+  const notification = {
+    category,
+    kind: body.kind,
+    title: body.title || "TourneyBirdie",
+    message: body.message,
+  };
+  const wanted = userIds.filter((id) => shouldDeliver(notification, prefById.get(id) ?? null));
   if (wanted.length === 0) return NextResponse.json({ ok: true, sent: 0 });
 
   const { data: subs } = await admin
