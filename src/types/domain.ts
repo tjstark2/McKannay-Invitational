@@ -44,6 +44,7 @@ export type Trip = {
   defaultFormat: string | null;
   rosterSize: number;
   isPro: boolean;
+  scoringMode?: "basic_918" | "hole_by_hole";
   wrappedAt?: string | null;
   headerBackground: string | null;
 };

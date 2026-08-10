@@ -147,6 +147,7 @@ export function mapTrip(row: TripRow): Trip {
     defaultFormat: row.default_format ?? null,
     rosterSize: Number(row.roster_size ?? 0),
     isPro: Boolean(row.is_pro ?? false),
+    scoringMode: ((row as unknown as { scoring_mode?: string }).scoring_mode ?? "basic_918") as "basic_918" | "hole_by_hole",
     wrappedAt: row.wrapped_at ?? null,
     headerBackground: row.header_background ?? null,
   };

@@ -11,6 +11,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { GroupedRoundEntry } from "@/features/trip/screens/GroupedRoundEntry";
 import { roundLifecycle } from "@/features/trip/roundLifecycle";
 import { RoundLifecycleButton } from "@/features/trip/components/RoundLifecycleButton";
+import { HoleByHoleEntry } from "@/features/trip/screens/HoleByHoleEntry";
 
 type LastSavedScore = {
   playerName: string;
@@ -113,6 +114,41 @@ export function AddScoreScreen() {
   // Score entry is gated by the round lifecycle: the organizer must open the
   // round, and a finished round is locked.
   const life = roundLifecycle(selectedRound);
+
+  // Hole-by-hole tournaments use the per-hole card instead of 9/18 totals.
+  if (trip.scoringMode === "hole_by_hole") {
+    return (
+      <div className="space-y-4">
+        <ScreenHeader
+          img="/brand/tee-it-up.png"
+          title="Tee It Up"
+          subtitle="Enter every hole as you play. Anyone in your tee time can fill in the group."
+        />
+        <Card className="p-4">
+          <label className="text-xs font-black uppercase text-slate-500">Round</label>
+          <select
+            value={selectedRound.id}
+            onChange={(event) => setRoundId(event.target.value)}
+            className="mt-2 w-full rounded-xl border border-slate-200 p-3 font-bold"
+          >
+            {rounds.map((round) => (
+              <option key={round.id} value={round.id}>
+                {round.title}
+              </option>
+            ))}
+          </select>
+        </Card>
+        {life !== "live" ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-[13px] text-amber-900">
+            This round has not been started yet. An admin starts it in Manage My Tournament, under Rounds.
+          </div>
+        ) : (
+          <HoleByHoleEntry roundId={selectedRound.id} />
+        )}
+      </div>
+    );
+  }
+
   if (life !== "live") {
     return (
       <div className="space-y-4">
