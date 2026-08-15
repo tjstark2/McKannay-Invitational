@@ -16,6 +16,19 @@ const INSTRUCTION = `You are reading a golf scorecard. Extract, for all 18 holes
 The stroke index is the row usually labelled "Handicap", "HCP", "H'cap", "Index" or "SI".
 Do NOT confuse it with yardage or par. Every stroke index 1-18 must appear exactly once.
 
+Work carefully, in this order:
+1. Find the row of hole numbers 1 to 18. Note that scorecards usually print holes 1-9,
+   then a subtotal column (OUT), then 10-18, then IN and TOTAL. IGNORE the OUT, IN and
+   TOTAL columns completely - they are not holes.
+2. Read the PAR row straight down under each hole number.
+3. Find the handicap row. It is labelled Handicap, HCP, H'cap, Index or SI, and it is the
+   only row whose values are the numbers 1 to 18 each used exactly once. Yardage rows are
+   3-digit numbers - never use those.
+4. Before answering, CHECK YOURSELF: the 18 stroke index values must be a permutation of
+   1 to 18 with no repeats and none missing. If your first read repeats or skips a number,
+   go back to the image and re-read that row rather than guessing. Par values must be 3, 4
+   or 5 for a normal course.
+
 Respond with ONLY raw JSON, no markdown fences, no commentary, in this exact shape:
 {"holes":[{"hole":1,"par":4,"si":7}, ... 18 entries ...],"tee":"Blue","confidence":"high"}
 If you cannot read a value, use null for it and set "confidence":"low".`;

@@ -63,6 +63,19 @@ export function TripItineraryCard() {
                     <span className="font-bold text-ink">{r.title}</span>
                     {r.dateLabel ? ` · ${r.dateLabel}` : ""}
                     {course ? ` · ${course.name}` : ""}
+                    {course?.address ? (
+                      <>
+                        {" "}
+                        <a
+                          href={`https://maps.google.com/?q=${encodeURIComponent(course.address)}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-bold text-fairway-900 underline"
+                        >
+                          map
+                        </a>
+                      </>
+                    ) : null}
                     {r.arrivalTime ? ` · arrive ${r.arrivalTime}` : ""}
                   </p>
                 );

@@ -40,7 +40,7 @@ export function CourseHolesTab({ tripId, joinCode }: { tripId: string; joinCode?
   const [parsedNote, setParsedNote] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [nc, setNc] = useState({ name: "", par: "72", teeName: "Blue", yardage: "", rating: "", slope: "" });
-  const [details, setDetails] = useState({ name: "" });
+  const [details, setDetails] = useState({ name: "", address: "" });
   const [tees, setTees] = useState<CourseTee[]>([]);
   const [newTee, setNewTee] = useState({ name: "", yardage: "", rating: "", slope: "" });
   const fileRef = useRef<HTMLInputElement>(null);
@@ -84,7 +84,7 @@ export function CourseHolesTab({ tripId, joinCode }: { tripId: string; joinCode?
     setSaved(null);
     setParsedNote(null);
     setTee(c.teeName ?? "");
-    setDetails({ name: c.name ?? "" });
+    setDetails({ name: c.name ?? "", address: c.address ?? "" });
     const supabase = getSupabaseClient();
     if (supabase) setTees(await loadCourseTees(supabase, c.id));
     if (supabase && c.holeCount > 0) {
@@ -385,7 +385,7 @@ export function CourseHolesTab({ tripId, joinCode }: { tripId: string; joinCode?
         <input
           className={inputClass}
           value={details.name}
-          onChange={(e) => setDetails({ name: e.target.value })}
+          onChange={(e) => setDetails({ ...details, name: e.target.value })}
           onBlur={async () => {
             const supabase = getSupabaseClient();
             if (!supabase || !active) return;

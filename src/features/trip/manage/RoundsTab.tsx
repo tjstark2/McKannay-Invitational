@@ -443,10 +443,11 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
 
                 {/* --- rebuild matches --- */}
                 <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-3">
-                  <p className="text-xs font-black uppercase tracking-wide text-amber-900">Rebuild matches</p>
+                  <p className="text-xs font-black uppercase tracking-wide text-amber-900">Rebuild matches from one format</p>
                   <p className="mt-1 text-[12px] leading-5 text-amber-900">
-                    Builds this round&apos;s matches from a single format across the whole field. This replaces
-                    every match in the round and any scores already entered.
+                    Use this to reset the whole round to one format. It replaces every match in the round and
+                    any scores already entered. To set different formats per tee time, use the tee time cards
+                    above instead.
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {[

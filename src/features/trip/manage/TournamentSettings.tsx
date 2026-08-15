@@ -244,72 +244,29 @@ export function TournamentSettings({
         </div>
       ) : null}
 
-      {/* ---------------- SCORING MODE (Pro tab) ---------------- */}
-      {tab === "pro" ? (
-        <div className="space-y-3">
-          <p className="text-[13px] leading-5 text-slate-600">
-            How players put scores in. This drives handicaps, stats and what the group sees during a round.
-          </p>
-
-          <button
-            type="button"
-            onClick={() => requestMode("basic_918")}
-            className={`w-full rounded-2xl border-2 p-3 text-left ${
-              s.scoringMode === "basic_918" ? "border-fairway-900 bg-fairway-900/5" : "border-sand-200"
-            }`}
-          >
-            <p className="font-black text-ink">Enter at 9 &amp; 18</p>
-            <p className="text-[13px] text-slate-500">
-              One score at the turn, one at the end. Net handicap off course rating and slope. Simple, low friction.
-            </p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => requestMode("hole_by_hole")}
-            className={`w-full rounded-2xl border-2 p-3 text-left ${
-              s.scoringMode === "hole_by_hole" ? "border-accent bg-accent/10" : "border-sand-200"
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <p className="font-black text-ink">Hole by hole</p>
-              <span className="rounded-full bg-accent/20 px-1.5 py-0.5 text-[10px] font-black uppercase text-accent-dark">
-                Pro
-              </span>
-            </div>
-            <p className="text-[13px] text-slate-500">
-              Live leaderboard, strokes on the right holes, birdie and blow-up callouts, richer Trip Wrapped.
-              {!s.isPro ? " Tap to see what Pro unlocks." : ""}
-            </p>
-          </button>
-
-          {s.scoringMode === "hole_by_hole" ? (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[13px] text-amber-900">
-              Hole by hole needs the par and stroke index for all 18 holes of each course. Add it in the
-              Courses tab before a round starts.
-            </div>
-          ) : null}
-        </div>
-      ) : null}
 
       {tab === "courses" ? <CourseHolesTab tripId={tripId} joinCode={joinCode} /> : null}
 
       {tab === "rounds" ? <RoundsTab tripId={tripId} joinCode={joinCode} /> : null}
 
       {tab === "pro" ? (
-        <div className="mb-3 space-y-3">
+        <div className="space-y-4">
+          {/* 1. status */}
           {s.isPro ? (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-              <p className="font-black text-emerald-800">This is a Pro tournament</p>
-              <p className="mt-1 text-[13px] leading-5 text-emerald-900">
-                Hole-by-hole scoring, the Clubhouse, matchup draws and Trip Wrapped are all unlocked.
+            <div className="rounded-2xl border-2 border-accent bg-accent/10 p-4">
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-black uppercase text-ink">Pro</span>
+                <p className="font-black text-ink">This tournament is Pro</p>
+              </div>
+              <p className="mt-1 text-[13px] leading-5 text-slate-600">
+                Hole-by-hole scoring, the Clubhouse, matchup draws and Trip Wrapped are unlocked.
               </p>
             </div>
           ) : (
-            <div className="rounded-2xl border border-sand-200 p-4">
+            <div className="rounded-2xl border-2 border-sand-200 p-4">
               <p className="font-black text-ink">Free tournament</p>
               <p className="mt-1 text-[13px] leading-5 text-slate-500">
-                Upgrade to unlock hole-by-hole live scoring, the Clubhouse, matchup draws and Trip Wrapped.
+                Upgrade to unlock live hole-by-hole scoring, the Clubhouse, matchup draws and Trip Wrapped.
               </p>
               <button
                 type="button"
@@ -320,56 +277,102 @@ export function TournamentSettings({
               </button>
             </div>
           )}
-          <div className="rounded-2xl border border-sand-200 p-3">
-            <div className="flex items-start gap-3">
-              <span className="flex-1">
-                <span className="block font-black text-ink">Post-round awards &amp; voting</span>
-                <span className="block text-[13px] leading-5 text-slate-500">
-                  After each round players vote for MVP, three-putt king and the rest.
-                </span>
-              </span>
+
+          {/* 2. scoring mode */}
+          <div>
+            <p className="mb-1.5 text-xs font-black uppercase tracking-wide text-slate-500">How scores are entered</p>
+            <div className="space-y-2">
               <button
                 type="button"
-                onClick={async () => {
-                  const supabase = getSupabaseClient();
-                  if (!supabase) return;
-                  const next = !voting;
-                  setVoting(next);
-                  await persistVoting(supabase, tripId, next);
-                }}
-                className={`h-8 w-14 shrink-0 rounded-full border-2 transition ${
-                  voting ? "border-fairway-900 bg-fairway-900" : "border-sand-200 bg-white"
+                onClick={() => requestMode("basic_918")}
+                className={`w-full rounded-2xl border-2 p-3 text-left ${
+                  s.scoringMode === "basic_918" ? "border-fairway-900 bg-fairway-900/5" : "border-sand-200"
                 }`}
-                aria-label="Toggle voting"
               >
-                <span
-                  className={`block h-5 w-5 rounded-full bg-white transition ${voting ? "ml-7" : "ml-1"}`}
-                  style={{ boxShadow: "0 1px 3px rgba(0,0,0,.25)" }}
-                />
+                <p className="font-black text-ink">Enter at 9 &amp; 18</p>
+                <p className="text-[13px] text-slate-500">
+                  One score at the turn, one at the end. Net handicap off rating and slope.
+                </p>
               </button>
+              <button
+                type="button"
+                onClick={() => requestMode("hole_by_hole")}
+                className={`w-full rounded-2xl border-2 p-3 text-left ${
+                  s.scoringMode === "hole_by_hole" ? "border-accent bg-accent/10" : "border-sand-200"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <p className="font-black text-ink">Hole by hole</p>
+                  <span className="rounded-full bg-accent/20 px-1.5 py-0.5 text-[10px] font-black uppercase text-accent-dark">
+                    Pro
+                  </span>
+                </div>
+                <p className="text-[13px] text-slate-500">
+                  Live leaderboard, strokes on the right holes, callouts and a richer Trip Wrapped.
+                </p>
+              </button>
+            </div>
+            {s.scoringMode === "hole_by_hole" ? (
+              <p className="mt-1.5 rounded-xl bg-amber-50 px-3 py-2 text-[12px] leading-5 text-amber-900">
+                Needs each course&apos;s par and course handicap numbers, set on the Courses tab.
+              </p>
+            ) : null}
+          </div>
+
+          {/* 3. features */}
+          <div>
+            <p className="mb-1.5 text-xs font-black uppercase tracking-wide text-slate-500">Features</p>
+            <div className="rounded-2xl border border-sand-200 p-3">
+              <div className="flex items-start gap-3">
+                <span className="flex-1">
+                  <span className="block font-black text-ink">Post-round awards &amp; voting</span>
+                  <span className="block text-[13px] leading-5 text-slate-500">
+                    After each round players vote for MVP, three-putt king and the rest.
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const supabase = getSupabaseClient();
+                    if (!supabase) return;
+                    const next = !voting;
+                    setVoting(next);
+                    await persistVoting(supabase, tripId, next);
+                  }}
+                  className={`h-8 w-14 shrink-0 rounded-full border-2 transition ${
+                    voting ? "border-fairway-900 bg-fairway-900" : "border-sand-200 bg-white"
+                  }`}
+                  aria-label="Toggle voting"
+                >
+                  <span
+                    className={`block h-5 w-5 rounded-full bg-white transition ${voting ? "ml-7" : "ml-1"}`}
+                    style={{ boxShadow: "0 1px 3px rgba(0,0,0,.25)" }}
+                  />
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-sand-200 p-3">
-            <p className="text-xs font-black uppercase tracking-wide text-slate-500">More Pro settings</p>
-            {[
-              ["Push notifications", "Night before, morning of, tee times and live callouts - per player"],
-              ["Clubhouse", "Photos and group chat for the trip"],
-              ["Round backgrounds", "Custom images behind each round"],
-            ].map(([t, d]) => (
-              <div key={t} className="mt-2 flex items-start gap-2">
-                <span className="mt-0.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-black uppercase text-slate-500">
-                  Soon
-                </span>
-                <span className="flex-1">
-                  <span className="block text-[13px] font-black text-ink">{t}</span>
-                  <span className="block text-[12px] leading-5 text-slate-500">{d}</span>
-                </span>
-              </div>
-            ))}
-            <p className="mt-3 text-[12px] leading-5 text-slate-400">
-              These are managed in the tournament&apos;s Admin area today and are moving here.
-            </p>
+          {/* 4. coming soon */}
+          <div>
+            <p className="mb-1.5 text-xs font-black uppercase tracking-wide text-slate-500">Coming soon</p>
+            <div className="rounded-2xl border border-sand-200 bg-[#f7f6f1] p-3">
+              {[
+                ["Push notifications", "Night before, morning of, and live callouts - each player picks."],
+                ["Clubhouse controls", "Turn photos or chat off for a tournament."],
+                ["Round backgrounds", "Custom imagery behind each round."],
+              ].map(([t, d]) => (
+                <div key={t} className="mt-2 flex items-start gap-2 first:mt-0">
+                  <span className="mt-0.5 rounded-full bg-white px-1.5 py-0.5 text-[10px] font-black uppercase text-slate-400">
+                    Soon
+                  </span>
+                  <span className="flex-1">
+                    <span className="block text-[13px] font-black text-ink">{t}</span>
+                    <span className="block text-[12px] leading-5 text-slate-500">{d}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       ) : null}

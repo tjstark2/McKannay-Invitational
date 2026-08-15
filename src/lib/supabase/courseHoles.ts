@@ -13,6 +13,7 @@ export type CourseLite = {
   rating: number | null;
   slope: number | null;
   teeName: string | null;
+  address: string | null;
   holeCount: number; // how many holes have data (18 = complete)
 };
 
@@ -22,7 +23,7 @@ export async function loadCoursesWithHoleStatus(
 ): Promise<CourseLite[]> {
   const { data: courses } = await supabase
     .from("courses")
-    .select("id,name,par,course_rating,slope,tee_name,yardage")
+    .select("id,name,par,course_rating,slope,tee_name,yardage,address")
     .eq("trip_id", tripId)
     .order("name");
   const list = (courses ?? []) as Record<string, unknown>[];
@@ -46,6 +47,7 @@ export async function loadCoursesWithHoleStatus(
     rating: (c.course_rating as number) ?? null,
     slope: (c.slope as number) ?? null,
     teeName: (c.tee_name as string) ?? null,
+    address: (c.address as string) ?? null,
     holeCount: counts.get(c.id as string) ?? 0,
   }));
 }
@@ -140,7 +142,7 @@ export async function createCourse(
 export async function updateCourse(
   supabase: SupabaseClient,
   courseId: string,
-  patch: { name?: string; par?: number; teeName?: string; yardage?: number | null; rating?: number | null; slope?: number | null }
+  patch: { name?: string; par?: number; teeName?: string; yardage?: number | null; rating?: number | null; slope?: number | null; address?: string | null }
 ): Promise<{ ok: boolean; error?: string }> {
   const row: Record<string, unknown> = {};
   if (patch.name !== undefined) row.name = patch.name;
@@ -149,6 +151,7 @@ export async function updateCourse(
   if (patch.yardage !== undefined) row.yardage = patch.yardage;
   if (patch.rating !== undefined) row.course_rating = patch.rating;
   if (patch.slope !== undefined) row.slope = patch.slope;
+  if (patch.address !== undefined) row.address = patch.address;
   const { error } = await supabase.from("courses").update(row).eq("id", courseId);
   return error ? { ok: false, error: error.message } : { ok: true };
 }

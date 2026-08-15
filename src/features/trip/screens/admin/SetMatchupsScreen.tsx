@@ -374,7 +374,11 @@ export function SetMatchupsScreen({
                       )}
                     </span>
                     <span className="block text-[13px] text-slate-500">
-                      {locked ? "Upgrade to Pro to use this" : !m.ready ? "Coming soon" : m.desc}
+                      {locked
+                        ? "Upgrade to Pro to use this"
+                        : !m.ready
+                        ? "Not built yet - for now set the tee time groups on the Rounds tab"
+                        : m.desc}
                     </span>
                   </span>
                   {!disabled ? <span className="font-black text-slate-300">›</span> : null}
