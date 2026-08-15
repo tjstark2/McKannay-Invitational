@@ -70,6 +70,16 @@ export function CourseDetailScreen({
         <div className="p-5">
           <h1 className="text-2xl font-black">{course.name}</h1>
           <p className="mt-1 text-sm text-slate-500">{course.location}</p>
+      {course.address ? (
+        <a
+          href={`https://maps.google.com/?q=${encodeURIComponent(course.address)}`}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-1 block text-sm font-bold text-fairway-900 underline"
+        >
+          {course.address}
+        </a>
+      ) : null}
           <p className="mt-2 inline-block rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">
             {course.teeName} tees
             {course.yardage !== null

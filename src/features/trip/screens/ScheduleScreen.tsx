@@ -83,6 +83,17 @@ export function ScheduleScreen({
                   </p>
                   <h2 className="mt-1 text-lg font-black">{course.name}</h2>
                   <p className="text-sm text-slate-500">{course.location}</p>
+                  {course.address ? (
+                    <a
+                      href={`https://maps.google.com/?q=${encodeURIComponent(course.address)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-0.5 inline-block text-[13px] font-bold text-fairway-900 underline"
+                    >
+                      {course.address}
+                    </a>
+                  ) : null}
                 </div>
                 <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-slate-300" />
               </div>

@@ -675,7 +675,11 @@ function DraftReveal({
       {!done ? (
         <div className="mt-3">
           <p className="text-center text-sm font-black" style={{ color: teamColor(onClock) }}>
-            {(onClock === "A" ? teamAName : teamBName)} are on the clock
+            {(() => {
+              const cap = players.find((p) => p.team === onClock && p.isCaptain);
+              return cap ? `${cap.name} (${onClock === "A" ? teamAName : teamBName})` : onClock === "A" ? teamAName : teamBName;
+            })()}{" "}
+            {" is on the clock"}
             <span className="ml-1 font-bold text-white/50">
               {withinMatch < perSide ? "- send someone out" : "- counter them"}
             </span>

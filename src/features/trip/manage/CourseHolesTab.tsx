@@ -393,6 +393,23 @@ export function CourseHolesTab({ tripId, joinCode }: { tripId: string; joinCode?
             refresh();
           }}
         />
+        <label className={`mt-2 ${labelClass}`}>Address</label>
+        <input
+          className={inputClass}
+          value={details.address}
+          placeholder="11 Lighthouse Lane, Hilton Head Island, SC"
+          onChange={(e) => setDetails({ ...details, address: e.target.value })}
+          onBlur={async () => {
+            const supabase = getSupabaseClient();
+            if (!supabase || !active) return;
+            await updateCourse(supabase, active.id, { address: details.address.trim() });
+            refresh();
+          }}
+        />
+        <p className="mt-0.5 text-[12px] leading-5 text-slate-500">
+          Players get a tappable map link to this on the round and in the trip details.
+        </p>
+
         <div className="mt-2 flex items-center gap-2 rounded-xl bg-white px-3 py-2">
           <span className="text-[11px] font-black uppercase tracking-wide text-slate-500">Total par</span>
           <span className="font-anton text-xl text-ink">{parTotal || "-"}</span>

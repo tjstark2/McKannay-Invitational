@@ -12,13 +12,15 @@ import {
 } from "@/lib/supabase/tripSettings";
 import { CourseHolesTab } from "@/features/trip/manage/CourseHolesTab";
 import { RoundsTab } from "@/features/trip/manage/RoundsTab";
+import { TeamsPanel } from "@/features/trip/manage/TeamsPanel";
 import { loadVotingEnabled, setVotingEnabled as persistVoting, setTournamentWrapped } from "@/lib/supabase/roundsAdmin";
 
-export type ManageTab = "basics" | "players" | "courses" | "rounds" | "pro";
+export type ManageTab = "basics" | "players" | "teams" | "courses" | "rounds" | "pro";
 
 export const MANAGE_TABS: { id: ManageTab; label: string }[] = [
   { id: "basics", label: "Basics" },
-  { id: "players", label: "Players & Teams" },
+  { id: "players", label: "Players" },
+  { id: "teams", label: "Teams & Captains" },
   { id: "courses", label: "Courses" },
   { id: "rounds", label: "Rounds" },
   { id: "pro", label: "Pro" },
@@ -248,6 +250,8 @@ export function TournamentSettings({
       {tab === "courses" ? <CourseHolesTab tripId={tripId} joinCode={joinCode} /> : null}
 
       {tab === "rounds" ? <RoundsTab tripId={tripId} joinCode={joinCode} /> : null}
+
+      {tab === "teams" ? <TeamsPanel tripId={tripId} /> : null}
 
       {tab === "pro" ? (
         <div className="space-y-4">

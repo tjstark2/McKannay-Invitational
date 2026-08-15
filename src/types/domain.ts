@@ -61,6 +61,7 @@ export type Player = {
   name: string;
   team: TeamId;
   handicapIndex: number;
+  isCaptain?: boolean;
   avatarEmoji?: string;
   accountId?: string;
   avatarId?: string; // chosen bird (from the account profile), shown everywhere

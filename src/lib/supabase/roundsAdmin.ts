@@ -337,3 +337,71 @@ export async function buildMatchesFromSegments(
   }
   return { ok: true, built: order };
 }
+
+/** Only one captain per team. Setting one clears the previous. */
+export async function setCaptain(
+  supabase: SupabaseClient,
+  tripId: string,
+  teamId: string,
+  playerId: string | null
+): Promise<void> {
+  await supabase.from("players").update({ is_captain: false }).eq("trip_id", tripId).eq("team_id", teamId);
+  if (playerId) await supabase.from("players").update({ is_captain: true }).eq("id", playerId);
+}
+
+/** Shuffle the whole field into the two teams, keeping the sides even. */
+export async function assignTeamsRandomly(
+  supabase: SupabaseClient,
+  tripId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const { data: teams } = await supabase.from("teams").select("id,code").eq("trip_id", tripId);
+  const list = (teams ?? []) as { id: string; code: string }[];
+  const teamA = list.find((t) => t.code === "A");
+  const teamB = list.find((t) => t.code === "B");
+  if (!teamA || !teamB) return { ok: false, error: "This tournament needs two teams first." };
+
+  const { data: players } = await supabase.from("players").select("id").eq("trip_id", tripId);
+  const ids = ((players ?? []) as { id: string }[]).map((p) => p.id);
+  for (let i = ids.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+  const half = Math.ceil(ids.length / 2);
+  for (let i = 0; i < ids.length; i++) {
+    const { error } = await supabase
+      .from("players")
+      .update({ team_id: i < half ? teamA.id : teamB.id })
+      .eq("id", ids[i]);
+    if (error) return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
+/** Snake the field into two teams by handicap so the sides are balanced. */
+export async function assignTeamsBalanced(
+  supabase: SupabaseClient,
+  tripId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const { data: teams } = await supabase.from("teams").select("id,code").eq("trip_id", tripId);
+  const list = (teams ?? []) as { id: string; code: string }[];
+  const teamA = list.find((t) => t.code === "A");
+  const teamB = list.find((t) => t.code === "B");
+  if (!teamA || !teamB) return { ok: false, error: "This tournament needs two teams first." };
+
+  const { data: players } = await supabase
+    .from("players")
+    .select("id,handicap_index")
+    .eq("trip_id", tripId)
+    .order("handicap_index");
+  const ordered = ((players ?? []) as { id: string }[]).map((p) => p.id);
+  // Snake: A, B, B, A, A, B ... keeps the combined handicaps close.
+  for (let i = 0; i < ordered.length; i++) {
+    const toA = Math.floor(i / 2) % 2 === 0 ? i % 2 === 0 : i % 2 === 1;
+    const { error } = await supabase
+      .from("players")
+      .update({ team_id: toA ? teamA.id : teamB.id })
+      .eq("id", ordered[i]);
+    if (error) return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
