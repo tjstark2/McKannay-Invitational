@@ -405,6 +405,7 @@ export function SetMatchupsScreen({
               teams={teams}
               coinWinner={coinWinner}
               draftLog={draftLog}
+              onDraftResult={(b) => setBoard(b)}
               onDone={() => setRevealing(false)}
             />
           </div>
