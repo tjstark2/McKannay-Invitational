@@ -39,6 +39,7 @@ export function TeamsPanel({ tripId }: { tripId: string }) {
         teamId: (x.team_id as string) ?? "",
         handicap: Number(x.handicap_index ?? 0),
         isCaptain: Boolean(x.is_captain),
+        accountId: null,
       }))
     );
   }, [tripId]);

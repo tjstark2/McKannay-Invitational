@@ -5,6 +5,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { useAuth } from "@/features/auth/AuthContext";
 import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import type { Player } from "@/types";
+import { notify } from "@/lib/notify";
 import type { CourseHole } from "@/lib/supabase/courseHoles";
 
 type HoleScore = { playerId: string; hole: number; strokes: number };
@@ -137,6 +138,24 @@ export function RoundConfirm({
     setBusy(false);
     if (e) return setError(e.message);
     setShowPreview(false);
+    // If exactly one player is still to sign, that is now blocking the round.
+    const after = [...confirmed, me.id];
+    const waiting = groupPlayers.filter((p) => !after.includes(p.id));
+    if (waiting.length === 1) {
+      await notify({
+        userIds: [waiting[0].accountId],
+        title: "Your card is waiting",
+        message: `Everyone else in your group has signed. Sign the card to lock the round.`,
+        category: "essential",
+      });
+    } else if (waiting.length > 1) {
+      await notify({
+        userIds: waiting.map((p) => p.accountId),
+        title: "Card ready to sign",
+        message: "All the holes are in. Check it over and sign your card.",
+        category: "my_card",
+      });
+    }
     await load();
     onLocked?.();
   }

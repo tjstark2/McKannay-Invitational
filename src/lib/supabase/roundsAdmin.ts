@@ -65,7 +65,7 @@ export function buildMatchesForFormat(
   return [];
 }
 
-export type RosterPlayerLite = { id: string; name: string; team: "A" | "B" };
+export type RosterPlayerLite = { id: string; name: string; team: "A" | "B"; accountId: string | null };
 
 export async function loadRoster(
   supabase: SupabaseClient,
@@ -77,13 +77,14 @@ export async function loadRoster(
   );
   const { data } = await supabase
     .from("players")
-    .select("id,display_name,team_id,sort_order")
+    .select("id,display_name,team_id,sort_order,account_id")
     .eq("trip_id", tripId)
     .order("sort_order");
   return ((data ?? []) as Record<string, unknown>[]).map((p) => ({
     id: p.id as string,
     name: (p.display_name as string) ?? "Player",
     team: ((codeById.get(p.team_id as string) as "A" | "B") ?? "A"),
+    accountId: (p.account_id as string) ?? null,
   }));
 }
 

@@ -5,6 +5,7 @@ import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { saveDraw } from "@/lib/supabase/draws";
+import { notify, othersIn } from "@/lib/notify";
 import { buildMatchesFromSegments, loadRoster } from "@/lib/supabase/roundsAdmin";
 import { uploadPhoto } from "@/lib/supabase/clubhouse";
 import { toJpeg } from "html-to-image";
@@ -219,6 +220,13 @@ export function SetMatchupsScreen({
           });
         }
       }
+      await notify({
+        userIds: othersIn(players, user?.id),
+        title: trip.name,
+        message: `Matchups are in for ${round?.title ?? "the round"}. Have a look at who you drew.`,
+        category: "round_day",
+        url: `/t/${trip.joinCode}`,
+      });
       setPosted(true);
     } catch (e) {
       setPostError(e instanceof Error ? e.message : "Couldn't post to Clubhouse.");

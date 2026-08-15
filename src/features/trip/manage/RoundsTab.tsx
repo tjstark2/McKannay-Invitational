@@ -30,6 +30,7 @@ import {
   type RosterPlayerLite,
 } from "@/lib/supabase/roundsAdmin";
 import { loadCoursesWithHoleStatus, loadCourseTees, type CourseLite, type CourseTee } from "@/lib/supabase/courseHoles";
+import { notify } from "@/lib/notify";
 
 const FORMATS: SegmentFormat[] = ["best_ball", "match_play", "net_score", "scramble", "casual"];
 const inputClass =
@@ -202,6 +203,13 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
                       <button type="button" onClick={async () => {
                         const sb = getSupabaseClient(); if (!sb) return;
                         await startRound(sb, r.id); await setCurrentRound(sb, tripId, r.id);
+                        await notify({
+                          userIds: roster.map((x) => x.accountId),
+                          title: r.title,
+                          message: `${r.title} is live. Enter your scores as you play.`,
+                          category: "round_day",
+                          url: joinCode ? `/t/${joinCode}` : "/home",
+                        });
                         note("Round started"); refresh();
                       }} className="rounded-xl bg-fairway-900 px-3 py-2 text-sm font-black text-white">
                         Start round
@@ -209,7 +217,15 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
                     ) : !r.finishedAt ? (
                       <button type="button" onClick={async () => {
                         const sb = getSupabaseClient(); if (!sb) return;
-                        await finishRound(sb, r.id); note("Round finished"); refresh();
+                        await finishRound(sb, r.id);
+                        await notify({
+                          userIds: roster.map((x) => x.accountId),
+                          title: r.title,
+                          message: `${r.title} is in the books. Have a look at where things stand.`,
+                          category: "round_day",
+                          url: joinCode ? `/t/${joinCode}` : "/home",
+                        });
+                        note("Round finished"); refresh();
                       }} className="rounded-xl bg-fairway-900 px-3 py-2 text-sm font-black text-white">
                         Finish round
                       </button>

@@ -22,6 +22,7 @@ import {
   deletePhotoComment,
 } from "@/lib/supabase/clubhouse";
 import { NewPill } from "@/features/trip/screens/clubhouse/NewPill";
+import { notify, othersIn } from "@/lib/notify";
 import type {
   Player,
   PhotoComment,
@@ -370,6 +371,14 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
         width,
         height,
         caption: composer.caption,
+      });
+      await notify({
+        userIds: othersIn(players, user?.id),
+        title: trip.name,
+        message: "New photo in the Clubhouse.",
+        category: "clubhouse",
+        kind: "photo",
+        url: `/t/${trip.joinCode}`,
       });
       setPhotos((prev) =>
         prev.some((p) => p.id === photo.id) ? prev : [photo, ...prev]
