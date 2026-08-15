@@ -453,9 +453,9 @@ export function CourseHolesTab({ tripId, joinCode }: { tripId: string; joinCode?
                   await deleteCourseTee(supabase, t.id);
                   setTees(await loadCourseTees(supabase, active.id));
                 }}
-                className="text-slate-400"
+                className="-my-2 -mr-1 px-3 py-2 text-lg font-black leading-none text-slate-400"
               >
-                x
+                ×
               </button>
             </div>
           ))}
@@ -520,7 +520,6 @@ export function CourseHolesTab({ tripId, joinCode }: { tripId: string; joinCode?
         ref={fileRef}
         type="file"
         accept="image/*"
-        capture="environment"
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0];

@@ -695,7 +695,8 @@ export default function ManagePage() {
               await supabase.from("trips").update({ is_pro: true }).eq("id", trip.id);
             }
             setUpsell(null);
-            window.location.reload();
+            setMtab("pro");
+            if (trip) await refresh(trip);
           }}
         />
       ) : null}

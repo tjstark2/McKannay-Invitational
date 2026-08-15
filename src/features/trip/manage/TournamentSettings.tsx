@@ -325,7 +325,30 @@ export function TournamentSettings({
 
           {/* 3. features */}
           <div>
-            <p className="mb-1.5 text-xs font-black uppercase tracking-wide text-slate-500">Features</p>
+            <p className="mb-1.5 text-xs font-black uppercase tracking-wide text-slate-500">
+              What Pro includes
+            </p>
+            <div className="mb-2 rounded-2xl border border-sand-200 bg-[#f7f6f1] p-3">
+              {[
+                ["Hole-by-hole live scoring", "Every score as it happens, with a live leaderboard the whole group watches."],
+                ["Real stroke play", "Strokes given on the right holes off each course's handicap index, with per-round allowances."],
+                ["Matchup draws", "Slot machine, hat draw, spinning wheel, captain's draft and handicap auto-balance."],
+                ["Callouts", "Birdies, eagles, snowmen and blow-ups posted to the Clubhouse as they happen."],
+                ["The Clubhouse", "Photos and group chat that live with the tournament."],
+                ["Post-round awards", "Vote for MVP, three-putt king and the rest after every round."],
+                ["Trip Wrapped", "A shareable recap card of the whole trip."],
+                ["Push notifications", "Tee times, matchups and live drama, each player choosing what they get."],
+              ].map(([t, d]) => (
+                <div key={t} className="mt-2 flex items-start gap-2 first:mt-0">
+                  <span className="mt-0.5 text-accent-dark">✓</span>
+                  <span className="flex-1">
+                    <span className="block text-[13px] font-black text-ink">{t}</span>
+                    <span className="block text-[12px] leading-5 text-slate-500">{d}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="mb-1.5 text-xs font-black uppercase tracking-wide text-slate-500">Settings</p>
             <div className="rounded-2xl border border-sand-200 p-3">
               <div className="flex items-start gap-3">
                 <span className="flex-1">
@@ -362,9 +385,9 @@ export function TournamentSettings({
             <p className="mb-1.5 text-xs font-black uppercase tracking-wide text-slate-500">Coming soon</p>
             <div className="rounded-2xl border border-sand-200 bg-[#f7f6f1] p-3">
               {[
-                ["Push notifications", "Night before, morning of, and live callouts - each player picks."],
                 ["Clubhouse controls", "Turn photos or chat off for a tournament."],
                 ["Round backgrounds", "Custom imagery behind each round."],
+                ["Season series", "Carry results across years and keep a running cup."],
               ].map(([t, d]) => (
                 <div key={t} className="mt-2 flex items-start gap-2 first:mt-0">
                   <span className="mt-0.5 rounded-full bg-white px-1.5 py-0.5 text-[10px] font-black uppercase text-slate-400">
@@ -515,9 +538,11 @@ export function TournamentSettings({
                 this if the group has agreed.
               </div>
             ) : turningOff ? (
-              <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[13px] leading-5 text-amber-900">
-                A round is in progress. You&apos;ll lose live per-hole scoring, strokes allocated by hole, and
-                the callouts for the rest of the trip. Any holes already entered stay saved.
+              <div className="mt-3 rounded-2xl border-2 border-red-300 bg-red-50 p-3 text-[13px] leading-5 text-red-800">
+                <b>A round is live right now.</b> Switch and everyone mid-round loses the per-hole card they are
+                using, the live leaderboard stops moving, strokes stop being given hole by hole, and the callouts
+                go quiet. Holes already entered stay saved but will not count the same way. Do not do this
+                unless the group has agreed on the tee.
               </div>
             ) : (
               <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-[13px] leading-5 text-emerald-900">

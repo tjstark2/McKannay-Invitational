@@ -202,7 +202,10 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
                     {!r.startedAt ? (
                       <button type="button" onClick={async () => {
                         const sb = getSupabaseClient(); if (!sb) return;
-                        await startRound(sb, r.id); await setCurrentRound(sb, tripId, r.id);
+                        const st = await startRound(sb, r.id);
+                        if (!st.ok) { setError(`Couldn't start the round: ${st.error}`); return; }
+                        const cr = await setCurrentRound(sb, tripId, r.id);
+                        if (!cr.ok) setError(`Round started, but couldn't set it as current: ${cr.error}`);
                         await notify({
                           userIds: roster.map((x) => x.accountId),
                           title: r.title,
@@ -217,7 +220,8 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
                     ) : !r.finishedAt ? (
                       <button type="button" onClick={async () => {
                         const sb = getSupabaseClient(); if (!sb) return;
-                        await finishRound(sb, r.id);
+                        const fi = await finishRound(sb, r.id);
+                        if (!fi.ok) { setError(`Couldn't finish the round: ${fi.error}`); return; }
                         await notify({
                           userIds: roster.map((x) => x.accountId),
                           title: r.title,
@@ -256,6 +260,29 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
                       ))}
                     </div>
                   ) : null}
+                </div>
+
+                {/* --- rebuild matches --- */}
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-3">
+                  <p className="text-xs font-black uppercase tracking-wide text-amber-900">Rebuild matches from one format</p>
+                  <p className="mt-1 text-[12px] leading-5 text-amber-900">
+                    Use this to reset the whole round to one format. It replaces every match in the round and
+                    any scores already entered. To set different formats per tee time, use the tee time cards
+                    above instead.
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {[
+                      { label: "2v2 Best Ball", f: "best_ball", gs: 2 },
+                      { label: "1v1 Singles", f: "match_play", gs: null },
+                      { label: "4v4 Scramble", f: "scramble", gs: 4 },
+                    ].map((o) => (
+                      <button key={o.label} type="button"
+                        onClick={() => setRebuild({ round: r, format: o.f, gs: o.gs })}
+                        className="rounded-full bg-white px-2.5 py-1 text-[12px] font-black text-slate-600">
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* --- details --- */}
@@ -457,28 +484,6 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
                   {busy ? "Saving…" : "Save tee time formats"}
                 </button>
 
-                {/* --- rebuild matches --- */}
-                <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-3">
-                  <p className="text-xs font-black uppercase tracking-wide text-amber-900">Rebuild matches from one format</p>
-                  <p className="mt-1 text-[12px] leading-5 text-amber-900">
-                    Use this to reset the whole round to one format. It replaces every match in the round and
-                    any scores already entered. To set different formats per tee time, use the tee time cards
-                    above instead.
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {[
-                      { label: "2v2 Best Ball", f: "best_ball", gs: 2 },
-                      { label: "1v1 Singles", f: "match_play", gs: null },
-                      { label: "4v4 Scramble", f: "scramble", gs: 4 },
-                    ].map((o) => (
-                      <button key={o.label} type="button"
-                        onClick={() => setRebuild({ round: r, format: o.f, gs: o.gs })}
-                        className="rounded-full bg-white px-2.5 py-1 text-[12px] font-black text-slate-600">
-                        {o.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
                 <button type="button"
                   onClick={async () => {

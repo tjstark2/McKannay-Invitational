@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -80,9 +80,33 @@ export function SetMatchupsScreen({
   const cardRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
   const [building, setBuilding] = useState(false);
+  const [builtTick, setBuiltTick] = useState(0);
+  const [freshMatches, setFreshMatches] = useState<DrawMatch[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const round = rounds.find((r) => r.id === roundId) ?? null;
+  useEffect(() => {
+    if (builtTick === 0 || !roundId) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    (async () => {
+      const { data } = await supabase
+        .from("matches")
+        .select("id,sort_order,match_players(player_id,side)")
+        .eq("round_id", roundId)
+        .order("sort_order");
+      const rows = ((data ?? []) as Record<string, unknown>[]).map((m) => {
+        const mp = (m.match_players ?? []) as { player_id: string; side: string }[];
+        return {
+          a: mp.filter((x) => x.side === "A").map((x) => x.player_id),
+          b: mp.filter((x) => x.side === "B").map((x) => x.player_id),
+        } as DrawMatch;
+      });
+      setFreshMatches(rows);
+      setBoard(rows);
+    })();
+  }, [builtTick, roundId]);
+
   const roundMatches = useMemo(
     () => (roundId ? matches.filter((m) => m.roundId === roundId) : []),
     [matches, roundId]
@@ -123,7 +147,7 @@ export function SetMatchupsScreen({
   }
 
   function runAnimated(id: DrawMethod) {
-    const b = computeMatches({ round: round!, players, hcp, method: id });
+    const b = computeFromShapes(id);
     setBoard(b);
     if (id === "draft") {
       const cw = flipCoin();
@@ -131,6 +155,37 @@ export function SetMatchupsScreen({
       setDraftLog(buildDraftLog(b, cw));
     }
     setRevealing(true);
+  }
+
+  /**
+   * Redraw using the shape of the round's real matches, so a round that mixes
+   * 2v2 and 1v1 keeps every seat. Players are shuffled within their own team
+   * and dealt back into the same seats.
+   */
+  function computeFromShapes(id: DrawMethod): DrawMatch[] {
+    const shapes = (freshMatches ?? roundMatches.map((m) => ({ a: m.aPlayers, b: m.bPlayers })));
+    const aPool = shapes.flatMap((m) => m.a).filter(Boolean);
+    const bPool = shapes.flatMap((m) => m.b).filter(Boolean);
+    const mix = (arr: string[]) => {
+      const out = arr.slice();
+      for (let i = out.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [out[i], out[j]] = [out[j], out[i]];
+      }
+      return out;
+    };
+    // Auto-balance keeps the engine's fairness pass; the rest are chance.
+    if (id === "autobalance") {
+      return computeMatches({ round: round!, players, hcp, method: "autobalance" });
+    }
+    const A = mix(aPool);
+    const B = mix(bPool);
+    let ai = 0;
+    let bi = 0;
+    return shapes.map((m) => ({
+      a: m.a.map(() => A[ai++]),
+      b: m.b.map(() => B[bi++]),
+    }));
   }
 
   // Manual: tap two matches to swap their B sides.
@@ -150,8 +205,25 @@ export function SetMatchupsScreen({
 
   function reshuffle() {
     setBoard((prev) => {
-      const bs = shuffle(prev.map((m) => m.b));
-      return prev.map((m, i) => ({ a: m.a, b: bs[i] }));
+      // Only swap B sides between matches of the same size, otherwise a pair
+      // lands in a singles match. Retry until something actually moved.
+      for (let attempt = 0; attempt < 24; attempt++) {
+        const next = prev.map((m) => ({ a: m.a, b: m.b }));
+        const bySize = new Map<number, number[]>();
+        next.forEach((m, i) => {
+          const k = m.b.length;
+          bySize.set(k, [...(bySize.get(k) ?? []), i]);
+        });
+        bySize.forEach((idxs) => {
+          const units = shuffle(idxs.map((i) => next[i].b));
+          idxs.forEach((i, k) => {
+            next[i].b = units[k];
+          });
+        });
+        const moved = next.some((m, i) => m.b.join() !== prev[i].b.join());
+        if (moved) return next;
+      }
+      return prev;
     });
     setSel(null);
   }
@@ -453,7 +525,7 @@ export function SetMatchupsScreen({
                       setError(res.error || "Couldn't build the matches.");
                       return;
                     }
-                    window.location.reload();
+                    setBuiltTick((t) => t + 1);
                   }}
                   className="mt-3 w-full rounded-2xl bg-fairway-900 px-4 py-3 font-black text-white disabled:opacity-50"
                 >

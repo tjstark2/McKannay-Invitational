@@ -623,12 +623,17 @@ function DraftReveal({
           <div
             className="mx-auto flex h-24 w-24 items-center justify-center rounded-full text-4xl"
             style={{
-              background: "radial-gradient(circle at 35% 30%, #ffe27a, #c9971a)",
+              background: `linear-gradient(90deg, ${RED} 0 50%, ${BLUE} 50% 100%)`,
               animation: "tb-flip 2.2s cubic-bezier(.2,.7,.2,1) both",
               boxShadow: "0 10px 26px rgba(0,0,0,.5)",
+              border: "3px solid #f3b50a",
+              fontSize: 13,
+              fontWeight: 900,
+              color: "#fff",
+              textShadow: "0 1px 3px rgba(0,0,0,.6)",
             }}
           >
-            🪙
+            {teamAName.slice(0, 1)} / {teamBName.slice(0, 1)}
           </div>
           <p className="mt-4 font-anton text-xl tracking-wide text-white/80">Flipping for first pick…</p>
         </div>

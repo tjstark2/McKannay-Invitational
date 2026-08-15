@@ -211,15 +211,26 @@ export async function setTeeTimePlayers(
 
 // ---- day-of lifecycle ------------------------------------------------------
 
-export async function startRound(supabase: SupabaseClient, roundId: string): Promise<void> {
-  await supabase
+export async function startRound(
+  supabase: SupabaseClient,
+  roundId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase
     .from("rounds")
     .update({ started_at: new Date().toISOString(), finished_at: null })
     .eq("id", roundId);
+  return error ? { ok: false, error: error.message } : { ok: true };
 }
 
-export async function finishRound(supabase: SupabaseClient, roundId: string): Promise<void> {
-  await supabase.from("rounds").update({ finished_at: new Date().toISOString() }).eq("id", roundId);
+export async function finishRound(
+  supabase: SupabaseClient,
+  roundId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase
+    .from("rounds")
+    .update({ finished_at: new Date().toISOString() })
+    .eq("id", roundId);
+  return error ? { ok: false, error: error.message } : { ok: true };
 }
 
 export async function reopenRound(supabase: SupabaseClient, roundId: string): Promise<void> {
@@ -230,8 +241,9 @@ export async function setCurrentRound(
   supabase: SupabaseClient,
   tripId: string,
   roundId: string
-): Promise<void> {
-  await supabase.from("trips").update({ current_round_id: roundId }).eq("id", tripId);
+): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await supabase.from("trips").update({ current_round_id: roundId }).eq("id", tripId);
+  return error ? { ok: false, error: error.message } : { ok: true };
 }
 
 export async function setTournamentWrapped(
