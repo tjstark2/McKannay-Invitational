@@ -271,3 +271,69 @@ export async function setVotingEnabled(
     );
   return error ? { ok: false, error: error.message } : { ok: true };
 }
+
+/**
+ * Build a round's matches from its tee-time segments: each tee time becomes one
+ * or more matches using the players actually assigned to it. Without this, a
+ * round configured purely with segments has no `matches` rows, so the matchup
+ * board opens empty and Lock stays disabled.
+ */
+export async function buildMatchesFromSegments(
+  supabase: SupabaseClient,
+  roundId: string,
+  roster: RosterPlayerLite[]
+): Promise<{ ok: boolean; error?: string; built: number }> {
+  const { data: tts } = await supabase
+    .from("tee_times")
+    .select("id,tee_time,sort_order,tee_time_players(player_id)")
+    .eq("round_id", roundId)
+    .order("sort_order");
+  const { data: segs } = await supabase
+    .from("round_segments")
+    .select("tee_time_id,format,points")
+    .eq("round_id", roundId);
+  const segBy = new Map(
+    ((segs ?? []) as Record<string, unknown>[]).map((x) => [x.tee_time_id as string, x])
+  );
+  const teamOf = new Map(roster.map((p) => [p.id, p.team]));
+
+  await supabase.from("matches").delete().eq("round_id", roundId);
+
+  let order = 0;
+  for (const raw of (tts ?? []) as Record<string, unknown>[]) {
+    const ids = ((raw.tee_time_players ?? []) as { player_id: string }[]).map((x) => x.player_id);
+    const a = ids.filter((id) => teamOf.get(id) === "A");
+    const b = ids.filter((id) => teamOf.get(id) === "B");
+    if (a.length === 0 || b.length === 0) continue;
+    const seg = segBy.get(raw.id as string);
+    const format = (seg?.format as string) ?? "best_ball";
+    const points = Number(seg?.points ?? 1);
+    const perSide = format === "match_play" ? 1 : Math.min(a.length, b.length);
+    const count = format === "match_play" ? Math.min(a.length, b.length) : 1;
+
+    for (let i = 0; i < count; i++) {
+      order += 1;
+      const aSide = format === "match_play" ? [a[i]] : a.slice(0, perSide);
+      const bSide = format === "match_play" ? [b[i]] : b.slice(0, perSide);
+      const ins = await supabase
+        .from("matches")
+        .insert({
+          round_id: roundId,
+          label: `${raw.tee_time ?? "Tee time"}${count > 1 ? ` #${i + 1}` : ""}`,
+          points: count > 1 ? points / count : points,
+          sort_order: order,
+        })
+        .select("id")
+        .single();
+      if (ins.error) return { ok: false, error: ins.error.message, built: order - 1 };
+      const mid = (ins.data as { id: string }).id;
+      const rows = [
+        ...aSide.map((pid) => ({ match_id: mid, player_id: pid, side: "A" })),
+        ...bSide.map((pid) => ({ match_id: mid, player_id: pid, side: "B" })),
+      ];
+      const mp = await supabase.from("match_players").insert(rows);
+      if (mp.error) return { ok: false, error: mp.error.message, built: order - 1 };
+    }
+  }
+  return { ok: true, built: order };
+}

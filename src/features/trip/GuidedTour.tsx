@@ -21,8 +21,8 @@ export function buildHomeTourSteps(tripName: string): TourStep[] {
       body: `This is your home base. Every tournament you run or join shows up here - tap a card to open it.`,
     },
     {
-      title: "Manage my tournament (outside the tournament)",
-      body: `On your tournament's card, "Manage my tournament" is where you set up the trip - players, teams, courses, rounds and Pro settings, and - since you're the owner - delete the tournament if you ever need to.`,
+      title: "Manage My Tournament (outside the tournament)",
+      body: `On your tournament's card, "Manage My Tournament" is where you set up the trip - players, teams, courses, rounds and Pro settings, and - since you're the owner - delete the tournament if you ever need to.`,
     },
     {
       title: "Let's head inside",
@@ -71,8 +71,8 @@ export function buildTourSteps(ctx: {
         body: `This is your home base. Every tournament you run or join shows up here - tap a card to open it.`,
       },
       {
-        title: "Manage my tournament (outside the tournament)",
-        body: `On your tournament's card, "Manage my tournament" is where you set up the trip - players, teams, courses, rounds and Pro settings, and - since you're the owner - delete the tournament if you ever need to.`,
+        title: "Manage My Tournament (outside the tournament)",
+        body: `On your tournament's card, "Manage My Tournament" is where you set up the trip - players, teams, courses, rounds and Pro settings, and - since you're the owner - delete the tournament if you ever need to.`,
       },
       {
         title: "Let's go inside",

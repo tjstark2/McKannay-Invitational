@@ -5,6 +5,7 @@ import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { saveDraw } from "@/lib/supabase/draws";
+import { buildMatchesFromSegments, loadRoster } from "@/lib/supabase/roundsAdmin";
 import { uploadPhoto } from "@/lib/supabase/clubhouse";
 import { toJpeg } from "html-to-image";
 import { courseHandicap } from "@/lib/scoring";
@@ -77,6 +78,7 @@ export function SetMatchupsScreen({
   const [postError, setPostError] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
+  const [building, setBuilding] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const round = rounds.find((r) => r.id === roundId) ?? null;
@@ -418,7 +420,36 @@ export function SetMatchupsScreen({
               )}
             </div>
 
-            {countMismatch ? (
+            {roundMatches.length === 0 ? (
+              <div className="mb-3 rounded-2xl border-2 border-amber-300 bg-amber-50 p-4">
+                <p className="font-black text-amber-900">This round has no matches yet</p>
+                <p className="mt-1 text-[13px] leading-5 text-amber-900">
+                  Build them from the tee times and formats you set up, then draw the matchups.
+                </p>
+                <button
+                  type="button"
+                  disabled={building}
+                  onClick={async () => {
+                    const supabase = getSupabaseClient();
+                    if (!supabase || !round) return;
+                    setBuilding(true);
+                    const roster = await loadRoster(supabase, trip.id);
+                    const res = await buildMatchesFromSegments(supabase, round.id, roster);
+                    setBuilding(false);
+                    if (!res.ok) {
+                      setError(res.error || "Couldn't build the matches.");
+                      return;
+                    }
+                    window.location.reload();
+                  }}
+                  className="mt-3 w-full rounded-2xl bg-fairway-900 px-4 py-3 font-black text-white disabled:opacity-50"
+                >
+                  {building ? "Building…" : "Build matches from tee times"}
+                </button>
+              </div>
+            ) : null}
+
+            {countMismatch && roundMatches.length > 0 ? (
               <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                 The roster changed since this round&apos;s matches were built. Rebuild the round&apos;s
                 format in Admin, then set the matchups.

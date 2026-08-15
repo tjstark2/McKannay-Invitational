@@ -53,6 +53,7 @@ export function TournamentSettings({
   const [error, setError] = useState<string | null>(null);
   const [confirmMode, setConfirmMode] = useState<ScoringMode | null>(null);
   const [voting, setVoting] = useState(true);
+  const [endConfirm, setEndConfirm] = useState(false);
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -195,47 +196,6 @@ export function TournamentSettings({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-sand-200 p-3">
-            <p className="text-xs font-black uppercase tracking-wide text-slate-500">Tournament status</p>
-            {s.wrappedAt ? (
-              <>
-                <p className="mt-1 text-[13px] leading-5 text-slate-600">
-                  This tournament is finished and wrapped. Reopen it if you need to fix scores.
-                </p>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const supabase = getSupabaseClient();
-                    if (!supabase) return;
-                    await setTournamentWrapped(supabase, tripId, false);
-                    set("wrappedAt", null);
-                  }}
-                  className="mt-2 w-full rounded-2xl border-[1.5px] border-fairway-900 px-4 py-2.5 font-black text-fairway-900"
-                >
-                  Reopen tournament
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="mt-1 text-[13px] leading-5 text-slate-600">
-                  Ending the tournament locks scoring and generates Trip Wrapped. You can reopen it after.
-                </p>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const supabase = getSupabaseClient();
-                    if (!supabase) return;
-                    if (!confirm("End the tournament? Scoring locks and Trip Wrapped is generated.")) return;
-                    await setTournamentWrapped(supabase, tripId, true);
-                    set("wrappedAt", new Date().toISOString());
-                  }}
-                  className="mt-2 w-full rounded-2xl bg-fairway-900 px-4 py-2.5 font-black text-white"
-                >
-                  End tournament
-                </button>
-              </>
-            )}
-          </div>
 
           <div className="rounded-2xl bg-[#f7f6f1] p-3">
             <p className="text-xs font-black uppercase tracking-wide text-slate-500">Win / Retain</p>
@@ -453,6 +413,78 @@ export function TournamentSettings({
               onChange={(e) => set("logisticsNotes", e.target.value)}
               onBlur={() => save({ logisticsNotes: s.logisticsNotes })}
             />
+          </div>
+        </div>
+      ) : null}
+
+      {tab === "basics" ? (
+        <div className="mt-4 rounded-2xl border-2 border-red-200 bg-red-50/40 p-3">
+          <p className="text-xs font-black uppercase tracking-wide text-red-700">Ending the tournament</p>
+          {s.wrappedAt ? (
+            <>
+              <p className="mt-1 text-[13px] leading-5 text-slate-600">
+                This tournament is finished and wrapped. Reopen it if you need to fix scores.
+              </p>
+              <button
+                type="button"
+                onClick={async () => {
+                  const supabase = getSupabaseClient();
+                  if (!supabase) return;
+                  await setTournamentWrapped(supabase, tripId, false);
+                  set("wrappedAt", null);
+                }}
+                className="mt-2 w-full rounded-2xl border-2 border-red-500 px-4 py-2.5 font-black text-red-600"
+              >
+                Reopen tournament
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="mt-1 text-[13px] leading-5 text-slate-600">
+                Locks scoring for everyone and generates Trip Wrapped. You can reopen it afterwards.
+              </p>
+              <button
+                type="button"
+                onClick={() => setEndConfirm(true)}
+                className="mt-2 w-full rounded-2xl bg-red-600 px-4 py-3 font-black text-white"
+              >
+                End tournament
+              </button>
+            </>
+          )}
+        </div>
+      ) : null}
+
+      {endConfirm ? (
+        <div className="fixed inset-0 z-[165] flex items-center justify-center bg-black/70 p-5">
+          <div className="w-full max-w-sm rounded-3xl bg-white p-5">
+            <h3 className="font-anton text-2xl tracking-tight text-ink">End the tournament?</h3>
+            <p className="mt-2 text-[14px] leading-6 text-slate-600">
+              Scoring locks for every player and Trip Wrapped is generated. Nobody can enter or change a score
+              until you reopen it.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setEndConfirm(false)}
+                className="flex-1 rounded-2xl border-[1.5px] border-slate-300 px-4 py-3 font-black text-slate-600"
+              >
+                Not yet
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const supabase = getSupabaseClient();
+                  if (!supabase) return;
+                  await setTournamentWrapped(supabase, tripId, true);
+                  set("wrappedAt", new Date().toISOString());
+                  setEndConfirm(false);
+                }}
+                className="flex-1 rounded-2xl bg-red-600 px-4 py-3 font-black text-white"
+              >
+                Yes, end it
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

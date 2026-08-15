@@ -393,10 +393,11 @@ export function CourseHolesTab({ tripId, joinCode }: { tripId: string; joinCode?
             refresh();
           }}
         />
-        <p className="mt-2 text-[12px] leading-5 text-slate-500">
-          Total par is worked out from the 18 holes below, so there is nothing to type here.
-          {parTotal > 0 ? ` Right now that adds up to ${parTotal}.` : ""}
-        </p>
+        <div className="mt-2 flex items-center gap-2 rounded-xl bg-white px-3 py-2">
+          <span className="text-[11px] font-black uppercase tracking-wide text-slate-500">Total par</span>
+          <span className="font-anton text-xl text-ink">{parTotal || "-"}</span>
+          <span className="ml-auto text-[12px] text-slate-500">added up from the 18 holes below</span>
+        </div>
       </div>
 
       <div className="rounded-2xl bg-[#f7f6f1] p-3">
@@ -421,6 +422,17 @@ export function CourseHolesTab({ tripId, joinCode }: { tripId: string; joinCode?
                 onClick={async () => {
                   const supabase = getSupabaseClient();
                   if (!supabase) return;
+                  const { count } = await supabase
+                    .from("rounds")
+                    .select("id", { count: "exact", head: true })
+                    .eq("tee_id", t.id);
+                  if ((count ?? 0) > 0) {
+                    setError(
+                      `${t.name} is being played in ${count} round${count === 1 ? "" : "s"}, so it can't be deleted. Edit its numbers instead, or point those rounds at different tees first.`
+                    );
+                    return;
+                  }
+                  if (!confirm(`Delete the ${t.name} tees? Their yardage, rating and slope go with them.`)) return;
                   await deleteCourseTee(supabase, t.id);
                   setTees(await loadCourseTees(supabase, active.id));
                 }}
@@ -444,17 +456,17 @@ export function CourseHolesTab({ tripId, joinCode }: { tripId: string; joinCode?
           <label className="block">
             <span className={labelClass}>Yardage</span>
             <input className={inputClass} inputMode="numeric" placeholder="6522" value={newTee.yardage}
-              onChange={(e) => setNewTee({ ...newTee, yardage: e.target.value })} />
+              onChange={(e) => setNewTee({ ...newTee, yardage: e.target.value.replace(/[^0-9]/g, "") })} />
           </label>
           <label className="block">
             <span className={labelClass}>Course rating</span>
             <input className={inputClass} inputMode="decimal" placeholder="72.2" value={newTee.rating}
-              onChange={(e) => setNewTee({ ...newTee, rating: e.target.value })} />
+              onChange={(e) => setNewTee({ ...newTee, rating: e.target.value.replace(/[^0-9\.]/g, "") })} />
           </label>
           <label className="block">
             <span className={labelClass}>Slope</span>
             <input className={inputClass} inputMode="numeric" placeholder="138" value={newTee.slope}
-              onChange={(e) => setNewTee({ ...newTee, slope: e.target.value })} />
+              onChange={(e) => setNewTee({ ...newTee, slope: e.target.value.replace(/[^0-9]/g, "") })} />
           </label>
         </div>
         <button
@@ -511,8 +523,8 @@ export function CourseHolesTab({ tripId, joinCode }: { tripId: string; joinCode?
       ) : null}
 
       <p className="rounded-xl bg-[#f3efe6] px-3 py-2 text-[12px] leading-5 text-slate-600">
-        Type the par and it jumps to the course handicap. Course handicap can be two digits, so hit
-        <b> enter</b> to drop to the next hole.
+        Type the par and it jumps straight to the course handicap. Course handicap can be two digits, so
+        <b>press enter to advance</b> to the next hole.
       </p>
 
       <div className="rounded-2xl bg-[#f7f6f1] p-3">

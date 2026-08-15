@@ -543,21 +543,6 @@ export default function ManagePage() {
         ) : null}
       </section>
 
-      {upsell ? (
-        <ProUpsellModal
-          topic={upsell}
-          onClose={() => setUpsell(null)}
-          onUpgrade={async () => {
-            const supabase = getSupabaseClient();
-            if (supabase && trip) {
-              await supabase.from("trips").update({ is_pro: true }).eq("id", trip.id);
-            }
-            setUpsell(null);
-            window.location.reload();
-          }}
-        />
-      ) : null}
-
       {/* requests */}
       <section data-tour="mng-requests" className="mt-8">
         <h2 className="flex items-center gap-2 font-anton text-2xl tracking-tight text-ink">
@@ -700,8 +685,24 @@ export default function ManagePage() {
         </button>
       </div>
 
+      {upsell ? (
+        <ProUpsellModal
+          topic={upsell}
+          onClose={() => setUpsell(null)}
+          onUpgrade={async () => {
+            const supabase = getSupabaseClient();
+            if (supabase && trip) {
+              await supabase.from("trips").update({ is_pro: true }).eq("id", trip.id);
+            }
+            setUpsell(null);
+            window.location.reload();
+          }}
+        />
+      ) : null}
+
       {/* danger zone - owner only */}
       {isOwnerViewer ? (
+
         <DangerZone trip={trip} onDeleted={() => router.replace("/home")} />
       ) : null}
     </Shell>
