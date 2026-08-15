@@ -64,15 +64,15 @@ export async function GET(req: Request) {
       joinCode: trip.join_code ?? "",
     };
     const arrival = (raw.arrival_time as string) ?? "";
-    if (h <= 16 && h > 10) {
+    if (h <= 26 && h > 2) {
       jobs.push({
         ...base,
         kind: "night_before",
         category: "round_day",
         title: trip.name ?? "Tomorrow",
-        message: `${raw.title} is tomorrow${arrival ? `, arrive ${arrival}` : ""}. Check your tee time and matchup.`,
+        message: `${raw.title} is coming up${arrival ? `, arrive ${arrival}` : ""}. Check your tee time and matchup.`,
       });
-    } else if (h <= 2 && h > 0.5) {
+    } else if (h <= 2 && h > 0.15) {
       jobs.push({
         ...base,
         kind: "morning_of",
