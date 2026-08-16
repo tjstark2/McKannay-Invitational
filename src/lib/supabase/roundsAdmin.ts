@@ -8,6 +8,14 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+/**
+ * Row-level security rejects a write by matching zero rows, not by raising an
+ * error, so "nothing happened" and "you are not allowed" look identical unless
+ * we ask for the changed rows back. This is the message for that case.
+ */
+const NO_PERMISSION =
+  "That didn't save - your account isn't listed as an owner or admin of this tournament. Check Manage > Players.";
+
 export type BuiltMatch = {
   label: string;
   points: number;
@@ -118,8 +126,10 @@ export async function updateRoundFields(
   roundId: string,
   patch: Record<string, unknown>
 ): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await supabase.from("rounds").update(patch).eq("id", roundId);
-  return error ? { ok: false, error: error.message } : { ok: true };
+  const { data, error } = await supabase.from("rounds").update(patch).eq("id", roundId).select("id");
+  if (error) return { ok: false, error: error.message };
+  if (!data || data.length === 0) return { ok: false, error: NO_PERMISSION };
+  return { ok: true };
 }
 
 export async function deleteRound(supabase: SupabaseClient, roundId: string): Promise<void> {
@@ -215,22 +225,28 @@ export async function startRound(
   supabase: SupabaseClient,
   roundId: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("rounds")
     .update({ started_at: new Date().toISOString(), finished_at: null })
-    .eq("id", roundId);
-  return error ? { ok: false, error: error.message } : { ok: true };
+    .eq("id", roundId)
+    .select("id");
+  if (error) return { ok: false, error: error.message };
+  if (!data || data.length === 0) return { ok: false, error: NO_PERMISSION };
+  return { ok: true };
 }
 
 export async function finishRound(
   supabase: SupabaseClient,
   roundId: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("rounds")
     .update({ finished_at: new Date().toISOString() })
-    .eq("id", roundId);
-  return error ? { ok: false, error: error.message } : { ok: true };
+    .eq("id", roundId)
+    .select("id");
+  if (error) return { ok: false, error: error.message };
+  if (!data || data.length === 0) return { ok: false, error: NO_PERMISSION };
+  return { ok: true };
 }
 
 export async function reopenRound(supabase: SupabaseClient, roundId: string): Promise<void> {

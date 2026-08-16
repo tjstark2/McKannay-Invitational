@@ -201,7 +201,9 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
                   <div className="mt-2 flex flex-wrap gap-2">
                     {!r.startedAt ? (
                       <button type="button" onClick={async () => {
-                        const sb = getSupabaseClient(); if (!sb) return;
+                        const sb = getSupabaseClient();
+                        if (!sb) { setError("No connection to the database."); return; }
+                        note("Starting…");
                         const st = await startRound(sb, r.id);
                         if (!st.ok) { setError(`Couldn't start the round: ${st.error}`); return; }
                         const cr = await setCurrentRound(sb, tripId, r.id);
@@ -517,8 +519,25 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
         + Add a round
       </button>
 
-      {error ? <p className="text-sm font-bold text-red-600">{error}</p> : null}
-      {toast ? <p className="text-sm font-bold text-emerald-700">{toast}</p> : null}
+      {error ? (
+        <div className="fixed inset-x-4 bottom-6 z-[200] rounded-2xl border-2 border-red-300 bg-white p-3 shadow-xl">
+          <p className="text-[13px] font-bold leading-5 text-red-700">{error}</p>
+          <button
+            type="button"
+            onClick={() => setError(null)}
+            className="mt-2 w-full rounded-xl bg-red-600 px-3 py-2 text-sm font-black text-white"
+          >
+            Close
+          </button>
+        </div>
+      ) : null}
+      {toast ? (
+        <div className="fixed inset-x-0 bottom-8 z-[200] flex justify-center">
+          <span className="rounded-full bg-fairway-900 px-5 py-2 text-sm font-black text-white shadow-lg">
+            {toast}
+          </span>
+        </div>
+      ) : null}
 
       {/* rebuild confirm */}
       {rebuild ? (

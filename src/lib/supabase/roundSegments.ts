@@ -113,11 +113,15 @@ export async function saveRoundHoles(
   holesCount: number,
   nine: "front" | "back" | null
 ): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("rounds")
     .update({ holes_count: holesCount, nine: holesCount === 9 ? nine ?? "front" : null })
-    .eq("id", roundId);
-  return error ? { ok: false, error: error.message } : { ok: true };
+    .eq("id", roundId)
+    .select("id");
+  if (error) return { ok: false, error: error.message };
+  if (!data || data.length === 0)
+    return { ok: false, error: "That didn't save - you may not have permission on this tournament." };
+  return { ok: true };
 }
 
 /** Replaces this round's segments (one per tee time). */
