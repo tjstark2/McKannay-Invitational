@@ -205,10 +205,10 @@ export async function GET(req: Request) {
     // Everyone has a handicap.
     const { data: noHcp } = await admin
       .from("players")
-      .select("name")
+      .select("display_name")
       .eq("trip_id", raw.trip_id as string)
-      .is("handicap_index", null);
-    const names = ((noHcp ?? []) as { name: string }[]).map((p) => p.name);
+      .or("handicap_index.is.null,handicap_index.eq.0");
+    const names = ((noHcp ?? []) as { display_name: string }[]).map((p) => p.display_name);
     if (names.length > 0) {
       issues.push(`no handicap for ${names.slice(0, 3).join(", ")}${names.length > 3 ? ` +${names.length - 3}` : ""}`);
     }

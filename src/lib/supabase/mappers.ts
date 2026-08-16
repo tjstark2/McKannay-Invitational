@@ -184,7 +184,11 @@ export function mapPlayer(
     name: row.display_name,
     team: (row.team_id ? teamCodeById.get(row.team_id) : undefined) ?? "A",
     handicapIndex: Number(row.handicap_index ?? 0),
-    hasHandicap: row.handicap_index != null,
+    // "Unset" is a null handicap. Rows written before handicap_index became
+    // nullable were forced to 0, so a 0 counts as unset as well: a wrongly
+    // flagged scratch player is a two-second fix, while silently treating an
+    // unset player as scratch quietly skews every balanced draw.
+    hasHandicap: row.handicap_index != null && Number(row.handicap_index) !== 0,
     isCaptain: Boolean((row as unknown as { is_captain?: boolean }).is_captain),
     avatarEmoji: row.avatar_emoji ?? undefined,
     accountId: row.account_id ?? undefined,

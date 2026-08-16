@@ -450,10 +450,33 @@ export async function assignTeamsBalanced(
 
   const { data: players } = await supabase
     .from("players")
-    .select("id,handicap_index")
+    .select("id,display_name,handicap_index")
     .eq("trip_id", tripId)
     .order("handicap_index");
-  const ordered = ((players ?? []) as { id: string }[]).map((p) => p.id);
+  const rows = (players ?? []) as {
+    id: string;
+    display_name: string;
+    handicap_index: number | null;
+  }[];
+
+  // Balancing without a handicap would quietly treat that player as scratch and
+  // skew both sides, so refuse and name them instead. Same rule as the matchup
+  // Auto-Balance and the field Balanced Groups.
+  const missing = rows
+    .filter((p) => p.handicap_index == null || Number(p.handicap_index) === 0)
+    .map((p) => p.display_name);
+  if (missing.length > 0) {
+    const names =
+      missing.length <= 3
+        ? missing.join(", ")
+        : `${missing.slice(0, 3).join(", ")} and ${missing.length - 3} more`;
+    return {
+      ok: false,
+      error: `Set a handicap for ${names} first - balancing without one would treat them as scratch. You can do it on the Players tab.`,
+    };
+  }
+
+  const ordered = rows.map((p) => p.id);
   // Snake: A, B, B, A, A, B ... keeps the combined handicaps close.
   for (let i = 0; i < ordered.length; i++) {
     const toA = Math.floor(i / 2) % 2 === 0 ? i % 2 === 0 : i % 2 === 1;
