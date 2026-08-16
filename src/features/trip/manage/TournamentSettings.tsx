@@ -14,6 +14,9 @@ import { CourseHolesTab } from "@/features/trip/manage/CourseHolesTab";
 import { RoundsTab } from "@/features/trip/manage/RoundsTab";
 import { TeamsPanel } from "@/features/trip/manage/TeamsPanel";
 import { loadVotingEnabled, setVotingEnabled as persistVoting, setTournamentWrapped } from "@/lib/supabase/roundsAdmin";
+import { notify, notifyEvent } from "@/lib/notify";
+import { listActiveMembers } from "@/lib/supabase/memberships";
+import { useAuth } from "@/features/auth/AuthContext";
 
 export type ManageTab = "basics" | "players" | "teams" | "courses" | "rounds" | "pro";
 
@@ -56,6 +59,7 @@ export function TournamentSettings({
   const [confirmMode, setConfirmMode] = useState<ScoringMode | null>(null);
   const [voting, setVoting] = useState(true);
   const [endConfirm, setEndConfirm] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     const supabase = getSupabaseClient();
@@ -509,6 +513,22 @@ export function TournamentSettings({
                   await setTournamentWrapped(supabase, tripId, true);
                   set("wrappedAt", new Date().toISOString());
                   setEndConfirm(false);
+                  // Wrap up loose voting, then tell everyone the recap is up.
+                  void notifyEvent("voting_concluded_sweep", tripId);
+                  try {
+                    const members = await listActiveMembers(supabase, tripId);
+                    void notify({
+                      userIds: members
+                        .map((m) => m.profile.id)
+                        .filter((id) => id !== user?.id),
+                      title: s?.name ?? "TourneyBirdie",
+                      message: "That's a wrap - your Trip Wrapped recap is ready. Come see how it all shook out.",
+                      category: "awards",
+                      url: joinCode ? `/t/${joinCode}` : "/home",
+                    });
+                  } catch {
+                    /* non-blocking */
+                  }
                 }}
                 className="flex-1 rounded-2xl bg-red-600 px-4 py-3 font-black text-white"
               >

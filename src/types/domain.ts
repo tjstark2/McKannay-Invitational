@@ -130,6 +130,8 @@ export type ScoreEntry = {
   playerId: string;
   frontNineScore?: number;
   grossScore?: number;
+  /** Account that saved it last; null on rows from before this existed. */
+  enteredBy?: string | null;
 };
 
 export type ScoringSettings = {

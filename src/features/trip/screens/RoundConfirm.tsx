@@ -137,6 +137,27 @@ export function RoundConfirm({
     );
     setBusy(false);
     if (e) return setError(e.message);
+
+    // Signing IS the confirmation, so publish my final gross to the shared
+    // results table. This is what opens my awards vote and puts the round on
+    // the classic standings.
+    const myGross = totals.find((t) => t.player.id === me.id)?.gross;
+    if (myGross != null && myGross > 0) {
+      try {
+        await supabase.from("score_entries").upsert(
+          {
+            round_id: roundId,
+            player_id: me.id,
+            gross_score: myGross,
+            entered_by: user?.id ?? null,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "round_id,player_id" }
+        );
+      } catch {
+        /* voting can still be opened later; never block the signature */
+      }
+    }
     setShowPreview(false);
     // If exactly one player is still to sign, that is now blocking the round.
     const after = [...confirmed, me.id];

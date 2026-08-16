@@ -5,6 +5,7 @@ import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { notifyEvent } from "@/lib/notify";
 import { TripView } from "@/features/trip/TripApp";
 import { AuthShell } from "@/features/auth/AuthShell";
 import {
@@ -129,9 +130,9 @@ export default function TripCodePage() {
     if (!supabase) return;
     setBusy(true);
     const res = await requestToJoin(supabase, gate.trip.id, user.id);
+    if (!res.error) void notifyEvent("join_request", gate.trip.id);
     setBusy(false);
     setGate({ kind: "join", trip: gate.trip, status: "pending" });
-    void res;
   }
 
   return (

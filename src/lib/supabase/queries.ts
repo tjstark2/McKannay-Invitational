@@ -748,6 +748,7 @@ export async function upsertScoreRow(
       typeof score.frontNineScore === "number" ? score.frontNineScore : null,
     gross_score:
       typeof score.grossScore === "number" ? score.grossScore : null,
+    entered_by: score.enteredBy ?? null,
     updated_at: new Date().toISOString(),
   };
   const { error } = await supabase

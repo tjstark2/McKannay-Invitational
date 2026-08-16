@@ -30,7 +30,7 @@ import {
   type RosterPlayerLite,
 } from "@/lib/supabase/roundsAdmin";
 import { loadCoursesWithHoleStatus, loadCourseTees, type CourseLite, type CourseTee } from "@/lib/supabase/courseHoles";
-import { notify } from "@/lib/notify";
+import { notify, notifyEvent } from "@/lib/notify";
 import { useAuth } from "@/features/auth/AuthContext";
 
 const FORMATS: SegmentFormat[] = ["best_ball", "match_play", "net_score", "scramble", "casual"];
@@ -217,6 +217,7 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
                           category: "round_day",
                           url: joinCode ? `/t/${joinCode}` : "/home",
                         });
+                        void notifyEvent("voting_concluded_sweep", tripId);
                         note("Round started"); refresh();
                       }} className="rounded-xl bg-fairway-900 px-3 py-2 text-sm font-black text-white">
                         Start round
@@ -233,6 +234,7 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
                           category: "round_day",
                           url: joinCode ? `/t/${joinCode}` : "/home",
                         });
+                        void notifyEvent("voting_concluded_sweep", tripId);
                         note("Round finished"); refresh();
                       }} className="rounded-xl bg-fairway-900 px-3 py-2 text-sm font-black text-white">
                         Finish round

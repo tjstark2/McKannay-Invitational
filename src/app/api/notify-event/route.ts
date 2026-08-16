@@ -1,0 +1,120 @@
+import { NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+
+import {
+  configureWebPush,
+  getAdminClient,
+  organizerIds,
+  sendPushToUsers,
+  sweepConcludedVoting,
+} from "@/lib/server/push";
+
+/**
+ * Events the client can't send itself:
+ *  - join_request: the requester isn't a member yet, so RLS hides who the
+ *    organizers are. The server looks them up and pushes to them.
+ *  - voting_concluded_sweep: finding newly concluded rounds and making sure
+ *    the "results are in" push goes exactly once needs the service role
+ *    (reminder_log has no client policies, on purpose).
+ *
+ * Callers must be signed in: the client sends its Supabase access token and
+ * we verify it before doing anything.
+ */
+export async function POST(req: Request) {
+  const admin = getAdminClient();
+  if (!admin || !configureWebPush()) {
+    return NextResponse.json({ ok: false, error: "Push isn't configured yet." }, { status: 500 });
+  }
+
+  let body: { event?: string; tripId?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ ok: false, error: "Bad request." }, { status: 400 });
+  }
+  const tripId = body.tripId;
+  if (!body.event || !tripId) {
+    return NextResponse.json({ ok: false, error: "Nothing to send." }, { status: 400 });
+  }
+
+  // Who is calling? The bearer token is the caller's Supabase session token.
+  const auth = req.headers.get("authorization") ?? "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  const { data: userData } = token
+    ? await admin.auth.getUser(token)
+    : { data: { user: null } };
+  const caller = userData?.user ?? null;
+  if (!caller) {
+    return NextResponse.json({ ok: false, error: "Not signed in." }, { status: 401 });
+  }
+
+  if (body.event === "join_request") {
+    // Only someone with a real membership row for this trip (their request)
+    // can trigger the organizer ping - stops drive-by spam.
+    const { data: mem } = await admin
+      .from("trip_members")
+      .select("id,status")
+      .eq("trip_id", tripId)
+      .eq("user_id", caller.id)
+      .maybeSingle();
+    if (!mem) {
+      return NextResponse.json({ ok: false, error: "No request found." }, { status: 403 });
+    }
+
+    const [{ data: trip }, { data: prof }] = await Promise.all([
+      admin.from("trips").select("name,join_code").eq("id", tripId).maybeSingle(),
+      admin
+        .from("public_profiles")
+        .select("username,first_name,last_name")
+        .eq("id", caller.id)
+        .maybeSingle(),
+    ]);
+    const t = (trip ?? {}) as { name?: string; join_code?: string };
+    const p = (prof ?? {}) as {
+      username?: string | null;
+      first_name?: string | null;
+      last_name?: string | null;
+    };
+    const who =
+      [p.first_name, p.last_name].filter(Boolean).join(" ") || p.username || "Someone";
+    const pending = (mem as { status?: string }).status === "pending";
+
+    const orgs = (await organizerIds(admin, tripId)).filter((id) => id !== caller.id);
+    const sent = await sendPushToUsers(admin, {
+      userIds: orgs,
+      title: t.name ?? "TourneyBirdie",
+      message: pending
+        ? `${who} asked to join. Approve or decline in Manage.`
+        : `${who} joined the tournament.`,
+      category: "organizer",
+      url: t.join_code ? `/manage/${t.join_code}` : "/home",
+    });
+    return NextResponse.json({ ok: true, sent });
+  }
+
+  if (body.event === "voting_concluded_sweep") {
+    // Any active member of the trip can nudge the sweep; the sweep itself
+    // decides what (if anything) is due and dedupes.
+    const { data: mem } = await admin
+      .from("trip_members")
+      .select("id")
+      .eq("trip_id", tripId)
+      .eq("user_id", caller.id)
+      .eq("status", "active")
+      .maybeSingle();
+    const { data: trip } = await admin
+      .from("trips")
+      .select("owner_id")
+      .eq("id", tripId)
+      .maybeSingle();
+    const isOwner = (trip as { owner_id?: string } | null)?.owner_id === caller.id;
+    if (!mem && !isOwner) {
+      return NextResponse.json({ ok: false, error: "Not a member." }, { status: 403 });
+    }
+    const sent = await sweepConcludedVoting(admin, tripId);
+    return NextResponse.json({ ok: true, sent });
+  }
+
+  return NextResponse.json({ ok: false, error: "Unknown event." }, { status: 400 });
+}

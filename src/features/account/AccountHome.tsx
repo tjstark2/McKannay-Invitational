@@ -5,6 +5,7 @@ import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { notifyEvent } from "@/lib/notify";
 import {
   loadMyTrips,
   type MyTripSummary,
@@ -115,6 +116,7 @@ export function AccountHome() {
       return;
     }
     const res = await requestToJoin(supabase, trip.id, user.id);
+    if (!res.error) void notifyEvent("join_request", trip.id);
     if (res.status === "active") {
       setJoinBusy(false);
       router.push(`/t/${trip.joinCode}`);

@@ -147,6 +147,21 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
       return;
     }
 
+    // First score of the round starts the voting clock. The is-null filter
+    // makes this a no-op every time after; RLS may quietly skip it for
+    // non-organizers, and that's fine - any organizer entry stamps it.
+    if (scores.length === 0) {
+      try {
+        await supabase
+          .from("rounds")
+          .update({ first_score_at: new Date().toISOString() })
+          .eq("id", roundId)
+          .is("first_score_at", null);
+      } catch {
+        /* non-blocking */
+      }
+    }
+
     // Trash talk. The board sees it in the Clubhouse; the big ones take over
     // this screen too.
     const par = playable.find((h) => h.hole === hole)?.par;

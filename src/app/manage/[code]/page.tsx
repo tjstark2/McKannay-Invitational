@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Check, X, UserPlus, Pencil } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { notify } from "@/lib/notify";
 import { BrandHeaderMark } from "@/features/trip/components/Brand";
 import { AccountMenu } from "@/features/account/AccountMenu";
 import {
@@ -169,11 +170,23 @@ export default function ManagePage() {
     );
   }
 
-  async function decide(membershipId: string, approve: boolean) {
+  async function decide(membershipId: string, approve: boolean, accountId?: string) {
     const supabase = getSupabaseClient();
     if (!supabase || !trip) return;
-    if (approve) await approveMember(supabase, membershipId);
-    else await removeMember(supabase, membershipId);
+    if (approve) {
+      await approveMember(supabase, membershipId);
+      if (accountId) {
+        void notify({
+          userIds: [accountId],
+          title: trip.name,
+          message: "You're in - your request to join was approved. Set your handicap and say hi in the Clubhouse.",
+          category: "essential",
+          url: `/t/${trip.joinCode}`,
+        });
+      }
+    } else {
+      await removeMember(supabase, membershipId);
+    }
     await refresh(trip);
   }
 
@@ -188,10 +201,19 @@ export default function ManagePage() {
     await refresh(trip);
   }
 
-  async function setRole(membershipId: string, role: "admin" | "member") {
+  async function setRole(membershipId: string, role: "admin" | "member", accountId?: string) {
     const supabase = getSupabaseClient();
     if (!supabase || !trip) return;
     await setMemberRole(supabase, membershipId, role);
+    if (role === "admin" && accountId) {
+      void notify({
+        userIds: [accountId],
+        title: trip.name,
+        message: "You've been made an organizer. You can now manage rounds, courses and players.",
+        category: "essential",
+        url: `/manage/${trip.joinCode}`,
+      });
+    }
     await refresh(trip);
   }
 
@@ -352,7 +374,7 @@ export default function ManagePage() {
                 ) : (
                   <button
                     data-tour="mng-makeadmin"
-                    onClick={() => setRole(m.membershipId, "admin")}
+                    onClick={() => setRole(m.membershipId, "admin", m.profile.id)}
                     className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1.5 text-xs font-extrabold text-accent-dark"
                   >
                     Make admin
@@ -561,7 +583,7 @@ export default function ManagePage() {
               <Row key={r.membershipId} r={r}>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => decide(r.membershipId, true)}
+                    onClick={() => decide(r.membershipId, true, r.profile.id)}
                     className="inline-flex items-center gap-1 rounded-full bg-fairway-900 px-3 py-2 text-sm font-extrabold text-white"
                   >
                     <Check className="h-4 w-4" /> Approve

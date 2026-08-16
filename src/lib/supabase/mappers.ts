@@ -125,6 +125,7 @@ export type ScoreRow = {
   player_id: string;
   front_nine_score: number | null;
   gross_score: number | null;
+  entered_by?: string | null;
 };
 
 // ---- Row -> domain ---------------------------------------------------------
@@ -270,6 +271,7 @@ export function mapScore(row: ScoreRow): ScoreEntry {
     playerId: row.player_id,
     frontNineScore: row.front_nine_score ?? undefined,
     grossScore: row.gross_score ?? undefined,
+    enteredBy: row.entered_by ?? null,
   };
 }
 

@@ -12,6 +12,7 @@ import { GroupedRoundEntry } from "@/features/trip/screens/GroupedRoundEntry";
 import { roundLifecycle } from "@/features/trip/roundLifecycle";
 import { RoundLifecycleButton } from "@/features/trip/components/RoundLifecycleButton";
 import { HoleByHoleEntry } from "@/features/trip/screens/HoleByHoleEntry";
+import { notify } from "@/lib/notify";
 
 type LastSavedScore = {
   playerName: string;
@@ -320,7 +321,39 @@ export function AddScoreScreen() {
       playerId: selectedPlayer.id,
       frontNineScore: finalFront,
       grossScore: finalGross,
+      enteredBy: user?.id ?? null,
     });
+
+    // Entering for someone else: tell them. An overwrite of what they already
+    // had is essential; a fresh final score on a Pro trip asks them to confirm
+    // it, which is what opens their awards vote.
+    const forSomeoneElse =
+      Boolean(user?.id) &&
+      Boolean(selectedPlayer.accountId) &&
+      selectedPlayer.accountId !== user?.id;
+    if (forSomeoneElse) {
+      const changedExisting =
+        (grossChanged && existingGross != null) ||
+        (frontChanged && existingFront != null);
+      const finalizing = hasGross && existingGross == null;
+      if (changedExisting) {
+        void notify({
+          userIds: [selectedPlayer.accountId],
+          title: trip.name,
+          message: `An organizer updated your ${selectedRound.title} score${finalGross != null ? ` to ${finalGross}` : ""}.`,
+          category: "essential",
+          url: `/t/${trip.joinCode}`,
+        });
+      } else if (finalizing && trip.isPro) {
+        void notify({
+          userIds: [selectedPlayer.accountId],
+          title: trip.name,
+          message: `Your final score for ${selectedRound.title} is in (${finalGross}). Open the app to confirm it and vote.`,
+          category: "my_card",
+          url: `/t/${trip.joinCode}`,
+        });
+      }
+    }
 
     setLastSavedScore({
       playerName: selectedPlayer.name,
