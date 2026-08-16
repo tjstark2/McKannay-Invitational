@@ -31,6 +31,7 @@ import {
 } from "@/lib/supabase/roundsAdmin";
 import { loadCoursesWithHoleStatus, loadCourseTees, type CourseLite, type CourseTee } from "@/lib/supabase/courseHoles";
 import { notify } from "@/lib/notify";
+import { useAuth } from "@/features/auth/AuthContext";
 
 const FORMATS: SegmentFormat[] = ["best_ball", "match_play", "net_score", "scramble", "casual"];
 const inputClass =
@@ -38,6 +39,7 @@ const inputClass =
 const labelClass = "block text-xs font-black uppercase tracking-wide text-slate-500";
 
 export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: string }) {
+  const { user } = useAuth();
   const [rounds, setRounds] = useState<RoundSetup[]>([]);
   const [roster, setRoster] = useState<RosterPlayerLite[]>([]);
   const [courses, setCourses] = useState<CourseLite[]>([]);
@@ -209,7 +211,7 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
                         const cr = await setCurrentRound(sb, tripId, r.id);
                         if (!cr.ok) setError(`Round started, but couldn't set it as current: ${cr.error}`);
                         await notify({
-                          userIds: roster.map((x) => x.accountId),
+                          userIds: roster.map((x) => x.accountId).filter((id) => id !== user?.id),
                           title: r.title,
                           message: `${r.title} is live. Enter your scores as you play.`,
                           category: "round_day",
@@ -225,7 +227,7 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
                         const fi = await finishRound(sb, r.id);
                         if (!fi.ok) { setError(`Couldn't finish the round: ${fi.error}`); return; }
                         await notify({
-                          userIds: roster.map((x) => x.accountId),
+                          userIds: roster.map((x) => x.accountId).filter((id) => id !== user?.id),
                           title: r.title,
                           message: `${r.title} is in the books. Have a look at where things stand.`,
                           category: "round_day",
