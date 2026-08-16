@@ -124,6 +124,7 @@ export function MatchDetailScreen({
                   emoji={player.avatarEmoji}
                   name={player.name}
                   size={28}
+                  playerId={player.id}
                 />
                 {player.name}
               </p>

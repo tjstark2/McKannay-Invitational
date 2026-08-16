@@ -48,6 +48,7 @@ export function PlayersScreen({
                   emoji={player.avatarEmoji}
                   name={player.name}
                   size={40}
+                  playerId={player.id}
                 />
                 <div className="min-w-0">
                   <p className="truncate font-black">{player.name}</p>

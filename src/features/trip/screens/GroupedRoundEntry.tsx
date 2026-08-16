@@ -41,6 +41,7 @@ export function GroupedRoundEntry({ round }: { round: Round }) {
               emoji={p!.avatarEmoji}
               name={p!.name}
               size={16}
+              playerId={p!.id}
             />
             {p!.name}
           </span>

@@ -14,6 +14,7 @@ export function AvatarWithFrame({
   size = 36,
   ring,
   className = "",
+  playerId,
 }: {
   frameId?: string | null;
   avatarId?: string | null;
@@ -22,6 +23,7 @@ export function AvatarWithFrame({
   size?: number;
   ring?: string;
   className?: string;
+  playerId?: string | null;
 }) {
   if (frameId) {
     return (
@@ -31,6 +33,7 @@ export function AvatarWithFrame({
         emoji={emoji}
         name={name}
         size={size}
+        playerId={playerId}
       />
     );
   }
@@ -42,6 +45,7 @@ export function AvatarWithFrame({
       size={size}
       ring={ring}
       className={className}
+      playerId={playerId}
     />
   );
 }

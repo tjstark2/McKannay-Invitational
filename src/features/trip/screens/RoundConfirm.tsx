@@ -194,7 +194,7 @@ export function RoundConfirm({
           const t = totals.find((x) => x.player.id === p.id);
           return (
             <div key={p.id} className="flex items-center gap-2 rounded-xl bg-[#f7f6f1] px-3 py-2">
-              <PlayerAvatar avatarId={p.avatarId} emoji={p.avatarEmoji} name={p.name} size={26} />
+              <PlayerAvatar avatarId={p.avatarId} emoji={p.avatarEmoji} name={p.name} size={26} playerId={p.id} />
               <span className="flex-1 text-[14px] font-black text-ink">{p.name}</span>
               <span className="text-[12px] font-bold text-slate-500">
                 {t?.gross} gross · {t?.net} net

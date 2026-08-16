@@ -139,6 +139,7 @@ export function NextRoundCard({
                           emoji={p?.avatarEmoji}
                           name={p?.name ?? pid}
                           size={18}
+                          playerId={pid}
                         />
                         <span className="truncate">{p?.name ?? pid}</span>
                       </span>

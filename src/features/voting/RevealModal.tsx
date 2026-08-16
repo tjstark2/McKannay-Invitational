@@ -110,6 +110,7 @@ export function RevealModal({
                               emoji={pl?.avatarEmoji}
                               name={nameFor(id)}
                               size={64}
+                              playerId={pl?.id}
                             />
                             <span className="font-anton text-xl">
                               {nameFor(id)}

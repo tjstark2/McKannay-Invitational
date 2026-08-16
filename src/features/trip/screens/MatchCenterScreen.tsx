@@ -265,6 +265,7 @@ export function MatchCenterScreen({
                       emoji={row.player.avatarEmoji}
                       name={row.player.name}
                       size={30}
+                      playerId={row.player.id}
                     />
                     <div className="min-w-0">
                     <p className="truncate font-black">{row.player.name}</p>

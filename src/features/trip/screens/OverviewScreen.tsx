@@ -352,6 +352,7 @@ export function OverviewScreen({
                   emoji={hot.player.avatarEmoji}
                   name={hot.player.name}
                   size={20}
+                  playerId={hot.player.id}
                 />
                 {hot.player.name} - front net {hot.frontNet?.toFixed(1)} through
                 9.
@@ -436,6 +437,7 @@ export function OverviewScreen({
                         emoji={row.player.avatarEmoji}
                         name={row.player.name}
                         size={30}
+                        playerId={row.player.id}
                       />
                       <div className="min-w-0">
                       <p className="truncate font-black">
@@ -553,6 +555,7 @@ export function OverviewScreen({
                     emoji={bestNet.player.avatarEmoji}
                     name={bestNet.player.name}
                     size={18}
+                    playerId={bestNet.player.id}
                   />
                 ) : null}
                 <p className="truncate text-sm font-extrabold">
@@ -580,6 +583,7 @@ export function OverviewScreen({
                     emoji={biggestMover.player.avatarEmoji}
                     name={biggestMover.player.name}
                     size={18}
+                    playerId={biggestMover.player.id}
                   />
                 ) : null}
                 <p className="truncate text-sm font-extrabold">

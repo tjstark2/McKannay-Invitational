@@ -160,6 +160,7 @@ export function LiveLeaderboard({ roundId }: { roundId: string }) {
             emoji={r.emoji}
             name={r.name}
             size={26}
+            playerId={r.playerId}
             ring={r.team === "A" ? "#e5484d" : "#3b82f6"}
           />
           <span className="flex-1 text-[14px] font-black text-ink">{r.name}</span>

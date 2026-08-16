@@ -478,6 +478,7 @@ export function AddScoreScreen() {
               emoji={selectedPlayer.avatarEmoji}
               name={selectedPlayer.name}
               size={28}
+              playerId={selectedPlayer.id}
             />
             {selectedPlayer.name}
           </div>
@@ -612,6 +613,7 @@ export function AddScoreScreen() {
                     emoji={player?.avatarEmoji}
                     name={player?.name ?? score.playerId}
                     size={32}
+                    playerId={score.playerId}
                   />
                   <div>
                     <p className="font-bold">{player?.name ?? score.playerId}</p>

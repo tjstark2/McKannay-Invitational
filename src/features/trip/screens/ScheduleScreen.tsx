@@ -136,6 +136,7 @@ export function ScheduleScreen({
                               emoji={p?.avatarEmoji}
                               name={p?.name ?? pid}
                               size={18}
+                              playerId={pid}
                             />
                             <span>{p?.name ?? pid}</span>
                           </span>

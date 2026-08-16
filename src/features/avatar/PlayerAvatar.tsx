@@ -1,8 +1,16 @@
+"use client";
+
 import { logoUrl } from "./catalog";
+import { useSnowmen } from "@/features/trip/state/SnowmenContext";
 
 /**
  * Circular avatar for a person. Prefers their chosen bird (avatarId), then an
  * emoji (typed players), then an initial. Use everywhere a player/account is shown.
+ *
+ * Pass playerId inside a tournament and the avatar swaps to the snowman while
+ * that player is wearing one (an 8+ on a hole puts it on; playing their way
+ * out takes it off). Outside a tournament the snowman set is empty, so the
+ * prop is harmless everywhere else.
  */
 export function PlayerAvatar({
   avatarId,
@@ -11,6 +19,7 @@ export function PlayerAvatar({
   size = 36,
   ring,
   className = "",
+  playerId,
 }: {
   avatarId?: string | null;
   emoji?: string | null;
@@ -18,11 +27,32 @@ export function PlayerAvatar({
   size?: number;
   ring?: string; // optional ring color (e.g., team color)
   className?: string;
+  playerId?: string | null;
 }) {
+  const snowmen = useSnowmen();
   const dim = { width: size, height: size } as React.CSSProperties;
   const ringStyle = ring
     ? ({ boxShadow: `0 0 0 2px ${ring}` } as React.CSSProperties)
     : undefined;
+
+  if (playerId && snowmen.has(playerId)) {
+    return (
+      <span
+        className={`inline-flex shrink-0 overflow-hidden rounded-full bg-sky-50 ${className}`}
+        style={{ ...dim, ...ringStyle }}
+        title={name ? `${name} is wearing the snowman` : "Wearing the snowman"}
+      >
+        <img
+          src="/draw/img_snowman.png"
+          alt={name ? `${name} is wearing the snowman` : "snowman"}
+          width={size}
+          height={size}
+          className="h-full w-full object-cover"
+          loading="lazy"
+        />
+      </span>
+    );
+  }
 
   if (avatarId) {
     return (

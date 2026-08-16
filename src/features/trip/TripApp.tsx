@@ -36,6 +36,7 @@ import {
   ViewerProvider,
   useViewer,
 } from "@/features/trip/state/ViewerContext";
+import { SnowmenProvider } from "@/features/trip/state/SnowmenContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import {
@@ -303,6 +304,7 @@ function TripAppInner() {
   const showTournamentShell = activeScreen === "tournament";
 
   return (
+    <SnowmenProvider tripId={trip.id}>
     <div className="min-h-screen bg-[#f7f6f1] text-slate-900">
       <div className="relative mx-auto min-h-screen max-w-md bg-[#f7f6f1] pb-28 shadow-phone">
         <div className="absolute right-4 top-4 z-[70]">
@@ -490,6 +492,7 @@ function TripAppInner() {
         />
       </div>
     </div>
+    </SnowmenProvider>
   );
 }
 

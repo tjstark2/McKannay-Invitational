@@ -176,12 +176,14 @@ export function AvatarFrame({
   emoji,
   name,
   size = 44,
+  playerId,
 }: {
   frameId?: string | null;
   avatarId?: string | null;
   emoji?: string | null;
   name?: string | null;
   size?: number;
+  playerId?: string | null;
 }) {
   const f: FrameDef = frameById(frameId);
   const inset = Math.max(2, Math.round(size * 0.07));
@@ -237,6 +239,7 @@ export function AvatarFrame({
           emoji={emoji}
           name={name}
           size={inner}
+          playerId={playerId}
         />
       </span>
     </span>

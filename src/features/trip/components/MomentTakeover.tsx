@@ -57,7 +57,7 @@ export function MomentTakeover() {
         <p className="text-[76px] leading-none">{ART[current.kind] ?? "🐦"}</p>
         {who ? (
           <div className="mt-4 flex justify-center">
-            <PlayerAvatar avatarId={who.avatarId} emoji={who.avatarEmoji} name={who.name} size={72} />
+            <PlayerAvatar avatarId={who.avatarId} emoji={who.avatarEmoji} name={who.name} size={72} playerId={who.id} />
           </div>
         ) : null}
         <p className="mt-4 font-anton text-3xl leading-tight tracking-tight text-white">{current.body}</p>

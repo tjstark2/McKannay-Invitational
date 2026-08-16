@@ -154,6 +154,7 @@ export function VotingModal({
                 emoji={p.avatarEmoji}
                 name={p.name}
                 size={52}
+                playerId={p.id}
               />
               <span className="text-sm font-bold text-[#f4efe2]">{p.name}</span>
             </button>

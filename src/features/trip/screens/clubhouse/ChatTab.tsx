@@ -389,6 +389,7 @@ export function ChatTab({ onRead }: { onRead?: () => void }) {
                     emoji={poster?.avatarEmoji}
                     name={name}
                     size={36}
+                    playerId={poster?.id}
                   />
                 </div>
                 <div className="min-w-0 flex-1">

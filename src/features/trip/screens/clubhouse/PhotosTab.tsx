@@ -620,6 +620,7 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
                     emoji={poster?.avatarEmoji}
                     name={name}
                     size={36}
+                    playerId={poster?.id}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -690,6 +691,7 @@ export function PhotosTab({ onRead }: { onRead?: () => void }) {
                                 emoji={cp?.avatarEmoji}
                                 name={cName}
                                 size={24}
+                                playerId={cp?.id}
                               />
                             </div>
                             <div className="min-w-0 flex-1">

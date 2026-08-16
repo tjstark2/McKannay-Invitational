@@ -120,6 +120,7 @@ export function TeamDetailScreen({
                     emoji={player.avatarEmoji}
                     name={player.name}
                     size={32}
+                    playerId={player.id}
                   />
                   <span className="truncate">{player.name}</span>
                 </span>

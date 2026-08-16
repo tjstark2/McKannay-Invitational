@@ -385,7 +385,7 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
               return (
                 <div key={p.id} className="rounded-xl bg-[#f7f6f1] p-2.5">
                   <div className="flex items-center gap-2">
-                    <PlayerAvatar avatarId={p.avatarId} emoji={p.avatarEmoji} name={p.name} size={28} />
+                    <PlayerAvatar avatarId={p.avatarId} emoji={p.avatarEmoji} name={p.name} size={28} playerId={p.id} />
                     <span className="flex-1 text-[14px] font-black text-ink">
                       {p.name}
                       {gets > 0 ? (

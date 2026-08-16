@@ -48,7 +48,7 @@ function Chip({ p, size = 26 }: { p?: Player; size?: number }) {
   if (!p) return <span className="text-white/40">-</span>;
   return (
     <span className="inline-flex items-center gap-1.5">
-      <PlayerAvatar avatarId={p.avatarId} emoji={p.avatarEmoji} name={p.name} size={size} ring={teamColor(p.team)} />
+      <PlayerAvatar avatarId={p.avatarId} emoji={p.avatarEmoji} name={p.name} size={size} ring={teamColor(p.team)} playerId={p.id} />
       <span className="font-black">{p.name}</span>
     </span>
   );

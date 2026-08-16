@@ -39,6 +39,7 @@ function Pod({ row, place }: { row: LbRow; place: number }) {
             emoji={row.player.avatarEmoji}
             name={row.player.name}
             size={place === 1 ? 56 : 46}
+            playerId={row.player.id}
           />
         </span>
         <span
@@ -171,6 +172,7 @@ export function LeaderboardScreen() {
                   emoji={row.player.avatarEmoji}
                   name={row.player.name}
                   size={32}
+                  playerId={row.player.id}
                 />
                 <div className="min-w-0">
                   <p className="truncate font-extrabold">{row.player.name}</p>
