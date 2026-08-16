@@ -15,10 +15,18 @@ import { RoundsTab } from "@/features/trip/manage/RoundsTab";
 import { TeamsPanel } from "@/features/trip/manage/TeamsPanel";
 import { loadVotingEnabled, setVotingEnabled as persistVoting, setTournamentWrapped } from "@/lib/supabase/roundsAdmin";
 import { notify, notifyEvent } from "@/lib/notify";
+import { RulesTab } from "@/features/trip/manage/RulesTab";
 import { listActiveMembers } from "@/lib/supabase/memberships";
 import { useAuth } from "@/features/auth/AuthContext";
 
-export type ManageTab = "basics" | "players" | "teams" | "courses" | "rounds" | "pro";
+export type ManageTab =
+  | "basics"
+  | "players"
+  | "teams"
+  | "courses"
+  | "rounds"
+  | "rules"
+  | "pro";
 
 export const MANAGE_TABS: { id: ManageTab; label: string }[] = [
   { id: "basics", label: "Basics" },
@@ -26,6 +34,7 @@ export const MANAGE_TABS: { id: ManageTab; label: string }[] = [
   { id: "teams", label: "Teams & Captains" },
   { id: "courses", label: "Courses" },
   { id: "rounds", label: "Rounds" },
+  { id: "rules", label: "House Rules" },
   { id: "pro", label: "Pro" },
 ];
 
@@ -256,6 +265,14 @@ export function TournamentSettings({
       {tab === "rounds" ? <RoundsTab tripId={tripId} joinCode={joinCode} /> : null}
 
       {tab === "teams" ? <TeamsPanel tripId={tripId} /> : null}
+
+      {tab === "rules" ? (
+        <RulesTab
+          tripId={tripId}
+          isPro={Boolean(s?.isPro)}
+          onUpsell={() => onUpsell("hole_by_hole")}
+        />
+      ) : null}
 
       {tab === "pro" ? (
         <div className="space-y-4">

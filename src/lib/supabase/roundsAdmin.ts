@@ -219,6 +219,37 @@ export async function setTeeTimePlayers(
     .insert(playerIds.map((pid) => ({ tee_time_id: teeTimeId, player_id: pid })));
 }
 
+/**
+ * Replace a round's tee sheet in one go: wipes its tee times (players cascade)
+ * and writes the given groups in order. Used by the field-round group draw.
+ */
+export async function saveFieldGroups(
+  supabase: SupabaseClient,
+  roundId: string,
+  groups: { time: string; playerIds: string[] }[]
+): Promise<{ ok: boolean; error?: string }> {
+  const del = await supabase.from("tee_times").delete().eq("round_id", roundId);
+  if (del.error) return { ok: false, error: del.error.message };
+  for (let i = 0; i < groups.length; i++) {
+    const g = groups[i];
+    const ins = await supabase
+      .from("tee_times")
+      .insert({ round_id: roundId, tee_time: g.time, sort_order: i + 1 })
+      .select("id")
+      .single();
+    if (ins.error || !ins.data) {
+      return { ok: false, error: ins.error?.message ?? "Couldn't save a tee time." };
+    }
+    if (g.playerIds.length > 0) {
+      const ps = await supabase
+        .from("tee_time_players")
+        .insert(g.playerIds.map((pid) => ({ tee_time_id: (ins.data as { id: string }).id, player_id: pid })));
+      if (ps.error) return { ok: false, error: ps.error.message };
+    }
+  }
+  return { ok: true };
+}
+
 // ---- day-of lifecycle ------------------------------------------------------
 
 export async function startRound(

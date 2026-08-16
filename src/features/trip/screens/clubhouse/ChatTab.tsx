@@ -9,6 +9,7 @@ import { NewPill } from "@/features/trip/screens/clubhouse/NewPill";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { notifyEvent } from "@/lib/notify";
 import {
   loadMessages,
   loadReactions,
@@ -245,6 +246,8 @@ export function ChatTab({ onRead }: { onRead?: () => void }) {
         prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]
       );
       scrollToBottom(true);
+      // Mentions go straight through; everyone else is batched server-side.
+      void notifyEvent("chat_message", trip.id, { text: body, messageId: msg.id });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Couldn't send message.");
     } finally {
@@ -274,6 +277,8 @@ export function ChatTab({ onRead }: { onRead?: () => void }) {
     if (!supabase) return;
     try {
       await toggleReaction(supabase, { messageId, userId: user.id, emoji, isOn });
+      // Only tell them when it goes on, not when it comes back off.
+      if (!isOn) void notifyEvent("chat_reaction", trip.id, { messageId, emoji });
     } catch (e: unknown) {
       setReactions((prev) =>
         isOn

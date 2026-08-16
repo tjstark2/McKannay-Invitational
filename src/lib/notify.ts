@@ -30,8 +30,9 @@ export async function notify(args: {
  * it and dedupes. Never throws.
  */
 export async function notifyEvent(
-  event: "join_request" | "voting_concluded_sweep",
-  tripId: string
+  event: "join_request" | "voting_concluded_sweep" | "chat_message" | "chat_reaction",
+  tripId: string,
+  extra?: Record<string, unknown>
 ): Promise<void> {
   try {
     const { getSupabaseClient } = await import("@/lib/supabase/client");
@@ -46,7 +47,7 @@ export async function notifyEvent(
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ event, tripId }),
+      body: JSON.stringify({ event, tripId, ...(extra ?? {}) }),
     });
   } catch {
     /* non-blocking by design */
@@ -61,4 +62,35 @@ export function othersIn(
   return players
     .map((p) => p.accountId)
     .filter((id): id is string => Boolean(id) && id !== meUserId);
+}
+
+/**
+ * POST to one of our own API routes with the caller's Supabase session token
+ * attached. Used for the endpoints that must know who is calling (the AI
+ * vision routes, which are rate limited per user).
+ */
+export async function authedPost(
+  path: string,
+  body: Record<string, unknown>
+): Promise<Response> {
+  const { getSupabaseClient } = await import("@/lib/supabase/client");
+  const supabase = getSupabaseClient();
+  const token = supabase
+    ? (await supabase.auth.getSession()).data.session?.access_token
+    : undefined;
+  if (supabase && !token) {
+    // Session gone. Say so plainly instead of a confusing server error.
+    return new Response(
+      JSON.stringify({ ok: false, error: "Your session expired - sign in again." }),
+      { status: 401, headers: { "Content-Type": "application/json" } }
+    );
+  }
+  return fetch(path, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
 }

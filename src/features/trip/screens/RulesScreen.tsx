@@ -1,13 +1,29 @@
-import { useState } from "react";
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useTripState } from "@/features/trip/state/TripStateContext";
+import { getSupabaseClient } from "@/lib/supabase/client";
+import { loadTripRules, type TripRule } from "@/lib/supabase/tripRules";
+import { ANSWER_LABELS, presetByKey } from "@/features/trip/rules/presetRules";
 
 type RuleTab = "overview" | "formats" | "handicaps" | "local" | "admin";
 
 export function RulesScreen() {
   const [activeTab, setActiveTab] = useState<RuleTab>("overview");
   const { trip, players, scoringSettings } = useTripState();
+  const [houseRules, setHouseRules] = useState<TripRule[]>([]);
+
+  const loadRules = useCallback(async () => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    setHouseRules(await loadTripRules(supabase, trip.id));
+  }, [trip.id]);
+
+  useEffect(() => {
+    loadRules();
+  }, [loadRules]);
 
   const netCount =
     typeof scoringSettings.netScorePointsOverride === "number" &&
@@ -195,6 +211,46 @@ export function RulesScreen() {
 
       {activeTab === "local" && (
         <>
+          {houseRules.length > 0 ? (
+            <>
+              <Card className="border-2 border-fairway-900 p-4">
+                <h2 className="font-black">House rules</h2>
+                <p className="mt-1 text-[13px] leading-5 text-slate-500">
+                  Set by the organizers for this tournament. These win over the
+                  defaults below.
+                </p>
+              </Card>
+              {houseRules.map((r) => {
+                const preset = r.ruleKey ? presetByKey(r.ruleKey) : undefined;
+                return (
+                  <Card key={r.id} className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <h2 className="font-black">{r.title}</h2>
+                      {!r.isCustom ? (
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-black uppercase ${
+                            r.answer === "yes"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : r.answer === "no"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-amber-100 text-amber-700"
+                          }`}
+                        >
+                          {ANSWER_LABELS[r.answer]}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      {r.isCustom
+                        ? r.body
+                        : preset?.detail[r.answer] ?? preset?.question ?? ""}
+                    </p>
+                  </Card>
+                );
+              })}
+            </>
+          ) : null}
+
           <Card className="p-4">
             <h2 className="font-black">Divots & Bad Lies</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">

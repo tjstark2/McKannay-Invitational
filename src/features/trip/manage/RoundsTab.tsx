@@ -30,6 +30,8 @@ import {
   type RosterPlayerLite,
 } from "@/lib/supabase/roundsAdmin";
 import { loadCoursesWithHoleStatus, loadCourseTees, type CourseLite, type CourseTee } from "@/lib/supabase/courseHoles";
+import { loadTripSettings } from "@/lib/supabase/tripSettings";
+import { fromTimeInput, isValidClock, toTimeInput } from "@/lib/teeTime";
 import { notify, notifyEvent } from "@/lib/notify";
 import { useAuth } from "@/features/auth/AuthContext";
 
@@ -52,18 +54,23 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
   const [rebuild, setRebuild] = useState<{ round: RoundSetup; format: string; gs: number | null } | null>(null);
   const [matchupRound, setMatchupRound] = useState<string | null>(null);
   const [newTime, setNewTime] = useState<Record<string, string>>({});
+  // Hole-by-hole rounds can't score without a full card, so the start gate is
+  // stricter for those trips.
+  const [holeByHole, setHoleByHole] = useState(false);
 
   const refresh = useCallback(async () => {
     const supabase = getSupabaseClient();
     if (!supabase) return;
-    const [rs, ros, cs] = await Promise.all([
+    const [rs, ros, cs, settings] = await Promise.all([
       loadRoundSetups(supabase, tripId),
       loadRoster(supabase, tripId),
       loadCoursesWithHoleStatus(supabase, tripId),
+      loadTripSettings(supabase, tripId),
     ]);
     setRounds(rs);
     setRoster(ros);
     setCourses(cs);
+    setHoleByHole(settings?.scoringMode === "hole_by_hole");
     const tees: Record<string, CourseTee[]> = {};
     for (const c of cs) tees[c.id] = await loadCourseTees(supabase, c.id);
     setTeesByCourse(tees);
@@ -160,7 +167,7 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
         const neededTeeTimes = Math.ceil(roster.length / 4);
         const assigned = new Set(r.teeTimes.flatMap((t) => t.playerIds));
         const unassigned = roster.filter((p) => !assigned.has(p.id));
-        const missingTimes = r.teeTimes.filter((t) => !t.time.trim()).length;
+        const missingTimes = r.teeTimes.filter((t) => !isValidClock(t.time)).length;
         const matchupBlockers: string[] = [];
         if (roster.length === 0) matchupBlockers.push("Add players first.");
         else {
@@ -168,7 +175,7 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
             matchupBlockers.push(
               `${roster.length} players needs at least ${neededTeeTimes} tee times - you have ${r.teeTimes.length}.`
             );
-          if (missingTimes > 0) matchupBlockers.push(`${missingTimes} tee time${missingTimes === 1 ? "" : "s"} still need a time.`);
+          if (missingTimes > 0) matchupBlockers.push(`${missingTimes} tee time${missingTimes === 1 ? "" : "s"} still need a valid time.`);
           if (unassigned.length > 0)
             matchupBlockers.push(
               `${unassigned.length} player${unassigned.length === 1 ? " is" : "s are"} not in a tee time: ${unassigned
@@ -177,6 +184,26 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
             );
         }
         const matchupsReady = matchupBlockers.length === 0;
+
+        // Starting a round it can't score leaves everyone stuck on the day, so
+        // check the course data is actually there first.
+        const startBlockers: string[] = [];
+        const badTimes = r.teeTimes.filter((t) => !isValidClock(t.time)).length;
+        if (badTimes > 0)
+          startBlockers.push(
+            `${badTimes} tee time${badTimes === 1 ? " has" : "s have"} no valid time set`
+          );
+        if (!r.courseId) startBlockers.push("this round has no course picked");
+        else if (!course) startBlockers.push("the course for this round is missing");
+        else {
+          if (!course.rating || !course.slope)
+            startBlockers.push(`${course.name} is missing its rating or slope`);
+          if (holeByHole && course.holeCount < 18)
+            startBlockers.push(
+              `${course.name} only has ${course.holeCount} of 18 holes entered`
+            );
+        }
+        const canStart = startBlockers.length === 0;
         return (
           <div key={r.id} className="overflow-hidden rounded-2xl border border-sand-200 bg-white">
             <button
@@ -200,11 +227,23 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
                 {/* --- day of --- */}
                 <div className="rounded-2xl bg-[#f3efe6] p-3">
                   <p className="text-xs font-black uppercase tracking-wide text-slate-500">On the day</p>
+                  {!r.startedAt && !canStart ? (
+                    <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-2.5">
+                      <p className="text-[13px] font-black text-amber-900">
+                        Can&apos;t start this round yet
+                      </p>
+                      <p className="mt-0.5 text-[13px] leading-5 text-amber-900">
+                        {startBlockers.join("; ")}. Fix it on the Courses tab and this
+                        will unlock.
+                      </p>
+                    </div>
+                  ) : null}
                   <div className="mt-2 flex flex-wrap gap-2">
                     {!r.startedAt ? (
-                      <button type="button" onClick={async () => {
+                      <button type="button" disabled={!canStart} onClick={async () => {
                         const sb = getSupabaseClient();
                         if (!sb) { setError("No connection to the database."); return; }
+                        if (!canStart) return;
                         note("Starting…");
                         const st = await startRound(sb, r.id);
                         if (!st.ok) { setError(`Couldn't start the round: ${st.error}`); return; }
@@ -219,7 +258,7 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
                         });
                         void notifyEvent("voting_concluded_sweep", tripId);
                         note("Round started"); refresh();
-                      }} className="rounded-xl bg-fairway-900 px-3 py-2 text-sm font-black text-white">
+                      }} className="rounded-xl bg-fairway-900 px-3 py-2 text-sm font-black text-white disabled:opacity-50">
                         Start round
                       </button>
                     ) : !r.finishedAt ? (
@@ -378,12 +417,15 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
                         <div key={t.id} className="rounded-xl bg-[#f7f6f1] p-2.5">
                           <div className="flex items-center gap-2">
                             <input
-                              className="w-28 rounded-lg border-[1.5px] border-sand-200 px-2 py-1.5 text-sm font-black"
-                              defaultValue={t.time}
-                              placeholder="8:00 AM"
-                              onBlur={async (e) => {
+                              type="time"
+                              aria-label="Tee time"
+                              className="w-32 rounded-lg border-[1.5px] border-sand-200 px-2 py-1.5 text-sm font-black"
+                              defaultValue={toTimeInput(t.time)}
+                              onChange={async (e) => {
+                                const next = fromTimeInput(e.target.value);
+                                if (!next) return; // cleared box: keep the old time
                                 const sb = getSupabaseClient(); if (!sb) return;
-                                await updateTeeTime(sb, t.id, e.target.value); refresh();
+                                await updateTeeTime(sb, t.id, next); refresh();
                               }}
                             />
                             <span className="text-[12px] text-slate-500">{t.playerCount} players</span>
@@ -459,15 +501,18 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
 
                   <div className="mt-2 flex gap-2">
                     <input
+                      type="time"
+                      aria-label="New tee time"
                       className={inputClass}
-                      placeholder="8:00 AM"
                       value={newTime[r.id] ?? ""}
                       onChange={(e) => setNewTime({ ...newTime, [r.id]: e.target.value })}
                     />
-                    <button type="button" disabled={!(newTime[r.id] ?? "").trim()}
+                    <button type="button" disabled={!isValidClock(newTime[r.id] ?? "")}
                       onClick={async () => {
+                        const time = fromTimeInput(newTime[r.id] ?? "");
+                        if (!time) return;
                         const sb = getSupabaseClient(); if (!sb) return;
-                        await addTeeTime(sb, r.id, (newTime[r.id] ?? "").trim(), r.teeTimes.length + 1);
+                        await addTeeTime(sb, r.id, time, r.teeTimes.length + 1);
                         setNewTime({ ...newTime, [r.id]: "" }); refresh();
                       }}
                       className="whitespace-nowrap rounded-xl bg-fairway-900 px-3 py-2 text-sm font-black text-white disabled:opacity-50">

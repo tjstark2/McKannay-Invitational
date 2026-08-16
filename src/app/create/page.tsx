@@ -641,7 +641,7 @@ export default function CreatePage() {
                       <span className="text-xs font-bold text-slate-500">Par</span>
                       <input className="w-14 rounded-xl border-[1.5px] border-sand-200 px-2 py-2.5 text-center outline-none focus:border-fairway-900" inputMode="numeric" value={c.par} onChange={(e) => setCourses((p) => p.map((x, j) => (j === i ? { ...x, par: e.target.value.replace(/[^0-9]/g, "").slice(0, 2) } : x)))} />
                     </div>
-                    {courses.length > 1 ? <button onClick={() => setCourses((p) => p.filter((_, j) => j !== i))} className="rounded-lg px-2 py-1 text-sm font-bold text-slate-400">✕</button> : null}
+                    {courses.length > 1 ? <button aria-label="Remove course" onClick={() => setCourses((p) => p.filter((_, j) => j !== i))} className="tb-tap-target rounded-lg px-2 py-1 text-sm font-bold text-slate-400">✕</button> : null}
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <input className="rounded-xl border-[1.5px] border-sand-200 px-3 py-2 text-sm outline-none focus:border-fairway-900" value={c.tees ?? ""} onChange={(e) => setCourses((p) => p.map((x, j) => (j === i ? { ...x, tees: e.target.value } : x)))} placeholder="Tees (e.g. Blue)" />
@@ -690,7 +690,7 @@ export default function CreatePage() {
                     <div key={i} className="rounded-2xl border-[1.5px] border-sand-200 bg-white p-3">
                       <div className="flex items-center justify-between">
                         <span className="font-black text-ink">Round {i + 1}</span>
-                        {rounds.length > 1 ? <button onClick={() => setRounds((pr) => pr.filter((_, j) => j !== i))} className="text-sm font-bold text-slate-400">✕</button> : null}
+                        {rounds.length > 1 ? <button aria-label="Remove round" onClick={() => setRounds((pr) => pr.filter((_, j) => j !== i))} className="tb-tap-target text-sm font-bold text-slate-400">✕</button> : null}
                       </div>
                       <div className="mt-2 space-y-2">
                         <select className={inp} value={r.courseIdx} onChange={(e) => setRounds((pr) => pr.map((x, j) => (j === i ? { ...x, courseIdx: Number(e.target.value) } : x)))}>

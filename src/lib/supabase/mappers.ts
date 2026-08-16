@@ -184,6 +184,7 @@ export function mapPlayer(
     name: row.display_name,
     team: (row.team_id ? teamCodeById.get(row.team_id) : undefined) ?? "A",
     handicapIndex: Number(row.handicap_index ?? 0),
+    hasHandicap: row.handicap_index != null,
     isCaptain: Boolean((row as unknown as { is_captain?: boolean }).is_captain),
     avatarEmoji: row.avatar_emoji ?? undefined,
     accountId: row.account_id ?? undefined,

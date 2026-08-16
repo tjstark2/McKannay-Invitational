@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { TeamDraftScreen } from "@/features/trip/manage/TeamDraftScreen";
 import {
   loadRoster,
   setCaptain,
@@ -19,15 +20,27 @@ export function TeamsPanel({ tripId }: { tripId: string }) {
   const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmPick, setConfirmPick] = useState<"random" | "balanced" | null>(null);
+  const [drafting, setDrafting] = useState(false);
+  const [tripName, setTripName] = useState("TourneyBirdie");
+  const [joinCode, setJoinCode] = useState<string | undefined>(undefined);
 
   const refresh = useCallback(async () => {
     const supabase = getSupabaseClient();
     if (!supabase) return;
     const { data: t } = await supabase.from("teams").select("id,code,name").eq("trip_id", tripId).order("code");
     setTeams(((t ?? []) as { id: string; code: string; name: string }[]) ?? []);
+    const { data: trip } = await supabase
+      .from("trips")
+      .select("name,join_code")
+      .eq("id", tripId)
+      .maybeSingle();
+    if (trip) {
+      setTripName((trip as { name?: string }).name ?? "TourneyBirdie");
+      setJoinCode((trip as { join_code?: string }).join_code);
+    }
     const { data: p } = await supabase
       .from("players")
-      .select("id,display_name,team_id,handicap_index,is_captain")
+      .select("id,display_name,team_id,handicap_index,is_captain,account_id")
       .eq("trip_id", tripId)
       .order("sort_order");
     const codeById = new Map(((t ?? []) as { id: string; code: string }[]).map((x) => [x.id, x.code]));
@@ -39,7 +52,7 @@ export function TeamsPanel({ tripId }: { tripId: string }) {
         teamId: (x.team_id as string) ?? "",
         handicap: Number(x.handicap_index ?? 0),
         isCaptain: Boolean(x.is_captain),
-        accountId: null,
+        accountId: (x.account_id as string) ?? null,
       }))
     );
   }, [tripId]);
@@ -100,7 +113,41 @@ export function TeamsPanel({ tripId }: { tripId: string }) {
             ⚖️ Balanced
           </button>
         </div>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => setDrafting(true)}
+          className="mt-2 w-full rounded-xl bg-fairway-900 px-3 py-2 text-sm font-black text-white disabled:opacity-50"
+        >
+          🪙 Captain&apos;s Draft
+        </button>
+        <p className="mt-1 text-[12px] leading-5 text-slate-500">
+          Coin toss, then the captains take turns picking the roster.
+        </p>
       </div>
+
+      {drafting ? (
+        <TeamDraftScreen
+          tripId={tripId}
+          tripName={tripName}
+          joinCode={joinCode}
+          players={rows.map((r) => ({
+            id: r.id,
+            name: r.name,
+            handicap: r.handicap,
+            isCaptain: r.isCaptain,
+            team: r.team,
+            accountId: r.accountId,
+          }))}
+          teamName={teamName}
+          teamIdOf={teamIdOf}
+          onClose={() => {
+            setDrafting(false);
+            refresh();
+          }}
+          onSaved={refresh}
+        />
+      ) : null}
 
       {(["A", "B"] as const).map((code) => (
         <div key={code} className="rounded-2xl border border-sand-200 p-3">

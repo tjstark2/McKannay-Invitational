@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Check, X, UserPlus, Pencil } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { notify } from "@/lib/notify";
+import { authedPost, notify } from "@/lib/notify";
 import { BrandHeaderMark } from "@/features/trip/components/Brand";
 import { AccountMenu } from "@/features/account/AccountMenu";
 import {
@@ -783,6 +783,15 @@ function DangerZone({
     if (!supabase) return;
     setBusy(true);
     setError(null);
+    // Clear the photos first, while the trip row still exists to prove
+    // ownership. Storage can't be cleaned from SQL, so this goes through the
+    // Storage API on the server. A failure here shouldn't block the delete -
+    // it just leaves files behind, which the tidy-up route can catch later.
+    try {
+      await authedPost("/api/trip-storage", { tripId: trip.id });
+    } catch {
+      /* non-blocking */
+    }
     const res = await deleteTrip(supabase, trip.id);
     setBusy(false);
     if (!res.ok) {

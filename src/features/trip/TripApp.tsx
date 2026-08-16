@@ -8,6 +8,7 @@ import { AddScoreScreen } from "@/features/trip/screens/AddScoreScreen";
 import { TourHost, startSpotlightTour, buildMemberSpotlight, buildAdminSpotlight } from "@/features/trip/tour/spotlight";
 import { whenOverlaysClear } from "@/features/trip/tour/overlayState";
 import { MomentTakeover } from "@/features/trip/components/MomentTakeover";
+import { ChampionTakeover } from "@/features/trip/components/ChampionTakeover";
 import { BottomNav } from "@/features/trip/components/BottomNav";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { CourseDetailScreen } from "@/features/trip/screens/CourseDetailScreen";
@@ -313,6 +314,7 @@ function TripAppInner() {
         <TopHero activeScreen={activeScreen} setActiveScreen={goToScreen} />
         <RoundTodayBanner />
         <WrappedBanner />
+        <ChampionTakeover />
         <PostRoundGate />
         <MomentTakeover />
         <TourHost />

@@ -6,22 +6,26 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { saveDraw } from "@/lib/supabase/draws";
 import { notify, othersIn } from "@/lib/notify";
-import { buildMatchesFromSegments, loadRoster } from "@/lib/supabase/roundsAdmin";
+import { buildMatchesFromSegments, loadRoster, saveFieldGroups } from "@/lib/supabase/roundsAdmin";
 import { uploadPhoto } from "@/lib/supabase/clubhouse";
 import { toJpeg } from "html-to-image";
 import { courseHandicap } from "@/lib/scoring";
+import { formatClock, parseClock } from "@/lib/teeTime";
 import {
   computeMatches,
+  computeGroups,
   buildDraftLog,
   flipCoin,
   fairnessDelta,
   fairnessTone,
   roundShape,
+  type DrawGroup,
   type DrawMatch,
   type DrawMethod,
   type DraftLogEntry,
 } from "@/features/trip/draw/drawCompute";
 import { DrawReveal } from "@/features/trip/screens/admin/DrawReveal";
+import { FieldGroupBoard } from "@/features/trip/screens/admin/FieldGroupBoard";
 import type { TeamId } from "@/types";
 
 function shuffle<T>(arr: readonly T[]): T[] {
@@ -52,8 +56,9 @@ const H2H_METHODS: MethodMeta[] = [
 ];
 
 const FIELD_METHODS: MethodMeta[] = [
-  { id: "fieldrandom", name: "Random Groups", desc: "Shuffle into tee-time groups", icon: "🎲", pro: false, ready: false },
-  { id: "fieldmanual", name: "Manual Groups", desc: "Arrange the groups yourself", icon: "✍️", pro: false, ready: false },
+  { id: "fieldrandom", name: "Random Groups", desc: "Shuffle into tee-time groups", icon: "🎲", pro: false, ready: true },
+  { id: "fieldbalanced", name: "Balanced Groups", desc: "Mix lows and highs in every group", icon: "⚖️", pro: true, ready: true },
+  { id: "fieldmanual", name: "Manual Groups", desc: "Arrange the groups yourself", icon: "✍️", pro: false, ready: true },
 ];
 
 export function SetMatchupsScreen({
@@ -83,6 +88,11 @@ export function SetMatchupsScreen({
   const [builtTick, setBuiltTick] = useState(0);
   const [freshMatches, setFreshMatches] = useState<DrawMatch[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Field rounds: tee-time groups rather than a head-to-head board.
+  const [groups, setGroups] = useState<DrawGroup[]>([]);
+  const [startTime, setStartTime] = useState("8:00 AM");
+  const [stepMinutes, setStepMinutes] = useState(10);
+  const [groupsSaved, setGroupsSaved] = useState(false);
 
   const round = rounds.find((r) => r.id === roundId) ?? null;
   useEffect(() => {
@@ -129,21 +139,125 @@ export function SetMatchupsScreen({
   const shape = round ? roundShape(round) : "pairs";
   const methodList = shape === "field" ? FIELD_METHODS : H2H_METHODS;
 
+  /**
+   * Anyone still without a handicap. A blank handicap reads as 0 downstream,
+   * which would quietly hand a scratch rating to someone who never set one, so
+   * the handicap-driven methods refuse until these are filled in.
+   */
+  const missingHandicap = useMemo(
+    () => players.filter((p) => p.hasHandicap === false).map((p) => p.name),
+    [players]
+  );
+  const needsHandicaps = (m: DrawMethod) =>
+    (m === "autobalance" || m === "fieldbalanced") && missingHandicap.length > 0;
+
+  function handicapRefusal(): string {
+    const names =
+      missingHandicap.length <= 3
+        ? missingHandicap.join(", ")
+        : `${missingHandicap.slice(0, 3).join(", ")} and ${missingHandicap.length - 3} more`;
+    return `Set a handicap for ${names} first - balancing without one would treat them as scratch. Players tab in Manage My Tournament.`;
+  }
+
   function pickMethod(m: MethodMeta) {
     if (!m.ready) return;
     if (m.pro && !trip.isPro) return;
+    if (needsHandicaps(m.id)) {
+      setError(handicapRefusal());
+      return;
+    }
     setMethod(m.id);
     setSel(null);
     setError(null);
     setRevealing(false);
+    setGroupsSaved(false);
     if (m.id === "manual") {
       setBoard(roundMatches.map((mm) => ({ a: mm.aPlayers, b: mm.bPlayers })));
     } else if (m.id === "autobalance") {
       setBoard(computeMatches({ round: round!, players, hcp, method: "autobalance" }));
+    } else if (m.id === "fieldrandom" || m.id === "fieldbalanced" || m.id === "fieldmanual") {
+      setGroups(buildGroups(m.id));
     } else {
       // Slot / Hat / Wheel / Draft: outcome decided now, animation reveals it.
       runAnimated(m.id);
     }
+  }
+
+  // ---- field rounds --------------------------------------------------------
+
+  function buildGroups(
+    m: "fieldrandom" | "fieldbalanced" | "fieldmanual",
+    start = startTime,
+    step = stepMinutes
+  ): DrawGroup[] {
+    return computeGroups(
+      players.map((p) => p.id),
+      m,
+      (parseClock(start) ?? 8 * 60),
+      step || 10,
+      4,
+      hcp
+    );
+  }
+
+  /** Re-time the existing groups without changing who is in them. */
+  function retime(start: string, step: number) {
+    setGroups((prev) =>
+      prev.map((g, i) => ({
+        ...g,
+        tee: formatClock((parseClock(start) ?? 8 * 60) + i * (step || 10)),
+      }))
+    );
+  }
+
+  function swapInGroups(a: { g: number; i: number }, b: { g: number; i: number }) {
+    setGroups((prev) => {
+      const next = prev.map((g) => ({ ...g, players: [...g.players] }));
+      const tmp = next[a.g].players[a.i];
+      next[a.g].players[a.i] = next[b.g].players[b.i];
+      next[b.g].players[b.i] = tmp;
+      return next;
+    });
+  }
+
+  async function saveGroups() {
+    if (busy || !round) return;
+    setBusy(true);
+    setError(null);
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      setBusy(false);
+      setError("No connection to the database.");
+      return;
+    }
+    const res = await saveFieldGroups(
+      supabase,
+      round.id,
+      groups.map((g) => ({ time: g.tee, playerIds: g.players }))
+    );
+    if (!res.ok) {
+      setBusy(false);
+      setError(res.error || "Couldn't save the groups.");
+      return;
+    }
+    await saveDraw(supabase, {
+      tripId: trip.id,
+      roundId: round.id,
+      method: method ?? "fieldrandom",
+      runBy: user?.id ?? null,
+      matches: [],
+      groups,
+      posted: true,
+    });
+    await notify({
+      userIds: othersIn(players, user?.id),
+      title: trip.name,
+      message: `Tee-time groups are set for ${round.title}. Check who you're out with.`,
+      category: "round_day",
+      url: `/t/${trip.joinCode}`,
+    });
+    setBusy(false);
+    setGroupsSaved(true);
   }
 
   function runAnimated(id: DrawMethod) {
@@ -430,6 +544,11 @@ export function SetMatchupsScreen({
           /* Method picker */
           <div className="space-y-2">
             <p className="mb-1 text-xs font-black uppercase tracking-wide text-slate-500">How should we set them?</p>
+            {error ? (
+              <p className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-900">
+                {error}
+              </p>
+            ) : null}
             {methodList.map((m) => {
               const locked = proLocked(m);
               const disabled = !m.ready || locked;
@@ -458,6 +577,8 @@ export function SetMatchupsScreen({
                         ? "Upgrade to Pro to use this"
                         : !m.ready
                         ? "Not built yet - for now set the tee time groups on the Rounds tab"
+                        : needsHandicaps(m.id)
+                        ? `Needs a handicap for ${missingHandicap.length} ${missingHandicap.length === 1 ? "player" : "players"}`
                         : m.desc}
                     </span>
                   </span>
@@ -465,6 +586,77 @@ export function SetMatchupsScreen({
                 </button>
               );
             })}
+          </div>
+        ) : groupsSaved ? (
+          <div className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-4">
+            <p className="font-black text-emerald-900">Groups are set</p>
+            <p className="mt-1 text-[13px] leading-5 text-emerald-900">
+              The tee sheet for {round.title} is saved and everyone has been told.
+              You can adjust the times any time on the Rounds tab.
+            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-3 w-full rounded-2xl bg-fairway-900 px-4 py-3 font-black text-white"
+            >
+              Done
+            </button>
+          </div>
+        ) : method === "fieldrandom" || method === "fieldbalanced" || method === "fieldmanual" ? (
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  setMethod(null);
+                  setGroups([]);
+                }}
+                className="text-sm font-bold text-slate-500"
+              >
+                ‹ Methods
+              </button>
+              <span className="text-[13px] font-bold text-slate-400">
+                {methodLabel?.name}
+              </span>
+            </div>
+
+            {error ? (
+              <p className="mb-3 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">
+                {error}
+              </p>
+            ) : null}
+
+            {groups.length === 0 ? (
+              <p className="text-sm text-slate-400">
+                Add players to the tournament before drawing tee-time groups.
+              </p>
+            ) : (
+              <FieldGroupBoard
+                groups={groups}
+                players={players}
+                hcp={hcp}
+                showHandicaps={method === "fieldbalanced"}
+                startTime={startTime}
+                stepMinutes={stepMinutes}
+                busy={busy}
+                onStartTimeChange={(v) => {
+                  setStartTime(v);
+                  retime(v, stepMinutes);
+                }}
+                onStepChange={(v) => {
+                  setStepMinutes(v);
+                  retime(startTime, v);
+                }}
+                onSwap={swapInGroups}
+                onReshuffle={
+                  method === "fieldmanual"
+                    ? undefined
+                    : () => setGroups(buildGroups(method as "fieldrandom" | "fieldbalanced"))
+                }
+                onSave={saveGroups}
+                saveLabel="Save groups and tee times"
+              />
+            )}
           </div>
         ) : revealing && method ? (
           <div>

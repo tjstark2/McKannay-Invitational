@@ -30,8 +30,11 @@ const config: Config = {
         green: "#1f7a3a",
         clover: "#1f7a3a",
         accent: {
+          // Brand gold, used on dark backgrounds where it reads fine.
           DEFAULT: "#c2a24e",
-          dark: "#a8863a"
+          // Text gold. Darkened so gold-on-white clears WCAG AA (was #a8863a
+          // at 3.42:1, which failed; this is 5.37:1).
+          dark: "#8b6327"
         },
         sand: {
           50: "#fbf7ef",

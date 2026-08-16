@@ -17,7 +17,8 @@ export type DrawMethod =
   | "wheel"
   | "draft"
   | "fieldmanual"
-  | "fieldrandom";
+  | "fieldrandom"
+  | "fieldbalanced";
 
 export type RoundShape = "singles" | "pairs" | "field";
 
@@ -53,7 +54,7 @@ export function isFieldRound(round: Pick<Round, "format" | "groupSize">): boolea
 
 /** Methods valid for a given round shape (field rounds hide the deciders). */
 export function methodsForShape(shape: RoundShape): DrawMethod[] {
-  if (shape === "field") return ["fieldmanual", "fieldrandom"];
+  if (shape === "field") return ["fieldrandom", "fieldbalanced", "fieldmanual"];
   return ["manual", "autobalance", "slot", "hat", "wheel", "draft"];
 }
 
@@ -154,15 +155,26 @@ export function computeMatches(input: ComputeInput): DrawMatch[] {
 /**
  * Field round: chunk players into tee-time groups of 4 (a final group of 2–3 is
  * allowed — never padded). fieldrandom shuffles; fieldmanual keeps roster order
- * for the admin to rearrange. Tee times start at 8:00 AM in 10-minute steps.
+ * for the admin to rearrange; fieldbalanced snake-deals by course handicap so
+ * every group mixes lows and highs and group totals stay close. Tee times start
+ * at 8:00 AM in 10-minute steps by default.
  */
 export function computeGroups(
   playerIds: string[],
-  method: "fieldmanual" | "fieldrandom" = "fieldrandom",
+  method: "fieldmanual" | "fieldrandom" | "fieldbalanced" = "fieldrandom",
   startMinutes = 8 * 60,
   stepMinutes = 10,
-  groupSize = 4
+  groupSize = 4,
+  hcp: Record<string, number> = {}
 ): DrawGroup[] {
+  // Balanced groups come out of the snake deal already grouped; chunking the
+  // flat list would misalign whenever the last group runs short.
+  if (method === "fieldbalanced") {
+    return snakeDeal(playerIds, hcp, groupSize).map((players, i) => ({
+      tee: minutesToClock(startMinutes + i * stepMinutes),
+      players,
+    }));
+  }
   const ordered = method === "fieldrandom" ? shuffle(playerIds) : [...playerIds];
   const groups: DrawGroup[] = [];
   for (let i = 0; i < ordered.length; i += groupSize) {
@@ -170,6 +182,39 @@ export function computeGroups(
     groups.push({ tee: minutesToClock(total), players: ordered.slice(i, i + groupSize) });
   }
   return groups;
+}
+
+/**
+ * Balanced deal: highest handicaps first, each into the group with the lowest
+ * running total that still has a seat (longest-processing-time scheduling).
+ * Groups end up mixing lows and highs with totals a stroke or two apart; only
+ * the last group runs short when the roster doesn't divide evenly.
+ */
+function snakeDeal(
+  playerIds: string[],
+  hcp: Record<string, number>,
+  groupSize: number
+): string[][] {
+  const sorted = [...playerIds].sort((x, y) => hcpOf(hcp)(y) - hcpOf(hcp)(x));
+  const groupCount = Math.max(1, Math.ceil(sorted.length / groupSize));
+  const remainder = sorted.length - (groupCount - 1) * groupSize;
+  // Every group holds groupSize except the last, which takes the remainder.
+  const caps = Array.from({ length: groupCount }, (_, i) =>
+    i === groupCount - 1 ? remainder : groupSize
+  );
+  const groups: string[][] = Array.from({ length: groupCount }, () => []);
+  const totals = new Array(groupCount).fill(0);
+  for (const id of sorted) {
+    let best = -1;
+    for (let g = 0; g < groupCount; g++) {
+      if (groups[g].length >= caps[g]) continue;
+      if (best === -1 || totals[g] < totals[best]) best = g;
+    }
+    groups[best].push(id);
+    totals[best] += hcpOf(hcp)(id);
+  }
+  // Read nicer low-to-high inside each group.
+  return groups.map((g) => [...g].sort((x, y) => hcpOf(hcp)(x) - hcpOf(hcp)(y)));
 }
 
 function minutesToClock(total: number): string {

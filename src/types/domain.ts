@@ -61,6 +61,9 @@ export type Player = {
   name: string;
   team: TeamId;
   handicapIndex: number;
+  /** False when no handicap has been set (the raw column is null); the 0 in
+   *  handicapIndex is a fallback, not a real scratch handicap. */
+  hasHandicap?: boolean;
   isCaptain?: boolean;
   avatarEmoji?: string;
   accountId?: string;

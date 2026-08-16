@@ -125,39 +125,49 @@ export function RoundConfirm({
 
   const allConfirmed = groupPlayers.every((p) => confirmed.includes(p.id));
 
+  // The database requires a front nine whenever a gross is set, so derive it
+  // from the card rather than leaving it null.
+  const frontNineOf = (pid: string) => {
+    const front = scores.filter((s) => s.playerId === pid && s.hole <= 9);
+    if (front.length === 0) return null;
+    return front.reduce((sum, s) => sum + s.strokes, 0);
+  };
+
   async function signCard() {
     if (!me) return;
     const supabase = getSupabaseClient();
     if (!supabase) return;
     setBusy(true);
     setError(null);
+    // Publish the final gross BEFORE recording the signature. The database
+    // locks a card once it is signed, so doing it the other way round would
+    // lock this player out of their own total.
+    const myGross = totals.find((t) => t.player.id === me.id)?.gross;
+    const myFront = frontNineOf(me.id);
+    if (myGross != null && myGross > 0) {
+      const { error: se } = await supabase.from("score_entries").upsert(
+        {
+          round_id: roundId,
+          player_id: me.id,
+          gross_score: myGross,
+          front_nine_score: myFront,
+          entered_by: user?.id ?? null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "round_id,player_id" }
+      );
+      if (se) {
+        setBusy(false);
+        return setError(se.message);
+      }
+    }
+
     const { error: e } = await supabase.from("round_confirmations").upsert(
       { round_id: roundId, player_id: me.id, confirmed_by: user?.id ?? null },
       { onConflict: "round_id,player_id" }
     );
     setBusy(false);
     if (e) return setError(e.message);
-
-    // Signing IS the confirmation, so publish my final gross to the shared
-    // results table. This is what opens my awards vote and puts the round on
-    // the classic standings.
-    const myGross = totals.find((t) => t.player.id === me.id)?.gross;
-    if (myGross != null && myGross > 0) {
-      try {
-        await supabase.from("score_entries").upsert(
-          {
-            round_id: roundId,
-            player_id: me.id,
-            gross_score: myGross,
-            entered_by: user?.id ?? null,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "round_id,player_id" }
-        );
-      } catch {
-        /* voting can still be opened later; never block the signature */
-      }
-    }
     setShowPreview(false);
     // If exactly one player is still to sign, that is now blocking the round.
     const after = [...confirmed, me.id];

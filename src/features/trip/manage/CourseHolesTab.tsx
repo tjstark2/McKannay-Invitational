@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { authedPost } from "@/lib/notify";
 import { TripStateProvider } from "@/features/trip/state/TripStateContext";
 import { BackgroundsAdmin } from "@/features/trip/screens/admin/BackgroundsAdmin";
 import {
@@ -137,10 +138,9 @@ export function CourseHolesTab({ tripId, joinCode }: { tripId: string; joinCode?
     setParsedNote(null);
     try {
       const { base64, mediaType } = await imageToBase64(file);
-      const res = await fetch("/api/parse-scorecard", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: base64, mediaType }),
+      const res = await authedPost("/api/parse-scorecard", {
+        imageBase64: base64,
+        mediaType,
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "Couldn't read that scorecard.");

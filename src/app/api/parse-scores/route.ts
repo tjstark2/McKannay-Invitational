@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { guardAiRoute } from "@/lib/server/aiGuard";
 import Anthropic from "@anthropic-ai/sdk";
 
 export const runtime = "nodejs";
@@ -32,6 +33,12 @@ function extractJson(text: string): unknown {
 }
 
 export async function POST(req: Request) {
+  // Signed in, and within their hourly budget. Costs money past this point.
+  const guard = await guardAiRoute(req, "parse-scores", 30);
+  if (!guard.ok) {
+    return NextResponse.json({ ok: false, error: guard.error }, { status: guard.status });
+  }
+
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) {
     return NextResponse.json(

@@ -13,6 +13,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { BrandHeaderMark } from "@/features/trip/components/Brand";
 import { AccountMenu } from "@/features/account/AccountMenu";
 import { NotificationSettings } from "@/features/account/NotificationSettings";
+import { AccountDangerZone } from "@/features/account/AccountDangerZone";
 
 type Profile = {
   first_name: string | null;
@@ -260,6 +261,10 @@ export default function ProfilePage() {
             ← Back to My Tournaments
           </button>
         </div>
+
+        <Section title="Your data">
+          <AccountDangerZone />
+        </Section>
       </main>
     </div>
   );
