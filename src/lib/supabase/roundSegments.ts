@@ -53,7 +53,10 @@ export async function loadRoundSetups(
 ): Promise<RoundSetup[]> {
   const { data: rounds } = await supabase
     .from("rounds")
-    .select("id,round_number,title,holes_count,nine,course_id,tee_id,tee_times(id,tee_time,tee_time_players(player_id))")
+    // Every column mapped below has to be listed here. started_at and
+    // finished_at were missing, so a started round always read back as "not
+    // started" - the Start round button worked, but the tab never showed it.
+    .select("id,round_number,title,holes_count,nine,course_id,tee_id,started_at,finished_at,format,group_size,date_label,arrival_time,tee_times(id,tee_time,tee_time_players(player_id))")
     .eq("trip_id", tripId)
     .order("round_number");
   const list = (rounds ?? []) as Record<string, unknown>[];
