@@ -19,8 +19,11 @@ import {
   fairnessDelta,
   fairnessTone,
   roundShape,
+  computeSlotMatches,
   type DrawGroup,
   type DrawMatch,
+  type SlotMatch,
+  type TeeSlot,
   type DrawMethod,
   type DraftLogEntry,
 } from "@/features/trip/draw/drawCompute";
@@ -73,7 +76,9 @@ export function SetMatchupsScreen({
 
   const [roundId, setRoundId] = useState<string | null>(initialRoundId ?? null);
   const [method, setMethod] = useState<DrawMethod | null>(null);
-  const [board, setBoard] = useState<DrawMatch[]>([]);
+  const [board, setBoard] = useState<SlotMatch[]>([]);
+  // Which player is picked up, waiting to be swapped with another.
+  const [heldPlayer, setHeldPlayer] = useState<{ m: number; side: "a" | "b"; i: number } | null>(null);
   const [sel, setSel] = useState<number | null>(null);
   const [revealing, setRevealing] = useState(false);
   const [coinWinner, setCoinWinner] = useState<TeamId>("A");
@@ -93,6 +98,36 @@ export function SetMatchupsScreen({
   const [startTime, setStartTime] = useState("8:00 AM");
   const [stepMinutes, setStepMinutes] = useState(10);
   const [groupsSaved, setGroupsSaved] = useState(false);
+  // Per-tee-time format and points, so each group is dealt as what it actually
+  // plays (2v2, 1v1) rather than the round being treated as one shape.
+  const [segments, setSegments] = useState<
+    { teeTimeId: string | null; format: string; points: number }[]
+  >([]);
+
+  useEffect(() => {
+    if (!roundId) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    let off = false;
+    (async () => {
+      const { data } = await supabase
+        .from("round_segments")
+        .select("tee_time_id,format,points")
+        .eq("round_id", roundId)
+        .order("sort_order");
+      if (off) return;
+      setSegments(
+        ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+          teeTimeId: (r.tee_time_id as string) ?? null,
+          format: (r.format as string) ?? "best_ball",
+          points: Number(r.points ?? 0),
+        }))
+      );
+    })();
+    return () => {
+      off = true;
+    };
+  }, [roundId]);
 
   const round = rounds.find((r) => r.id === roundId) ?? null;
   useEffect(() => {
@@ -113,9 +148,31 @@ export function SetMatchupsScreen({
         } as DrawMatch;
       });
       setFreshMatches(rows);
-      setBoard(rows);
     })();
   }, [builtTick, roundId]);
+
+  /** Tee times with their format, in tee order. */
+  const slots: TeeSlot[] = useMemo(() => {
+    if (!round) return [];
+    return (round.teeTimes ?? []).map((t) => {
+      const seg = segments.find((sg) => sg.teeTimeId === t.id);
+      const fmt = seg?.format ?? round.format;
+      const perSide = fmt === "match_play" ? 1 : 2;
+      return {
+        teeTimeId: t.id,
+        label: t.time || "No time set",
+        playerIds: t.players ?? [],
+        perSide,
+        points: seg?.points ?? 0,
+      };
+    });
+  }, [round, segments]);
+
+  /** Anyone on the roster who is not in any tee time for this round. */
+  const unseated = useMemo(() => {
+    const seated = new Set(slots.flatMap((sl) => sl.playerIds));
+    return players.filter((p) => !seated.has(p.id)).map((p) => p.id);
+  }, [slots, players]);
 
   const roundMatches = useMemo(
     () => (roundId ? matches.filter((m) => m.roundId === roundId) : []),
@@ -172,9 +229,9 @@ export function SetMatchupsScreen({
     setRevealing(false);
     setGroupsSaved(false);
     if (m.id === "manual") {
-      setBoard(roundMatches.map((mm) => ({ a: mm.aPlayers, b: mm.bPlayers })));
+      setBoard(computeSlotMatches(slots, players, hcp, "manual"));
     } else if (m.id === "autobalance") {
-      setBoard(computeMatches({ round: round!, players, hcp, method: "autobalance" }));
+      setBoard(computeSlotMatches(slots, players, hcp, "autobalance"));
     } else if (m.id === "fieldrandom" || m.id === "fieldbalanced" || m.id === "fieldmanual") {
       setGroups(buildGroups(m.id));
     } else {
@@ -276,71 +333,60 @@ export function SetMatchupsScreen({
    * 2v2 and 1v1 keeps every seat. Players are shuffled within their own team
    * and dealt back into the same seats.
    */
-  function computeFromShapes(id: DrawMethod): DrawMatch[] {
-    const shapes = (freshMatches ?? roundMatches.map((m) => ({ a: m.aPlayers, b: m.bPlayers })));
-    const aPool = shapes.flatMap((m) => m.a).filter(Boolean);
-    const bPool = shapes.flatMap((m) => m.b).filter(Boolean);
-    const mix = (arr: string[]) => {
-      const out = arr.slice();
-      for (let i = out.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [out[i], out[j]] = [out[j], out[i]];
-      }
-      return out;
-    };
-    // Auto-balance keeps the engine's fairness pass; the rest are chance.
-    if (id === "autobalance") {
-      return computeMatches({ round: round!, players, hcp, method: "autobalance" });
-    }
-    const A = mix(aPool);
-    const B = mix(bPool);
-    let ai = 0;
-    let bi = 0;
-    return shapes.map((m) => ({
-      a: m.a.map(() => A[ai++]),
-      b: m.b.map(() => B[bi++]),
-    }));
+  /**
+   * Deal a fresh board for the chosen method.
+   *
+   * This used to pool players out of the EXISTING matches and redistribute
+   * them, which meant any player the old engine had dropped stayed dropped
+   * forever, and a pool that didn't match the shapes produced the same player
+   * twice. It now deals from the tee times themselves, so the roster is the
+   * source of truth and every assigned player is dealt exactly once.
+   */
+  function computeFromShapes(id: DrawMethod): SlotMatch[] {
+    return computeSlotMatches(slots, players, hcp, id);
   }
 
-  // Manual: tap two matches to swap their B sides.
-  function tapMatch(i: number) {
-    if (method !== "manual") return;
-    if (sel === null) setSel(i);
-    else if (sel === i) setSel(null);
-    else {
-      setBoard((prev) => {
-        const next = prev.map((m) => ({ a: m.a, b: m.b }));
-        [next[i].b, next[sel].b] = [next[sel].b, next[i].b];
-        return next;
-      });
-      setSel(null);
+  /**
+   * Tap a player, then tap another to swap them. Swapping is only allowed
+   * between players on the SAME team - moving someone across sides would put
+   * them in a match against their own team, which is never what you want here.
+   * Use Teams & Captains to change which side someone is on.
+   */
+  function tapPlayer(m: number, side: "a" | "b", i: number) {
+    if (!heldPlayer) {
+      setHeldPlayer({ m, side, i });
+      return;
     }
+    if (heldPlayer.m === m && heldPlayer.side === side && heldPlayer.i === i) {
+      setHeldPlayer(null);
+      return;
+    }
+    if (heldPlayer.side !== side) {
+      setError("You can only swap players on the same team. Change sides on Teams & Captains.");
+      setHeldPlayer(null);
+      return;
+    }
+    setBoard((prev) => {
+      const next = prev.map((x) => ({ ...x, a: [...x.a], b: [...x.b] }));
+      const from = next[heldPlayer.m][heldPlayer.side];
+      const to = next[m][side];
+      const tmp = from[heldPlayer.i];
+      from[heldPlayer.i] = to[i];
+      to[i] = tmp;
+      return next;
+    });
+    setError(null);
+    setHeldPlayer(null);
   }
 
   function reshuffle() {
-    setBoard((prev) => {
-      // Only swap B sides between matches of the same size, otherwise a pair
-      // lands in a singles match. Retry until something actually moved.
-      for (let attempt = 0; attempt < 24; attempt++) {
-        const next = prev.map((m) => ({ a: m.a, b: m.b }));
-        const bySize = new Map<number, number[]>();
-        next.forEach((m, i) => {
-          const k = m.b.length;
-          bySize.set(k, [...(bySize.get(k) ?? []), i]);
-        });
-        bySize.forEach((idxs) => {
-          const units = shuffle(idxs.map((i) => next[i].b));
-          idxs.forEach((i, k) => {
-            next[i].b = units[k];
-          });
-        });
-        const moved = next.some((m, i) => m.b.join() !== prev[i].b.join());
-        if (moved) return next;
-      }
-      return prev;
-    });
+    // Re-deal from the tee times rather than shuffling B sides across the
+    // whole board - a player must stay in the group they are teeing off with.
+    setBoard(computeSlotMatches(slots, players, hcp, "slot"));
+    setHeldPlayer(null);
     setSel(null);
   }
+
 
   const countMismatch = board.length !== roundMatches.length;
 
@@ -677,7 +723,20 @@ export function SetMatchupsScreen({
               teams={teams}
               coinWinner={coinWinner}
               draftLog={draftLog}
-              onDraftResult={(b) => setBoard(b)}
+              onDraftResult={(b) =>
+                setBoard((prev) =>
+                  b.map((m, i) => ({
+                    ...(prev[i] ?? {
+                      teeTimeId: "",
+                      label: "",
+                      perSide: m.a.length || 1,
+                      points: 0,
+                    }),
+                    a: m.a,
+                    b: m.b,
+                  }))
+                )
+              }
               onDone={() => setRevealing(false)}
             />
           </div>
@@ -733,55 +792,125 @@ export function SetMatchupsScreen({
               </div>
             ) : null}
 
-            <div className="space-y-2">
-              {board.map((m, i) => {
-                const diff = fairnessDelta(m, hcp);
-                const tone = fairnessTone(diff);
-                const selected = sel === i;
+            <div className="space-y-3">
+              {slots.map((slot) => {
+                const inSlot = board
+                  .map((m, i) => ({ m, i }))
+                  .filter((x) => x.m.teeTimeId === slot.teeTimeId);
+                if (inSlot.length === 0) return null;
                 return (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => tapMatch(i)}
-                    className={`w-full rounded-2xl border-2 p-3 text-left transition ${
-                      selected ? "border-accent bg-accent/20 ring-2 ring-accent" : "border-sand-200 bg-white"
-                    }`}
+                  <div
+                    key={slot.teeTimeId}
+                    className="rounded-2xl border-[1.5px] border-sand-200 bg-white p-3"
                   >
-                    <div className="mb-1 flex items-center justify-center gap-2">
+                    <div className="mb-2 flex items-baseline justify-between">
+                      <span className="font-black text-ink">{slot.label}</span>
                       <span className="text-[11px] font-black uppercase tracking-wide text-slate-400">
-                        Match {i + 1}
+                        {slot.perSide === 1 ? "1v1 singles" : "2v2"} ·{" "}
+                        {slot.points} {slot.points === 1 ? "pt" : "pts"}
                       </span>
-                      {method === "autobalance" ? (
-                        <span
-                          className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${
-                            tone === "even"
-                              ? "bg-emerald-100 text-emerald-700"
-                              : tone === "close"
-                              ? "bg-amber-100 text-amber-700"
-                              : "bg-red-100 text-red-700"
-                          }`}
-                        >
-                          Δ {diff}
-                        </span>
-                      ) : null}
                     </div>
-                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                      <div className="text-right">
-                        {m.a.map((pid) => (
-                          <p key={pid} className="font-bold text-team-north">{nameOf(pid)}</p>
-                        ))}
-                      </div>
-                      <span className="font-anton text-sm text-slate-400">VS</span>
-                      <div>
-                        {m.b.map((pid) => (
-                          <p key={pid} className="font-bold text-team-south">{nameOf(pid)}</p>
-                        ))}
-                      </div>
-                    </div>
-                  </button>
+
+                    {inSlot.map(({ m, i }) => {
+                      const diff = fairnessDelta(m, hcp);
+                      const tone = fairnessTone(diff);
+                      const gap = m.a.length !== m.b.length;
+                      return (
+                        <div key={i} className="mt-1.5 rounded-xl bg-[#f7f6f1] p-2.5">
+                          {method === "autobalance" ? (
+                            <div className="mb-1 text-center">
+                              <span
+                                className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${
+                                  tone === "even"
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : tone === "close"
+                                    ? "bg-amber-100 text-amber-700"
+                                    : "bg-red-100 text-red-700"
+                                }`}
+                              >
+                                Δ {diff}
+                              </span>
+                            </div>
+                          ) : null}
+                          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                            <div className="space-y-1">
+                              {m.a.map((pid, k) => {
+                                const held =
+                                  heldPlayer?.m === i && heldPlayer.side === "a" && heldPlayer.i === k;
+                                return (
+                                  <button
+                                    key={`${pid}-${k}`}
+                                    type="button"
+                                    onClick={() => tapPlayer(i, "a", k)}
+                                    className={`w-full rounded-lg px-2 py-1.5 text-right text-[13px] font-black transition ${
+                                      held
+                                        ? "bg-accent text-ink ring-2 ring-accent"
+                                        : "bg-white text-team-north"
+                                    }`}
+                                  >
+                                    {nameOf(pid)}
+                                  </button>
+                                );
+                              })}
+                              {m.a.length === 0 ? (
+                                <p className="text-right text-[12px] font-bold text-slate-400">
+                                  Nobody
+                                </p>
+                              ) : null}
+                            </div>
+                            <span className="font-anton text-sm text-slate-400">VS</span>
+                            <div className="space-y-1">
+                              {m.b.map((pid, k) => {
+                                const held =
+                                  heldPlayer?.m === i && heldPlayer.side === "b" && heldPlayer.i === k;
+                                return (
+                                  <button
+                                    key={`${pid}-${k}`}
+                                    type="button"
+                                    onClick={() => tapPlayer(i, "b", k)}
+                                    className={`w-full rounded-lg px-2 py-1.5 text-left text-[13px] font-black transition ${
+                                      held
+                                        ? "bg-accent text-ink ring-2 ring-accent"
+                                        : "bg-white text-team-south"
+                                    }`}
+                                  >
+                                    {nameOf(pid)}
+                                  </button>
+                                );
+                              })}
+                              {m.b.length === 0 ? (
+                                <p className="text-[12px] font-bold text-slate-400">Nobody</p>
+                              ) : null}
+                            </div>
+                          </div>
+                          {gap ? (
+                            <p className="mt-1.5 text-center text-[11px] font-bold text-amber-700">
+                              Uneven sides - one team is a player short here
+                            </p>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
                 );
               })}
+
+              {unseated.length > 0 ? (
+                <div className="rounded-2xl border-[1.5px] border-amber-300 bg-amber-50 p-3">
+                  <p className="text-[13px] font-black text-amber-900">
+                    Not in a tee time
+                  </p>
+                  <p className="mt-0.5 text-[13px] leading-5 text-amber-900">
+                    {unseated.map(nameOf).join(", ")} - add them to a tee time on
+                    the Rounds tab and they&apos;ll be dealt in.
+                  </p>
+                </div>
+              ) : null}
             </div>
+
+            <p className="mt-2 text-center text-[12px] text-slate-400">
+              {heldPlayer ? "Tap another player to swap" : "Tap two players to swap them"}
+            </p>
 
             {error ? <p className="mt-3 text-sm font-bold text-red-600">{error}</p> : null}
 
@@ -798,7 +927,7 @@ export function SetMatchupsScreen({
               ) : method === "autobalance" ? (
                 <button
                   type="button"
-                  onClick={() => setBoard(computeMatches({ round: round!, players, hcp, method: "autobalance" }))}
+                  onClick={() => setBoard(computeSlotMatches(slots, players, hcp, "autobalance"))}
                   disabled={busy}
                   className="rounded-2xl border-[1.5px] border-fairway-900 px-4 py-3 text-sm font-black text-fairway-900 disabled:opacity-50"
                 >

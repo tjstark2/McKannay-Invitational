@@ -20,7 +20,14 @@ export type GuardResult =
 export async function guardAiRoute(
   req: Request,
   route: string,
-  limit = 30
+  limit = 30,
+  /**
+   * Optional thing the limit is counted against - a course id, say. When set,
+   * the budget is per user PER SCOPE and has no time window: reading one
+   * course's scorecard is a setup task you do once or twice, not something
+   * that should refill every hour.
+   */
+  scope?: string | null
 ): Promise<GuardResult> {
   const admin = getAdminClient();
   if (!admin) {
@@ -38,25 +45,33 @@ export async function guardAiRoute(
     return { ok: false, status: 401, error: "Your session expired - sign in again." };
   }
 
-  const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const { count } = await admin
+  let query = admin
     .from("ai_usage_log")
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id)
-    .eq("route", route)
-    .gte("called_at", since);
+    .eq("route", route);
+  if (scope) {
+    query = query.eq("scope", scope);
+  } else {
+    query = query.gte("called_at", new Date(Date.now() - 60 * 60 * 1000).toISOString());
+  }
+  const { count } = await query;
 
   if ((count ?? 0) >= limit) {
     return {
       ok: false,
       status: 429,
-      error: "That's a lot of photo scoring in one hour. Try again shortly.",
+      error: scope
+        ? "You've used your photo reads for this course. Type the remaining " +
+          "numbers in by hand - reading a card costs real money, so it's capped."
+        : "You've used up your photo reads for this hour. Type the numbers in " +
+          "by hand for now - reading a card costs real money, so it's capped.",
     };
   }
 
   // Record the call before doing the expensive work, so a burst of parallel
   // requests can't all slip through the check.
-  await admin.from("ai_usage_log").insert({ user_id: user.id, route });
+  await admin.from("ai_usage_log").insert({ user_id: user.id, route, scope: scope ?? null });
 
   return { ok: true, userId: user.id, admin };
 }

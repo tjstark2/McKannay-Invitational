@@ -63,7 +63,15 @@ function validate(holes: unknown): { holes: Hole[]; issues: string[] } {
 
 export async function POST(req: Request) {
   // Signed in, and within their hourly budget. Costs money past this point.
-  const guard = await guardAiRoute(req, "parse-scorecard", 20);
+  // Two reads per course per organizer. After that it's by hand.
+  let scopeCourse: string | null = null;
+  try {
+    const peek = await req.clone().json();
+    scopeCourse = (peek?.courseId as string) ?? null;
+  } catch {
+    scopeCourse = null;
+  }
+  const guard = await guardAiRoute(req, "parse-scorecard", scopeCourse ? 2 : 3, scopeCourse);
   if (!guard.ok) {
     return NextResponse.json({ ok: false, error: guard.error }, { status: guard.status });
   }

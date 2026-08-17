@@ -45,8 +45,9 @@ export function FieldGroupBoard({
   const nameOf = (id: string) => players.find((p) => p.id === id)?.name ?? "-";
   const playerOf = (id: string) => players.find((p) => p.id === id);
 
+  const round1 = (n: number) => Math.round(n * 10) / 10;
   const totals = useMemo(
-    () => groups.map((g) => g.players.reduce((sum, id) => sum + (hcp[id] ?? 0), 0)),
+    () => groups.map((g) => round1(g.players.reduce((sum, id) => sum + (hcp[id] ?? 0), 0))),
     [groups, hcp]
   );
   const spread = useMemo(() => {
@@ -55,7 +56,7 @@ export function FieldGroupBoard({
       .filter((x) => x.n === 4)
       .map((x) => x.t);
     if (full.length < 2) return null;
-    return Math.max(...full) - Math.min(...full);
+    return Math.round((Math.max(...full) - Math.min(...full)) * 10) / 10;
   }, [groups, totals]);
 
   function tap(g: number, i: number) {

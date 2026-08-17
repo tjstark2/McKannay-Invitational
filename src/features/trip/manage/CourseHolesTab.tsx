@@ -2,9 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { FloatingNote } from "@/components/ui/FloatingNote";
 import { authedPost } from "@/lib/notify";
-import { TripStateProvider } from "@/features/trip/state/TripStateContext";
-import { BackgroundsAdmin } from "@/features/trip/screens/admin/BackgroundsAdmin";
 import {
   loadCoursesWithHoleStatus,
   loadCourseHoles,
@@ -141,6 +140,7 @@ export function CourseHolesTab({ tripId, joinCode }: { tripId: string; joinCode?
       const res = await authedPost("/api/parse-scorecard", {
         imageBase64: base64,
         mediaType,
+        courseId: active?.id ?? null,
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || "Couldn't read that scorecard.");
@@ -299,15 +299,6 @@ export function CourseHolesTab({ tripId, joinCode }: { tripId: string; joinCode?
           </button>
         )}
 
-        {joinCode ? (
-          <div className="mt-4">
-            <p className="mb-1 text-xs font-black uppercase tracking-wide text-slate-500">Backgrounds</p>
-            <TripStateProvider initialJoinCode={joinCode}>
-              <BackgroundsAdmin />
-            </TripStateProvider>
-          </div>
-        ) : null}
-
         {missing.length > 0 && courses.length > 0 ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[13px] text-amber-900">
             {missing.length} course{missing.length === 1 ? "" : "s"} still need hole data. Rounds on those
@@ -453,7 +444,7 @@ export function CourseHolesTab({ tripId, joinCode }: { tripId: string; joinCode?
                   await deleteCourseTee(supabase, t.id);
                   setTees(await loadCourseTees(supabase, active.id));
                 }}
-                className="-my-2 -mr-1 px-3 py-2 text-lg font-black leading-none text-slate-400"
+                className="tb-tap-target -my-2 -mr-1 px-3 py-2 text-2xl font-black leading-none text-red-500"
               >
                 ×
               </button>
@@ -578,7 +569,7 @@ export function CourseHolesTab({ tripId, joinCode }: { tripId: string; joinCode?
         </div>
       )}
 
-      {error ? <p className="text-sm font-bold text-red-600">{error}</p> : null}
+      <FloatingNote text={error} tone="error" onDone={() => setError(null)} />
 
       <button
         type="button"

@@ -16,6 +16,8 @@ import {
 type Target = { kind: "header" } | { kind: "course"; id: string };
 
 export function BackgroundsAdmin() {
+  // Everything below stays inside the card - long file names used to run off
+  // the side of the screen on a phone.
   const { trip, courses } = useTripState();
   const [headerBg, setHeaderBg] = useState<string | null>(trip.headerBackground);
   const [courseBg, setCourseBg] = useState<Record<string, string | null>>(

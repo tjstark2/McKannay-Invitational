@@ -57,6 +57,11 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
   // Hole-by-hole rounds can't score without a full card, so the start gate is
   // stricter for those trips.
   const [holeByHole, setHoleByHole] = useState(false);
+  // Starting or finishing a round tells all ten players, so both ask first.
+  const [confirmStart, setConfirmStart] = useState<string | null>(null);
+  const [confirmFinish, setConfirmFinish] = useState<string | null>(null);
+  // Tee-time lists get long with ten players; keep them foldable.
+  const [teeOpen, setTeeOpen] = useState<Record<string, boolean>>({});
 
   const refresh = useCallback(async () => {
     const supabase = getSupabaseClient();
@@ -79,6 +84,44 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  async function doStartRound(roundId: string, title: string) {
+    const sb = getSupabaseClient();
+    if (!sb) { setError("No connection to the database."); return; }
+    note("Starting…");
+    const st = await startRound(sb, roundId);
+    if (!st.ok) { setError(`Couldn't start the round: ${st.error}`); return; }
+    const cr = await setCurrentRound(sb, tripId, roundId);
+    if (!cr.ok) setError(`Round started, but couldn't set it as current: ${cr.error}`);
+    await notify({
+      userIds: roster.map((x) => x.accountId).filter((id) => id !== user?.id),
+      title,
+      message: `${title} is live. Enter your scores as you play.`,
+      category: "round_day",
+      url: joinCode ? `/t/${joinCode}` : "/home",
+    });
+    void notifyEvent("voting_concluded_sweep", tripId);
+    note("Round started");
+    refresh();
+  }
+
+  async function doFinishRound(roundId: string, title: string) {
+    const sb = getSupabaseClient();
+    if (!sb) { setError("No connection to the database."); return; }
+    note("Finishing…");
+    const fi = await finishRound(sb, roundId);
+    if (!fi.ok) { setError(`Couldn't finish the round: ${fi.error}`); return; }
+    await notify({
+      userIds: roster.map((x) => x.accountId).filter((id) => id !== user?.id),
+      title,
+      message: `${title} is in the books. Have a look at where things stand.`,
+      category: "round_day",
+      url: joinCode ? `/t/${joinCode}` : "/home",
+    });
+    void notifyEvent("voting_concluded_sweep", tripId);
+    note("Round finished");
+    refresh();
+  }
 
   const note = (msg: string) => {
     setToast(msg);
@@ -149,8 +192,61 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
 
   const teamOf = (pid: string) => roster.find((p) => p.id === pid)?.team;
 
+  const startTarget = rounds.find((x) => x.id === confirmStart);
+  const finishTarget = rounds.find((x) => x.id === confirmFinish);
+
   return (
     <div className="space-y-3">
+      {startTarget ? (
+        <div className="fixed inset-0 z-[140] flex items-end justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-3xl bg-white p-5">
+            <p className="font-black text-ink">Start {startTarget.title}?</p>
+            <p className="mt-1 text-[13px] leading-5 text-slate-600">
+              This tells everyone the round is live and opens scoring. You can
+              still change tee times and matchups afterwards.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button type="button" onClick={() => setConfirmStart(null)}
+                className="flex-1 rounded-2xl border-[1.5px] border-slate-300 px-4 py-3 font-black text-slate-600">
+                Not yet
+              </button>
+              <button type="button" onClick={async () => {
+                const t = startTarget;
+                setConfirmStart(null);
+                await doStartRound(t.id, t.title);
+              }} className="flex-1 rounded-2xl bg-fairway-900 px-4 py-3 font-black text-white">
+                Start it
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {finishTarget ? (
+        <div className="fixed inset-0 z-[140] flex items-end justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-3xl bg-white p-5">
+            <p className="font-black text-ink">Finish {finishTarget.title}?</p>
+            <p className="mt-1 text-[13px] leading-5 text-slate-600">
+              Scoring closes for everyone and the awards vote for this round
+              ends. You can reopen it afterwards if you need to.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button type="button" onClick={() => setConfirmFinish(null)}
+                className="flex-1 rounded-2xl border-[1.5px] border-slate-300 px-4 py-3 font-black text-slate-600">
+                Not yet
+              </button>
+              <button type="button" onClick={async () => {
+                const t = finishTarget;
+                setConfirmFinish(null);
+                await doFinishRound(t.id, t.title);
+              }} className="flex-1 rounded-2xl bg-fairway-900 px-4 py-3 font-black text-white">
+                Finish it
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <p className="text-[13px] leading-5 text-slate-600">
         Everything about each round: the course and tees, how many holes, who is out at what time, what each
         group is playing, and starting or finishing the round on the day.
@@ -168,9 +264,15 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
         const assigned = new Set(r.teeTimes.flatMap((t) => t.playerIds));
         const unassigned = roster.filter((p) => !assigned.has(p.id));
         const missingTimes = r.teeTimes.filter((t) => !isValidClock(t.time)).length;
+        // A field round's whole job is to CREATE the tee times, so it must not
+        // be blocked for not having them yet. Only head-to-head rounds need a
+        // finished tee sheet before matchups can be drawn.
+        const isField = r.format === "net_score" || r.format === "casual";
         const matchupBlockers: string[] = [];
         if (roster.length === 0) matchupBlockers.push("Add players first.");
-        else {
+        else if (isField) {
+          // nothing else to check - the draw builds the groups and the times
+        } else {
           if (r.teeTimes.length < neededTeeTimes)
             matchupBlockers.push(
               `${roster.length} players needs at least ${neededTeeTimes} tee times - you have ${r.teeTimes.length}.`
@@ -212,7 +314,19 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
               className="flex w-full items-center gap-3 p-3 text-left"
             >
               <span className="flex-1">
-                <span className="block font-black text-ink">{r.title}</span>
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="font-black text-ink">{r.title}</span>
+                  {r.startedAt && !r.finishedAt ? (
+                    <span className="rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-amber-950">
+                      In progress
+                    </span>
+                  ) : null}
+                  {r.finishedAt ? (
+                    <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-emerald-900">
+                      Finished
+                    </span>
+                  ) : null}
+                </span>
                 <span className="block text-[13px] text-slate-500">
                   {course?.name ?? "No course"} ·{" "}
                   {r.holesCount === 9 ? `9 holes (${r.nine === "back" ? "back" : "front"})` : "18 holes"} ·{" "}
@@ -240,52 +354,26 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
                   ) : null}
                   <div className="mt-2 flex flex-wrap gap-2">
                     {!r.startedAt ? (
-                      <button type="button" disabled={!canStart} onClick={async () => {
-                        const sb = getSupabaseClient();
-                        if (!sb) { setError("No connection to the database."); return; }
+                      <button type="button" disabled={!canStart} onClick={() => {
                         if (!canStart) return;
-                        note("Starting…");
-                        const st = await startRound(sb, r.id);
-                        if (!st.ok) { setError(`Couldn't start the round: ${st.error}`); return; }
-                        const cr = await setCurrentRound(sb, tripId, r.id);
-                        if (!cr.ok) setError(`Round started, but couldn't set it as current: ${cr.error}`);
-                        await notify({
-                          userIds: roster.map((x) => x.accountId).filter((id) => id !== user?.id),
-                          title: r.title,
-                          message: `${r.title} is live. Enter your scores as you play.`,
-                          category: "round_day",
-                          url: joinCode ? `/t/${joinCode}` : "/home",
-                        });
-                        void notifyEvent("voting_concluded_sweep", tripId);
-                        note("Round started"); refresh();
+                        setConfirmStart(r.id);
                       }} className="rounded-xl bg-fairway-900 px-3 py-2 text-sm font-black text-white disabled:opacity-50">
                         Start round
                       </button>
                     ) : !r.finishedAt ? (
-                      <button type="button" onClick={async () => {
-                        const sb = getSupabaseClient(); if (!sb) return;
-                        const fi = await finishRound(sb, r.id);
-                        if (!fi.ok) { setError(`Couldn't finish the round: ${fi.error}`); return; }
-                        await notify({
-                          userIds: roster.map((x) => x.accountId).filter((id) => id !== user?.id),
-                          title: r.title,
-                          message: `${r.title} is in the books. Have a look at where things stand.`,
-                          category: "round_day",
-                          url: joinCode ? `/t/${joinCode}` : "/home",
-                        });
-                        void notifyEvent("voting_concluded_sweep", tripId);
-                        note("Round finished"); refresh();
-                      }} className="rounded-xl bg-fairway-900 px-3 py-2 text-sm font-black text-white">
+                      <button type="button" onClick={() => setConfirmFinish(r.id)}
+                        className="rounded-xl bg-fairway-900 px-3 py-2 text-sm font-black text-white">
                         Finish round
                       </button>
-                    ) : (
+                    ) : null}
+                    {r.finishedAt ? (
                       <button type="button" onClick={async () => {
                         const sb = getSupabaseClient(); if (!sb) return;
                         await reopenRound(sb, r.id); note("Round reopened"); refresh();
                       }} className="rounded-xl border-[1.5px] border-fairway-900 px-3 py-2 text-sm font-black text-fairway-900">
                         Reopen round
                       </button>
-                    )}
+                    ) : null}
                     <button
                       type="button"
                       disabled={!matchupsReady}
@@ -409,8 +497,19 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
 
                 {/* --- tee times --- */}
                 <div>
-                  <p className="mb-1 text-xs font-black uppercase tracking-wide text-slate-500">Tee times</p>
-                  <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setTeeOpen((prev) => ({ ...prev, [r.id]: prev[r.id] === false }))}
+                    className="mb-1 flex w-full items-center justify-between text-left"
+                  >
+                    <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                      Tee times ({r.teeTimes.length})
+                    </span>
+                    <span className="text-xs font-black text-slate-400">
+                      {teeOpen[r.id] === false ? "Show" : "Hide"}
+                    </span>
+                  </button>
+                  <div className={`space-y-2 ${teeOpen[r.id] === false ? "hidden" : ""}`}>
                     {r.teeTimes.map((t) => {
                       const s = segFor(r, t.id);
                       return (

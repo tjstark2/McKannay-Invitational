@@ -96,13 +96,20 @@ function seatOrder(board: DrawMatch[]): Seat[] {
 }
 
 /** The board as filled so far, for the running scoreboard under each draw. */
+/** A board row, optionally carrying which tee time and format it belongs to. */
+type RevealMatch = DrawMatch & {
+  label?: string;
+  perSide?: number;
+  points?: number;
+};
+
 function FillingBoard({
   board,
   seats,
   placed,
   P,
 }: {
-  board: DrawMatch[];
+  board: RevealMatch[];
   seats: Seat[];
   placed: number;
   P: (id: string) => Player | undefined;
@@ -115,9 +122,19 @@ function FillingBoard({
         const A = got("a");
         const B = got("b");
         const live = seats[placed]?.matchIndex === i;
+        const row = board[i] as RevealMatch;
+        const prev = i > 0 ? (board[i - 1] as RevealMatch) : null;
+        const newGroup = Boolean(row.label) && row.label !== prev?.label;
         return (
+          <div key={`wrap-${i}`}>
+          {newGroup ? (
+            <p className="mb-1 mt-2 text-[11px] font-black uppercase tracking-wide text-white/50">
+              {row.label}
+              {row.perSide ? ` · ${row.perSide === 1 ? "1v1 singles" : "2v2"}` : ""}
+              {row.points ? ` · ${row.points} ${row.points === 1 ? "pt" : "pts"}` : ""}
+            </p>
+          ) : null}
           <div
-            key={i}
             className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-xl px-3 py-2 text-[13px]"
             style={{
               background: A.length + B.length > 0 ? "rgba(243,181,10,.12)" : "rgba(255,255,255,.04)",
@@ -131,6 +148,7 @@ function FillingBoard({
             <div className="flex flex-col items-start gap-0.5">
               {B.length ? B.map((id) => <Chip key={id} p={P(id)} size={22} />) : <span className="text-white/25">-</span>}
             </div>
+          </div>
           </div>
         );
       })}
@@ -151,7 +169,7 @@ export function DrawReveal({
   onDraftResult,
 }: {
   method: DrawMethod;
-  board: DrawMatch[];
+  board: RevealMatch[];
   players: Player[];
   teams: Team[];
   coinWinner?: TeamId | null;
@@ -197,7 +215,7 @@ function SlotReveal({
   P,
   onDone,
 }: {
-  board: DrawMatch[];
+  board: RevealMatch[];
   P: (id: string) => Player | undefined;
   onDone: () => void;
 }) {
@@ -321,7 +339,7 @@ function HatReveal({
   P,
   onDone,
 }: {
-  board: DrawMatch[];
+  board: RevealMatch[];
   P: (id: string) => Player | undefined;
   onDone: () => void;
 }) {
@@ -413,7 +431,7 @@ function WheelReveal({
   P,
   onDone,
 }: {
-  board: DrawMatch[];
+  board: RevealMatch[];
   P: (id: string) => Player | undefined;
   onDone: () => void;
 }) {
@@ -449,7 +467,10 @@ function WheelReveal({
 
   const done = placed >= order.length;
   const seg = 360 / Math.max(1, remaining.length);
-  const short = (id: string) => P(id)?.name?.split(" ")[0] ?? "?";
+  const short = (id: string) => {
+    const first = P(id)?.name?.split(" ")[0] ?? "?";
+    return first.length > 9 ? `${first.slice(0, 8)}…` : first;
+  };
 
   return (
     <Stage>
@@ -478,9 +499,18 @@ function WheelReveal({
                   ? `conic-gradient(${remaining
                       .map((id, i) => {
                         const p = P(id);
-                        const c = p ? (p.team === "A" ? "#e5484d" : "#3b82f6") : "#888";
-                        const shade = i % 2 ? "cc" : "ff";
-                        return `${c}${shade} ${i * seg}deg ${(i + 1) * seg}deg`;
+                        // Alternate light and dark within the team colour so
+                        // neighbouring wedges stay distinguishable.
+                        const c = p
+                          ? p.team === "A"
+                            ? i % 2
+                              ? "#b8383c"
+                              : "#e5484d"
+                            : i % 2
+                            ? "#2f66b0"
+                            : "#3b82f6"
+                          : "#888888";
+                        return `${c} ${i * seg}deg ${(i + 1) * seg}deg`;
                       })
                       .join(",")})`
                   : "#222",
@@ -491,15 +521,34 @@ function WheelReveal({
             {remaining.map((id, i) => (
               <div
                 key={id}
-                className="absolute left-1/2 top-1/2 origin-left text-[10px] font-black text-white"
+                className="absolute left-1/2 top-1/2 origin-left whitespace-nowrap text-[11px] font-black text-white"
                 style={{
-                  transform: `rotate(${i * seg + seg / 2}deg) translateX(34px)`,
-                  textShadow: "0 1px 2px rgba(0,0,0,.8)",
+                  // The wedges are drawn by conic-gradient, which starts at 12
+                  // o'clock; CSS rotate(0) points at 3 o'clock. Without the -90
+                  // every name sat a quarter turn away from its own wedge, which
+                  // is why the wheel never looked like it landed on the winner.
+                  transform: `rotate(${i * seg + seg / 2 - 90}deg) translateX(30px)`,
+                  textShadow: "0 1px 3px rgba(0,0,0,.9)",
                 }}
               >
                 {short(id)}
               </div>
             ))}
+
+            {remaining.length > 1
+              ? remaining.map((id, i) => (
+                  <div
+                    key={`line-${id}`}
+                    className="absolute left-1/2 top-1/2 origin-left"
+                    style={{
+                      width: "50%",
+                      height: 2,
+                      background: "rgba(255,255,255,.35)",
+                      transform: `rotate(${i * seg - 90}deg)`,
+                    }}
+                  />
+                ))
+              : null}
           </div>
           <div className="absolute left-1/2 top-1/2 z-10 h-11 w-11 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-[#f3b50a] bg-[#0b2418]" />
         </div>
@@ -553,7 +602,10 @@ function DraftReveal({
   onDone: () => void;
   onDraftResult?: (b: DrawMatch[]) => void;
 }) {
-  const perSide = board[0]?.a.length ?? 1;
+  // Matches can be different sizes now (a round may mix 2v2 and 1v1), so the
+  // draft order is built from each match's own size rather than assuming the
+  // first one speaks for all of them.
+  const sizes = board.map((m) => Math.max(m.a.length, m.b.length, 1));
   const matchCount = board.length;
 
   const poolA = useMemo(
@@ -576,10 +628,17 @@ function DraftReveal({
 
   // Whose turn: alternate the thrower each match; within a match the thrower
   // fills their side, then the opponent answers.
-  const totalSeats = matchCount * perSide * 2;
+  const totalSeats = sizes.reduce((t, n) => t + n * 2, 0);
   const seatsDone = picksA.length + picksB.length;
-  const matchIndex = Math.floor(seatsDone / (perSide * 2));
-  const withinMatch = seatsDone % (perSide * 2);
+
+  // Walk the matches to find which one we are in and how far through it.
+  let matchIndex = 0;
+  let withinMatch = seatsDone;
+  while (matchIndex < sizes.length && withinMatch >= sizes[matchIndex] * 2) {
+    withinMatch -= sizes[matchIndex] * 2;
+    matchIndex += 1;
+  }
+  const perSide = sizes[Math.min(matchIndex, sizes.length - 1)] ?? 1;
   const throwerIsA = coinWinner === "A" ? matchIndex % 2 === 0 : matchIndex % 2 === 1;
   const onClock: TeamId = withinMatch < perSide ? (throwerIsA ? "A" : "B") : throwerIsA ? "B" : "A";
   const done = seatsDone >= totalSeats;
@@ -603,14 +662,20 @@ function DraftReveal({
   // Build the board from what the captains chose.
   const built: DrawMatch[] = useMemo(() => {
     const out: DrawMatch[] = [];
+    let ai = 0;
+    let bi = 0;
     for (let i = 0; i < matchCount; i++) {
+      const n = sizes[i] ?? 1;
       out.push({
-        a: picksA.slice(i * perSide, i * perSide + perSide),
-        b: picksB.slice(i * perSide, i * perSide + perSide),
+        a: picksA.slice(ai, ai + n),
+        b: picksB.slice(bi, bi + n),
       });
+      ai += n;
+      bi += n;
     }
     return out;
-  }, [picksA, picksB, matchCount, perSide]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [picksA, picksB, matchCount, sizes.join(",")]);
 
   useEffect(() => {
     if (done) onDraftResult?.(built);

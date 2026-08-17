@@ -38,26 +38,35 @@ export async function loadTripRules(
   return ((data ?? []) as Record<string, unknown>[]).map(mapRule);
 }
 
-/** Turn a preset on. Idempotent thanks to the unique index on (trip, key). */
+/**
+ * Turn a preset on.
+ *
+ * Deliberately a plain insert rather than an upsert: the unique index on
+ * (trip_id, rule_key) is PARTIAL (it only covers rows where rule_key is not
+ * null), and Postgres refuses to infer a conflict target from a partial index
+ * unless you repeat its WHERE clause - which is what produced "there is no
+ * unique or exclusion constraint matching the ON CONFLICT specification".
+ * The UI only offers presets that are not already on, and a duplicate is
+ * caught below and reported as harmless.
+ */
 export async function addPresetRule(
   supabase: SupabaseClient,
   tripId: string,
   preset: { key: string; title: string; defaultAnswer: RuleAnswer },
   sortOrder: number
 ): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await supabase.from("trip_rules").upsert(
-    {
-      trip_id: tripId,
-      rule_key: preset.key,
-      title: preset.title,
-      answer: preset.defaultAnswer,
-      is_custom: false,
-      sort_order: sortOrder,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "trip_id,rule_key" }
-  );
-  return error ? { ok: false, error: error.message } : { ok: true };
+  const { error } = await supabase.from("trip_rules").insert({
+    trip_id: tripId,
+    rule_key: preset.key,
+    title: preset.title,
+    answer: preset.defaultAnswer,
+    is_custom: false,
+    sort_order: sortOrder,
+  });
+  if (!error) return { ok: true };
+  // 23505 = already on. Nothing is wrong, so don't shout about it.
+  if ((error as { code?: string }).code === "23505") return { ok: true };
+  return { ok: false, error: error.message };
 }
 
 export async function addCustomRule(

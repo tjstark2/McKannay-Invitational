@@ -251,6 +251,11 @@ export function RulesScreen() {
             </>
           ) : null}
 
+          {/* The built-in examples only show when the organizers have not set
+              their own house rules - otherwise the screen reads as though rules
+              nobody chose are in force. */}
+          {houseRules.length === 0 ? (
+          <>
           <Card className="p-4">
             <h2 className="font-black">Divots & Bad Lies</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
@@ -298,6 +303,8 @@ export function RulesScreen() {
               tournament commissioner makes the final ruling.
             </p>
           </Card>
+          </>
+          ) : null}
         </>
       )}
 

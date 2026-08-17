@@ -16,6 +16,8 @@ import { TeamsPanel } from "@/features/trip/manage/TeamsPanel";
 import { loadVotingEnabled, setVotingEnabled as persistVoting, setTournamentWrapped } from "@/lib/supabase/roundsAdmin";
 import { notify, notifyEvent } from "@/lib/notify";
 import { RulesTab } from "@/features/trip/manage/RulesTab";
+import { BackgroundsAdmin } from "@/features/trip/screens/admin/BackgroundsAdmin";
+import { TripStateProvider } from "@/features/trip/state/TripStateContext";
 import { listActiveMembers } from "@/lib/supabase/memberships";
 import { useAuth } from "@/features/auth/AuthContext";
 
@@ -128,7 +130,8 @@ export function TournamentSettings({
   }
 
   const turningOff = confirmMode === "basic_918";
-  const hardWarning = turningOff && progress.completed > 0;
+  const liveNow = progress.inProgress > 0;
+  const hardWarning = turningOff && (liveNow || progress.completed > 0);
 
   const tabs = MANAGE_TABS.filter((t) => t.id !== "players");
 
@@ -266,6 +269,20 @@ export function TournamentSettings({
 
       {tab === "teams" ? <TeamsPanel tripId={tripId} /> : null}
 
+      {tab === "basics" && joinCode ? (
+        <div className="mt-4 overflow-hidden">
+          <p className="mb-1 text-xs font-black uppercase tracking-wide text-slate-500">
+            Tournament banner
+          </p>
+          <p className="mb-2 text-[13px] leading-5 text-slate-500">
+            The image behind the header on every screen.
+          </p>
+          <TripStateProvider initialJoinCode={joinCode}>
+            <BackgroundsAdmin />
+          </TripStateProvider>
+        </div>
+      ) : null}
+
       {tab === "rules" ? (
         <RulesTab
           tripId={tripId}
@@ -347,21 +364,28 @@ export function TournamentSettings({
           {/* 3. features */}
           <div>
             <p className="mb-1.5 text-xs font-black uppercase tracking-wide text-slate-500">
-              What Pro includes
+              {s.isPro ? "What you have" : "What Pro unlocks"}
             </p>
             <div className="mb-2 rounded-2xl border border-sand-200 bg-[#f7f6f1] p-3">
               {[
                 ["Hole-by-hole live scoring", "Every score as it happens, with a live leaderboard the whole group watches."],
                 ["Real stroke play", "Strokes given on the right holes off each course's handicap index, with per-round allowances."],
+                ["Scoring that works with no signal", "Scores save on the phone and sync themselves when the signal comes back."],
                 ["Matchup draws", "Slot machine, hat draw, spinning wheel, captain's draft and handicap auto-balance."],
-                ["Callouts", "Birdies, eagles, snowmen and blow-ups posted to the Clubhouse as they happen."],
+                ["Captain's Draft for teams", "Coin toss, then the captains take turns picking the whole roster."],
+                ["Balanced tee-time groups", "Field rounds split into groups that mix low and high handicaps evenly."],
+                ["Callouts and the snowman", "Birdies, eagles and blow-ups posted as they happen - an 8 puts a snowman on your avatar until you play it off."],
                 ["The Clubhouse", "Photos and group chat that live with the tournament."],
+                ["House rules", "Settle gimmes, mulligans and breakfast balls before the first tee."],
                 ["Post-round awards", "Vote for MVP, three-putt king and the rest after every round."],
-                ["Trip Wrapped", "A shareable recap card of the whole trip."],
+                ["Trip Wrapped and the champion moment", "A full-screen finish for the winning side, then a shareable recap of the trip."],
+                ["Custom backgrounds", "Your own imagery behind the tournament."],
                 ["Push notifications", "Tee times, matchups and live drama, each player choosing what they get."],
               ].map(([t, d]) => (
                 <div key={t} className="mt-2 flex items-start gap-2 first:mt-0">
-                  <span className="mt-0.5 text-accent-dark">✓</span>
+                  <span className={`mt-0.5 ${s.isPro ? "text-accent-dark" : "text-slate-300"}`}>
+                    {s.isPro ? "✓" : "🔒"}
+                  </span>
                   <span className="flex-1">
                     <span className="block text-[13px] font-black text-ink">{t}</span>
                     <span className="block text-[12px] leading-5 text-slate-500">{d}</span>
@@ -567,19 +591,30 @@ export function TournamentSettings({
             <h3 className="font-anton text-2xl tracking-tight text-ink">
               {turningOff ? "Switch back to 9 & 18?" : "Turn on hole by hole?"}
             </h3>
-            {hardWarning ? (
+            {turningOff && liveNow ? (
+              <div className="mt-3 rounded-2xl border-2 border-red-500 bg-red-50 p-3 text-[13px] leading-5 text-red-900">
+                <p className="text-[15px] font-black">
+                  Stop. {progress.inProgress} round
+                  {progress.inProgress === 1 ? " is" : "s are"} being played right now.
+                </p>
+                <p className="mt-1">
+                  Everyone out on the course loses the card they are entering
+                  scores on, mid-hole. The live leaderboard freezes, strokes stop
+                  being given on the right holes, and the callouts go quiet.
+                  Holes already entered stay in the database but stop counting
+                  the same way, and the awards vote for those rounds may not open.
+                </p>
+                <p className="mt-1 font-black">
+                  Finish the round first unless the whole group has agreed on the
+                  tee to switch.
+                </p>
+              </div>
+            ) : hardWarning ? (
               <div className="mt-3 rounded-2xl border-2 border-red-300 bg-red-50 p-3 text-[13px] leading-5 text-red-800">
                 <b>Careful - {progress.completed} round{progress.completed === 1 ? " has" : "s have"} already
                 finished.</b> Those rounds were scored hole by hole. Switching now changes how scores and
                 handicaps are read for the rest of the tournament, and per-hole stats and callouts stop. Only do
                 this if the group has agreed.
-              </div>
-            ) : turningOff ? (
-              <div className="mt-3 rounded-2xl border-2 border-red-300 bg-red-50 p-3 text-[13px] leading-5 text-red-800">
-                <b>A round is live right now.</b> Switch and everyone mid-round loses the per-hole card they are
-                using, the live leaderboard stops moving, strokes stop being given hole by hole, and the callouts
-                go quiet. Holes already entered stay saved but will not count the same way. Do not do this
-                unless the group has agreed on the tee.
               </div>
             ) : (
               <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-[13px] leading-5 text-emerald-900">

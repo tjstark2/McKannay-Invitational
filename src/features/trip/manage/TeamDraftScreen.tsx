@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { setPlayerTeam } from "@/lib/supabase/memberships";
 import { notify } from "@/lib/notify";
+import { sendMessage } from "@/lib/supabase/clubhouse";
 import {
   applyPick,
   draftBalance,
@@ -36,6 +37,7 @@ export function TeamDraftScreen({
   tripId,
   tripName,
   joinCode,
+  userId,
   players,
   teamName,
   teamIdOf,
@@ -45,6 +47,7 @@ export function TeamDraftScreen({
   tripId: string;
   tripName: string;
   joinCode?: string;
+  userId?: string | null;
   players: DraftPlayer[];
   teamName: (code: TeamId) => string;
   teamIdOf: (code: TeamId) => string;
@@ -119,6 +122,22 @@ export function TeamDraftScreen({
         return;
       }
     }
+    // The pick order is half the fun, so it goes on the Clubhouse board too.
+    try {
+      const order = state.picks
+        .map((p, i) => `${i + 1}. ${teamName(p.team)} take ${nameOf(p.playerId)}`)
+        .join("\n");
+      await sendMessage(supabase, {
+        tripId,
+        userId: userId ?? "",
+        body: `🪙 The draft is done.\n\n${teamName("A")}: ${result.a
+          .map(nameOf)
+          .join(", ")}\n${teamName("B")}: ${result.b.map(nameOf).join(", ")}\n\nHow it went:\n${order}`,
+      });
+    } catch {
+      /* the teams are saved either way */
+    }
+
     await notify({
       userIds: players
         .map((p) => p.accountId)

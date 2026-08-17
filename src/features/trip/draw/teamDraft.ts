@@ -99,8 +99,12 @@ export function draftBalance(
   result: { a: string[]; b: string[] },
   hcp: Record<string, number>
 ): { a: number; b: number; diff: number } {
-  const sum = (ids: string[]) => ids.reduce((t, id) => t + (hcp[id] ?? 0), 0);
+  // Handicaps are decimals, so a plain sum drifts (22.60000000000000001).
+  // Round to one place, which is the precision a handicap is quoted in anyway.
+  const round1 = (n: number) => Math.round(n * 10) / 10;
+  const sum = (ids: string[]) =>
+    round1(ids.reduce((t, id) => t + (hcp[id] ?? 0), 0));
   const a = sum(result.a);
   const b = sum(result.b);
-  return { a, b, diff: Math.abs(a - b) };
+  return { a, b, diff: round1(Math.abs(a - b)) };
 }

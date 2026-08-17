@@ -47,6 +47,18 @@ export type RoundSetup = {
   segments: Segment[];
 };
 
+/** Minutes since midnight, for sorting tee times. Unparseable goes last. */
+function clockValue(text: string): number {
+  const m = /^\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*$/i.exec(text ?? "");
+  if (!m) return 99999;
+  let h = Number(m[1]);
+  const mins = Number(m[2] ?? 0);
+  const ampm = (m[3] ?? "").toLowerCase();
+  if (ampm === "pm" && h < 12) h += 12;
+  if (ampm === "am" && h === 12) h = 0;
+  return h * 60 + mins;
+}
+
 export async function loadRoundSetups(
   supabase: SupabaseClient,
   tripId: string
@@ -89,7 +101,9 @@ export async function loadRoundSetups(
         playerCount: ((t.tee_time_players ?? []) as unknown[]).length,
         playerIds: ((t.tee_time_players ?? []) as { player_id: string }[]).map((x) => x.player_id),
       }))
-      .sort((a, b) => a.time.localeCompare(b.time));
+      // Sort by actual clock time. localeCompare put "10:00 AM" before
+      // "8:00 AM", so a late-morning tee time jumped to the top of the list.
+      .sort((a, b) => clockValue(a.time) - clockValue(b.time));
     return {
       id: r.id as string,
       roundNumber: r.round_number as number,

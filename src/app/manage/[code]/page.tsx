@@ -319,20 +319,24 @@ export default function ManagePage() {
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-sand-100 pt-3">
           <HandicapEditor member={m} tripId={trip!.id} onSaved={() => refresh(trip!)} />
 
-          {/* team assignment */}
+          {/* Team assignment.
+              Once someone is on the roster their team is shown but not changed
+              here - moving people lives on Teams & Captains, so there is one
+              place for it. These buttons still ADD an approved member to the
+              roster on the side you pick, which is their other job. */}
           <span className="inline-flex items-center gap-1.5">
-            <span className="text-xs font-bold text-slate-400">Team:</span>
+            <span className="text-xs font-bold text-slate-400">
+              {player ? "Team:" : "Add to:"}
+            </span>
             {teams.map((t) => {
               const active = !!player && player.teamId === t.dbId;
+              if (player && !active) return null;
               return (
                 <button
                   key={t.dbId}
+                  disabled={!!player}
                   onClick={() =>
-                    active
-                      ? undefined
-                      : player
-                        ? switchTeam(player.id, t.dbId)
-                        : addToRoster(m, t.dbId)
+                    player ? undefined : addToRoster(m, t.dbId)
                   }
                   className={
                     active
@@ -346,6 +350,11 @@ export default function ManagePage() {
                 </button>
               );
             })}
+            {player ? (
+              <span className="text-[11px] text-slate-400">
+                change on Teams &amp; Captains
+              </span>
+            ) : null}
             {player ? (
               <button
                 onClick={() => removeFromRoster(player.id)}

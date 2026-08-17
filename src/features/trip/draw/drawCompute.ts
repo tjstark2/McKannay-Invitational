@@ -152,6 +152,91 @@ export function computeMatches(input: ComputeInput): DrawMatch[] {
   return aPairs.map((pair, i) => ({ a: pair, b: b[i] ?? [] }));
 }
 
+/** One tee time's worth of players, with the format they're playing. */
+export type TeeSlot = {
+  teeTimeId: string;
+  label: string;
+  /** Players actually assigned to this tee time. */
+  playerIds: string[];
+  /** 1 = singles, 2 = pairs. Taken from the round segment. */
+  perSide: number;
+  points: number;
+};
+
+/** A matchup that knows which tee time it belongs to. */
+export type SlotMatch = DrawMatch & {
+  teeTimeId: string;
+  label: string;
+  perSide: number;
+  points: number;
+};
+
+/**
+ * Deal matchups WITHIN each tee time.
+ *
+ * This replaces the old whole-round pairing, which had two real faults: it
+ * built pairs from each team's full roster and then dropped any leftover
+ * player (`buildPairs(...).filter(p => p.length === 2)`), so an odd team lost
+ * someone entirely; and it ignored per-tee-time formats, so a round mixing 2v2
+ * and 1v1 was dealt as if every group were the same shape. Dealing inside the
+ * group it actually belongs to fixes both: everyone assigned to a tee time is
+ * dealt exactly once, into the format that group is really playing.
+ *
+ * Anyone in a tee time whose team has no opponent left is still placed - they
+ * appear on their side with an empty opposite slot, which the board shows as a
+ * gap to fix rather than silently swallowing them.
+ */
+export function computeSlotMatches(
+  slots: TeeSlot[],
+  players: Player[],
+  hcp: Record<string, number>,
+  method: DrawMethod
+): SlotMatch[] {
+  const teamOf = new Map(players.map((p) => [p.id, p.team]));
+  const out: SlotMatch[] = [];
+
+  for (const slot of slots) {
+    const inSlot = slot.playerIds.filter((id) => teamOf.has(id));
+    let aSide = inSlot.filter((id) => teamOf.get(id) === "A");
+    let bSide = inSlot.filter((id) => teamOf.get(id) === "B");
+
+    if (method === "autobalance") {
+      const byHcp = (x: string, y: string) => hcpOf(hcp)(x) - hcpOf(hcp)(y);
+      aSide = [...aSide].sort(byHcp);
+      bSide = [...bSide].sort(byHcp);
+    } else if (method !== "manual" && method !== "fieldmanual") {
+      aSide = shuffle(aSide);
+      bSide = shuffle(bSide);
+    }
+
+    const per = Math.max(1, slot.perSide);
+    const rounds = Math.max(
+      Math.ceil(aSide.length / per),
+      Math.ceil(bSide.length / per),
+      1
+    );
+    for (let i = 0; i < rounds; i++) {
+      const a = aSide.slice(i * per, i * per + per);
+      const b = bSide.slice(i * per, i * per + per);
+      if (a.length === 0 && b.length === 0) continue;
+      out.push({
+        a,
+        b,
+        teeTimeId: slot.teeTimeId,
+        label: slot.label,
+        perSide: per,
+        points: slot.points,
+      });
+    }
+  }
+  return out;
+}
+
+/** Every player the given slots account for - used to spot anyone left out. */
+export function playersInSlots(slots: TeeSlot[]): string[] {
+  return slots.flatMap((s) => s.playerIds);
+}
+
 /**
  * Field round: chunk players into tee-time groups of 4 (a final group of 2–3 is
  * allowed — never padded). fieldrandom shuffles; fieldmanual keeps roster order

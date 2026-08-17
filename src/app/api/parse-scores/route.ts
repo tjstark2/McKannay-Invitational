@@ -34,7 +34,7 @@ function extractJson(text: string): unknown {
 
 export async function POST(req: Request) {
   // Signed in, and within their hourly budget. Costs money past this point.
-  const guard = await guardAiRoute(req, "parse-scores", 30);
+  const guard = await guardAiRoute(req, "parse-scores", 10);
   if (!guard.ok) {
     return NextResponse.json({ ok: false, error: guard.error }, { status: guard.status });
   }

@@ -43,6 +43,8 @@ export function RulesTab({
   const [editing, setEditing] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState<TripRule | null>(null);
 
   const refresh = useCallback(async () => {
     const supabase = getSupabaseClient();
@@ -122,8 +124,62 @@ export function RulesTab({
 
   if (loading) return <p className="text-sm text-slate-400">Loading rules…</p>;
 
+  // House rules are a Pro feature end to end - free tournaments see the pitch,
+  // not a half-usable version of it.
+  if (!isPro) {
+    return (
+      <div className="rounded-2xl border-[1.5px] border-dashed border-sand-200 bg-white p-5 text-center">
+        <p className="text-3xl">📜</p>
+        <p className="mt-2 font-black text-ink">House rules are a Pro feature</p>
+        <p className="mx-auto mt-1 max-w-xs text-[13px] leading-5 text-slate-500">
+          Settle gimmes, mulligans and breakfast balls before the first tee, and
+          write your own rules on top. Everyone sees them on the Rules screen.
+        </p>
+        <button
+          type="button"
+          onClick={onUpsell}
+          className="mt-4 w-full rounded-2xl bg-fairway-900 px-4 py-3.5 font-black text-white"
+        >
+          See what Pro unlocks
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {confirmRemove ? (
+        <div className="fixed inset-0 z-[140] flex items-end justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-3xl bg-white p-5">
+            <p className="font-black text-ink">Remove {confirmRemove.title}?</p>
+            <p className="mt-1 text-[13px] leading-5 text-slate-600">
+              It comes off the Rules screen for everyone. You can add it back any
+              time.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmRemove(null)}
+                className="flex-1 rounded-2xl border-[1.5px] border-slate-300 px-4 py-3 font-black text-slate-600"
+              >
+                Keep it
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const target = confirmRemove;
+                  setConfirmRemove(null);
+                  await drop(target.id);
+                }}
+                className="flex-1 rounded-2xl bg-red-600 px-4 py-3 font-black text-white"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <p className="text-[13px] leading-5 text-slate-600">
         Settle the arguments before they happen. Anything you turn on here shows
         up for everyone on the Rules screen.
@@ -155,8 +211,8 @@ export function RulesTab({
                   <button
                     type="button"
                     aria-label={`Remove ${r.title}`}
-                    onClick={() => drop(r.id)}
-                    className="shrink-0 rounded-lg px-2 py-1 text-slate-400"
+                    onClick={() => setConfirmRemove(r)}
+                    className="tb-tap-target shrink-0 rounded-lg px-2 py-1 font-black text-red-500"
                   >
                     ✕
                   </button>
@@ -191,10 +247,17 @@ export function RulesTab({
       {/* --- catalog --- */}
       {available.length > 0 ? (
         <div className="space-y-2">
-          <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-            Common rules to add
-          </p>
-          {available.map((p) => (
+          <button
+            type="button"
+            onClick={() => setCatalogOpen((v) => !v)}
+            className="flex w-full items-center justify-between rounded-xl bg-[#f3efe6] px-3 py-2.5 text-left"
+          >
+            <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+              Common rules to add ({available.length})
+            </span>
+            <span className="font-black text-slate-400">{catalogOpen ? "−" : "+"}</span>
+          </button>
+          {catalogOpen ? available.map((p) => (
             <button
               key={p.key}
               type="button"
@@ -208,7 +271,7 @@ export function RulesTab({
               </span>
               <span className="font-black text-slate-300">+</span>
             </button>
-          ))}
+          )) : null}
         </div>
       ) : null}
 
@@ -280,8 +343,8 @@ export function RulesTab({
                   <button
                     type="button"
                     aria-label={`Remove ${r.title}`}
-                    onClick={() => drop(r.id)}
-                    className="rounded-lg px-2 py-1 text-slate-400"
+                    onClick={() => setConfirmRemove(r)}
+                    className="tb-tap-target rounded-lg px-2 py-1 font-black text-red-500"
                   >
                     ✕
                   </button>
