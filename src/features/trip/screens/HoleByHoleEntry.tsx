@@ -43,7 +43,11 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
   const [tee, setTee] = useState<{ rating: number | null; slope: number | null } | null>(null);
   const [coursePar, setCoursePar] = useState<number | null>(null);
   const [scores, setScores] = useState<HoleScore[]>([]);
+  // Which hole is on screen. Set to the first hole still missing a score once
+  // the card loads - returning to a round used to drop you back on hole 1 even
+  // with three holes already confirmed, which looked like being stuck.
   const [current, setCurrent] = useState(1);
+  const resumedRef = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -111,6 +115,7 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
     setDraft({});
   }, [current]);
 
+
   // Which tee time am I in? Anyone in the group can enter for anyone in it.
   const myPlayer = players.find((p) => p.accountId && p.accountId === user?.id);
   const myTeeTime = useMemo(() => {
@@ -158,6 +163,22 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
 
   // Every earlier hole must be complete before moving on.
   const firstIncomplete = playable.find((h) => !allInForHole(h.hole));
+  // Resume where the card actually is, once, after the first load.
+  useEffect(() => {
+    if (resumedRef.current || loading || playable.length === 0) return;
+    if (groupPlayers.length === 0) return;
+    const next = playable.find(
+      (h) => !groupPlayers.every((p) => scores.some((s) => s.playerId === p.id && s.hole === h.hole))
+    );
+    setCurrent(next ? next.hole : playable[playable.length - 1].hole);
+    resumedRef.current = true;
+  }, [loading, playable, groupPlayers, scores]);
+
+  // Switching group as an organizer means resuming that group's card instead.
+  useEffect(() => {
+    resumedRef.current = false;
+  }, [adminTeeTimeId]);
+
   const canAdvance = holeInfo ? allInForHole(holeInfo.hole) : false;
   const completedHoles = playable.filter((h) => allInForHole(h.hole)).length;
 
@@ -736,7 +757,7 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
                   {/* Buttons are built from the par of THIS hole, so the same
                       tap means Par on a 3 and on a 5. The number is what gets
                       saved; the word underneath is just how golfers say it. */}
-                  <div className="mt-2 grid grid-cols-7 gap-1">
+                  <div className="mt-2 grid grid-cols-5 gap-1.5">
                     {opts.map((o) => {
                       const on = val === o.strokes;
                       return (
@@ -748,12 +769,12 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
                           onClick={() =>
                             setDraft((d) => ({ ...d, [p.id]: o.strokes }))
                           }
-                          className={`flex flex-col items-center rounded-lg border-[1.5px] py-1 ${
+                          className={`flex flex-col items-center rounded-lg border-[1.5px] py-1.5 ${
                             on ? "border-fairway-900 bg-fairway-900 text-white" : TONE_CLASS[o.tone]
                           }`}
                         >
-                          <span className="text-[15px] font-black leading-none">{o.strokes}</span>
-                          <span className="mt-0.5 text-[8px] font-black uppercase leading-none">
+                          <span className="text-[17px] font-black leading-none">{o.strokes}</span>
+                          <span className="mt-0.5 text-[9px] font-black uppercase leading-none">
                             {o.label}
                           </span>
                         </button>

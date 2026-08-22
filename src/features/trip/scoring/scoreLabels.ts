@@ -40,15 +40,16 @@ export function scoreLabel(strokes: number, par: number): Omit<ScoreOption, "str
 }
 
 /**
- * The buttons to offer for a hole. Starts at an eagle (or 1 on a par 3, where
- * an eagle IS the ace) and runs to four over, which covers all but the truly
- * grim holes - those go through the "More" stepper.
+ * The buttons to offer for a hole: everything from 1 (an ace is always
+ * possible, and people do make them) up to four over par. Anything worse goes
+ * through the by-hand prompt.
+ *
+ * That gives 7 buttons on a par 3, 8 on a par 4 and 9 on a par 5, which lays
+ * out as two comfortable rows rather than one cramped one.
  */
 export function scoreOptions(par: number): ScoreOption[] {
-  const from = Math.max(1, par - 2);
-  const to = par + 4;
   const out: ScoreOption[] = [];
-  for (let s = from; s <= to; s++) {
+  for (let s = 1; s <= par + 4; s++) {
     out.push({ strokes: s, ...scoreLabel(s, par) });
   }
   return out;
