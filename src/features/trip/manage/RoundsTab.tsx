@@ -60,8 +60,14 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
   // Starting or finishing a round tells all ten players, so both ask first.
   const [confirmStart, setConfirmStart] = useState<string | null>(null);
   const [confirmFinish, setConfirmFinish] = useState<string | null>(null);
+  const [confirmReopen, setConfirmReopen] = useState<string | null>(null);
   // Tee-time lists get long with ten players; keep them foldable.
   const [teeOpen, setTeeOpen] = useState<Record<string, boolean>>({});
+  // How complete each round's scoring is, so finishing and reopening can warn
+  // rather than silently doing something destructive.
+  const [scoreState, setScoreState] = useState<
+    Record<string, { withScores: number; expected: number; signed: number }>
+  >({});
 
   const refresh = useCallback(async () => {
     const supabase = getSupabaseClient();
@@ -76,6 +82,29 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
     setRoster(ros);
     setCourses(cs);
     setHoleByHole(settings?.scoringMode === "hole_by_hole");
+
+    // Who has a score in, per round. Cheap enough to do for every round on
+    // this tab, and it is what the finish and reopen warnings are built on.
+    const state: Record<string, { withScores: number; expected: number; signed: number }> = {};
+    for (const r of rs) {
+      const expected = r.teeTimes.reduce((n, t) => n + t.playerIds.length, 0);
+      const [{ data: holes }, { data: entries }, { data: signed }] = await Promise.all([
+        supabase.from("hole_scores").select("player_id").eq("round_id", r.id),
+        supabase.from("score_entries").select("player_id,gross_score").eq("round_id", r.id),
+        supabase.from("round_confirmations").select("player_id").eq("round_id", r.id),
+      ]);
+      const scored = new Set<string>();
+      for (const h of (holes ?? []) as { player_id: string }[]) scored.add(h.player_id);
+      for (const e of (entries ?? []) as { player_id: string; gross_score: number | null }[]) {
+        if (e.gross_score != null) scored.add(e.player_id);
+      }
+      state[r.id] = {
+        withScores: scored.size,
+        expected,
+        signed: ((signed ?? []) as unknown[]).length,
+      };
+    }
+    setScoreState(state);
     const tees: Record<string, CourseTee[]> = {};
     for (const c of cs) tees[c.id] = await loadCourseTees(supabase, c.id);
     setTeesByCourse(tees);
@@ -194,6 +223,7 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
 
   const startTarget = rounds.find((x) => x.id === confirmStart);
   const finishTarget = rounds.find((x) => x.id === confirmFinish);
+  const reopenTarget = rounds.find((x) => x.id === confirmReopen);
 
   return (
     <div className="space-y-3">
@@ -226,7 +256,28 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
         <div className="fixed inset-0 z-[140] flex items-end justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-3xl bg-white p-5">
             <p className="font-black text-ink">Finish {finishTarget.title}?</p>
-            <p className="mt-1 text-[13px] leading-5 text-slate-600">
+            {(() => {
+              const st = scoreState[finishTarget.id];
+              const missing = st ? Math.max(0, st.expected - st.withScores) : 0;
+              return missing > 0 ? (
+                <div className="mt-2 rounded-xl border-2 border-amber-300 bg-amber-50 p-2.5">
+                  <p className="text-[13px] font-black text-amber-900">
+                    {missing} of {st.expected} player{st.expected === 1 ? "" : "s"} still
+                    {missing === 1 ? " has" : " have"} no score
+                  </p>
+                  <p className="mt-0.5 text-[13px] leading-5 text-amber-900">
+                    Finishing now locks them out - they will need an organizer to
+                    enter their card afterwards. Usually you want to wait, or
+                    check who is missing on the leaderboard first.
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-2 text-[13px] font-bold text-emerald-700">
+                  All {st?.expected ?? 0} players have a score in.
+                </p>
+              );
+            })()}
+            <p className="mt-2 text-[13px] leading-5 text-slate-600">
               Scoring closes for everyone and the awards vote for this round
               ends. You can reopen it afterwards if you need to.
             </p>
@@ -241,6 +292,51 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
                 await doFinishRound(t.id, t.title);
               }} className="flex-1 rounded-2xl bg-fairway-900 px-4 py-3 font-black text-white">
                 Finish it
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {reopenTarget ? (
+        <div className="fixed inset-0 z-[140] flex items-end justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-3xl bg-white p-5">
+            <p className="font-black text-ink">Reopen {reopenTarget.title}?</p>
+            {(() => {
+              const st = scoreState[reopenTarget.id];
+              const allIn = st ? st.expected > 0 && st.withScores >= st.expected : false;
+              return allIn ? (
+                <div className="mt-2 rounded-xl border-2 border-amber-300 bg-amber-50 p-2.5">
+                  <p className="text-[13px] font-black text-amber-900">
+                    This round is complete
+                  </p>
+                  <p className="mt-0.5 text-[13px] leading-5 text-amber-900">
+                    All {st.expected} players have a score
+                    {st.signed > 0 ? ` and ${st.signed} card${st.signed === 1 ? " is" : "s are"} signed` : ""}.
+                    Reopening lets scores change again and reopens the awards
+                    vote, so the standings can move after people have seen them.
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-2 text-[13px] leading-5 text-slate-600">
+                  Scoring opens again for everyone in this round.
+                </p>
+              );
+            })()}
+            <div className="mt-4 flex gap-2">
+              <button type="button" onClick={() => setConfirmReopen(null)}
+                className="flex-1 rounded-2xl border-[1.5px] border-slate-300 px-4 py-3 font-black text-slate-600">
+                Leave it finished
+              </button>
+              <button type="button" onClick={async () => {
+                const t = reopenTarget;
+                setConfirmReopen(null);
+                const sb = getSupabaseClient(); if (!sb) return;
+                await reopenRound(sb, t.id);
+                note("Round reopened");
+                refresh();
+              }} className="flex-1 rounded-2xl bg-fairway-900 px-4 py-3 font-black text-white">
+                Reopen it
               </button>
             </div>
           </div>
@@ -367,10 +463,8 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
                       </button>
                     ) : null}
                     {r.finishedAt ? (
-                      <button type="button" onClick={async () => {
-                        const sb = getSupabaseClient(); if (!sb) return;
-                        await reopenRound(sb, r.id); note("Round reopened"); refresh();
-                      }} className="rounded-xl border-[1.5px] border-fairway-900 px-3 py-2 text-sm font-black text-fairway-900">
+                      <button type="button" onClick={() => setConfirmReopen(r.id)}
+                        className="rounded-xl border-[1.5px] border-fairway-900 px-3 py-2 text-sm font-black text-fairway-900">
                         Reopen round
                       </button>
                     ) : null}

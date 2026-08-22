@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { logoUrl } from "./catalog";
 import { useSnowmen } from "@/features/trip/state/SnowmenContext";
 
@@ -30,6 +31,10 @@ export function PlayerAvatar({
   playerId?: string | null;
 }) {
   const snowmen = useSnowmen();
+  // An avatar row can exist with no artwork on disk (the Special Access birds
+  // were granted before their images were added). Rather than showing a broken
+  // image, fall back to the emoji or initial.
+  const [imgFailed, setImgFailed] = useState(false);
   const dim = { width: size, height: size } as React.CSSProperties;
   const ringStyle = ring
     ? ({ boxShadow: `0 0 0 2px ${ring}` } as React.CSSProperties)
@@ -54,7 +59,7 @@ export function PlayerAvatar({
     );
   }
 
-  if (avatarId) {
+  if (avatarId && !imgFailed) {
     return (
       <span
         className={`inline-flex shrink-0 overflow-hidden rounded-full bg-sand-50 ${className}`}
@@ -67,6 +72,7 @@ export function PlayerAvatar({
           height={size}
           className="h-full w-full object-cover"
           loading="lazy"
+          onError={() => setImgFailed(true)}
         />
       </span>
     );

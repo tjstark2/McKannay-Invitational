@@ -245,7 +245,11 @@ export function TeamsPanel({ tripId }: { tripId: string }) {
                       setError(`Couldn't move ${r.name}.`);
                       return;
                     }
-                    note(`${r.name} moved to ${teamName(other)}`);
+                    note(
+                      r.isCaptain
+                        ? `${r.name} moved to ${teamName(other)} - pick a new captain for ${teamName(code)}`
+                        : `${r.name} moved to ${teamName(other)}`
+                    );
                     refresh();
                   }}
                   className="rounded-full bg-white px-2.5 py-1 text-[11px] font-black text-fairway-900 disabled:opacity-40"

@@ -12,7 +12,6 @@ import { toJpeg } from "html-to-image";
 import { courseHandicap } from "@/lib/scoring";
 import { formatClock, parseClock } from "@/lib/teeTime";
 import {
-  computeMatches,
   computeGroups,
   buildDraftLog,
   flipCoin,

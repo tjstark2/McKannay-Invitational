@@ -111,46 +111,14 @@ export type ComputeInput = {
   method: DrawMethod;
 };
 
-/**
- * Compute the final matchups for a head-to-head round. Auto-Balance pairs by
- * closest handicap; the chance methods (slot/hat/wheel) and the initial Manual
- * board are a random cross-team pairing. Draft's ordering is built separately
- * (buildDraftLog) but its resulting matches are computed here too.
+/*
+ * computeMatches() used to live here: it paired each team's whole roster and
+ * then dropped any leftover player, and it ignored per-tee-time formats. Both
+ * faults are why draws dealt 8 of 10 players and repeated others. It has been
+ * replaced by computeSlotMatches(), which deals inside each tee time. Removed
+ * rather than left in place so nothing calls it again by accident.
  */
-export function computeMatches(input: ComputeInput): DrawMatch[] {
-  const { players, hcp, method } = input;
-  const shape = roundShape(input.round);
-  const aIds = teamIds(players, "A");
-  const bIds = teamIds(players, "B");
 
-  if (shape === "singles") {
-    if (method === "autobalance") {
-      const a = [...aIds].sort((x, y) => hcpOf(hcp)(x) - hcpOf(hcp)(y));
-      const b = [...bIds].sort((x, y) => hcpOf(hcp)(x) - hcpOf(hcp)(y));
-      return a.map((id, i) => ({ a: [id], b: b[i] ? [b[i]] : [] }));
-    }
-    // manual / slot / hat / wheel / draft: random cross-team pairing
-    const a = aIds;
-    const b = shuffle(bIds);
-    return a.map((id, i) => ({ a: [id], b: b[i] ? [b[i]] : [] }));
-  }
-
-  // pairs
-  const aPairs = buildPairs(aIds, hcp).filter((p) => p.length === 2);
-  const bPairsRaw = buildPairs(bIds, hcp).filter((p) => p.length === 2);
-  if (method === "autobalance") {
-    const byCombined = (arr: string[][]) =>
-      [...arr].sort(
-        (p, q) =>
-          hcpOf(hcp)(p[0]) + hcpOf(hcp)(p[1]) - (hcpOf(hcp)(q[0]) + hcpOf(hcp)(q[1]))
-      );
-    const a = byCombined(aPairs);
-    const b = byCombined(bPairsRaw);
-    return a.map((pair, i) => ({ a: pair, b: b[i] ?? [] }));
-  }
-  const b = shuffle(bPairsRaw);
-  return aPairs.map((pair, i) => ({ a: pair, b: b[i] ?? [] }));
-}
 
 /** One tee time's worth of players, with the format they're playing. */
 export type TeeSlot = {

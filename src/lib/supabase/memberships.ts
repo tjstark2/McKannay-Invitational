@@ -413,6 +413,14 @@ export async function removeRosterPlayer(
 }
 
 // Move an existing roster player to a different team.
+/**
+ * Move a player to the other team.
+ *
+ * Captaincy does not travel with them: a captain who switches sides would
+ * otherwise land on a team that already has one, leaving two captains on one
+ * side and none on the other. Their star is cleared and the organizer picks a
+ * new captain for the side they left.
+ */
 export async function setPlayerTeam(
   supabase: SupabaseClient,
   playerId: string,
@@ -420,7 +428,7 @@ export async function setPlayerTeam(
 ): Promise<boolean> {
   const { error } = await supabase
     .from("players")
-    .update({ team_id: teamDbId })
+    .update({ team_id: teamDbId, is_captain: false })
     .eq("id", playerId);
   return !error;
 }
