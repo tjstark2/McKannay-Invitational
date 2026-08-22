@@ -70,6 +70,21 @@ These are the things that stop you inviting people who are not you.
 
 ## Recently shipped
 
+**22 Aug 2026 (second bundle)**
+- Score entry rebuilt around confirm-then-write. Nothing is saved or announced
+  until the whole hole is confirmed, so callouts and pushes fire exactly once
+  and only for scores the person meant.
+- Score buttons are now par-relative: the stroke number large, the golf term
+  ("Par", "Bogey", "Double") small underneath, generated from the par of the
+  hole being played. Anything worse than a triple reads "+4", "+5" rather than
+  spelling out "quadruple bogey".
+- The hole strip is a progress bar rather than tappable navigation - holes are
+  played in order, which also stops scoring hole 2 before hole 1.
+- Test document numbers were WRONG, not the app: hole-by-hole uses relative
+  strokes off the low player (allocateForMatch), not the full course handicap
+  (courseHandicap). Two handicap implementations that disagree - a strong
+  argument for the unit tests at the top of the debt list.
+
 **22 Aug 2026**
 - Captains no longer wiped by the team draft (setPlayerTeam was clearing the
   star for every player it wrote, including the two captains).
@@ -116,6 +131,27 @@ These are the things that stop you inviting people who are not you.
   tap targets, reduce-motion support.
 
 ---
+
+## Confirm-before-effects audit (22 Aug)
+
+TJ's finding: the app fired callouts, pushes and leaderboard updates the moment
+a score was typed, before the write was confirmed. A mistyped 1 sent a
+hole-in-one push that could not be recalled, and correcting the score left the
+leaderboard showing the old one. Every place with the same shape:
+
+- **Hole-by-hole scoring** - FIXED 22 Aug. Scores are held locally until the
+  whole hole is confirmed, then written, then the effects run once.
+- **Basic-mode scoring (AddScoreScreen)** - STILL OPEN. `upsertScore` in
+  TripStateContext is typed `(score) => void`: it cannot report failure, so the
+  "an organizer updated your score" push goes out whether or not the write
+  landed. Fixing it means making that function return a result, which touches
+  every caller.
+- **Approve member / promote to admin** (manage/[code]) - STILL OPEN, minor.
+  `approveMember` and `setMemberRole` are awaited but their result is not
+  checked before the push is sent. A silently refused write would still tell
+  the person they are in.
+- **Round start / finish** - already correct, checks `.ok` first.
+- **Field group save, team draft save, card signing** - already correct.
 
 ## Still open from the 22 Aug test pass
 

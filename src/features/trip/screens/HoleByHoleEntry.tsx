@@ -10,6 +10,7 @@ import { loadCourseHoles, loadCourseTees, imageToBase64, type CourseHole } from 
 import { loadRoundSetups, type RoundSetup } from "@/lib/supabase/roundSegments";
 import { RoundConfirm } from "@/features/trip/screens/RoundConfirm";
 import { detectCallouts, clearsSnowman, type Callout } from "@/features/trip/scoring/callouts";
+import { scoreOptions, TONE_CLASS } from "@/features/trip/scoring/scoreLabels";
 import {
   detectCloseAtTurn,
   detectLeadChange,
@@ -54,6 +55,10 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
   const [photoNote, setPhotoNote] = useState<string | null>(null);
   const photoRef = useRef<HTMLInputElement>(null);
   const loadedOnceRef = useRef(false);
+  // Scores typed for the hole on screen, held locally until confirmed.
+  const [draft, setDraft] = useState<Record<string, number>>({});
+  const [confirming, setConfirming] = useState(false);
+  const [confirmedHoles, setConfirmedHoles] = useState<number[]>([]);
 
   const load = useCallback(async () => {
     const supabase = getSupabaseClient();
@@ -99,6 +104,12 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  // A fresh hole starts with an empty draft; any score already saved shows
+  // through because the buttons fall back to it.
+  useEffect(() => {
+    setDraft({});
+  }, [current]);
 
   // Which tee time am I in? Anyone in the group can enter for anyone in it.
   const myPlayer = players.find((p) => p.accountId && p.accountId === user?.id);
@@ -150,9 +161,18 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
   const canAdvance = holeInfo ? allInForHole(holeInfo.hole) : false;
   const completedHoles = playable.filter((h) => allInForHole(h.hole)).length;
 
-  async function saveScore(pid: string, hole: number, strokes: number) {
+  /**
+   * Write one score. Deliberately silent: no callouts, no pushes, no clubhouse
+   * post. Those belong to confirmHole, which runs once the whole hole has been
+   * confirmed - otherwise a mistyped 1 fires a hole-in-one notification that
+   * cannot be recalled, and deleting the score leaves the leaderboard wrong.
+   *
+   * Returns whether the database accepted it, so the caller can tell the
+   * difference between "saved" and "queued because we are offline".
+   */
+  async function saveScore(pid: string, hole: number, strokes: number): Promise<boolean> {
     const supabase = getSupabaseClient();
-    if (!supabase) return;
+    if (!supabase) return false;
     // Was there already a score here? Distinguishes a fix from a first entry.
     const wasScored = scores.some((s) => s.playerId === pid && s.hole === hole);
     setScores((prev) => {
@@ -187,64 +207,217 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
       // Still queued, so don't alarm anyone - just say what's happening.
       setError(null);
       refreshCount();
-      return;
+      return false;
     }
     dequeueScore({ roundId, playerId: pid, hole });
     refreshCount();
 
-    // Match state: did this hole flip the match, or leave it on a knife edge at
-    // the turn? Only fires on the hole that completes, so an edit to an old
-    // hole doesn't re-announce it.
+    return true;
+  }
+
+  /**
+   * Everything that should happen ONCE, after a hole has been confirmed and
+   * written: callouts, pushes, the clubhouse post, the snowman, match-state
+   * moments and the published total.
+   *
+   * Keeping this out of saveScore is the whole point. Previously each keystroke
+   * fired its own notifications, so a mistyped 1 sent a hole-in-one push that
+   * could not be taken back, and correcting the score left the leaderboard
+   * showing the old one.
+   */
+  /**
+   * Everything that should happen ONCE, after a hole has been confirmed and
+   * written: callouts, pushes, the clubhouse post, the snowman, match-state
+   * moments and the published totals.
+   *
+   * Keeping this out of saveScore is the whole point. Previously every
+   * keystroke fired its own notifications, so a mistyped 1 sent a hole-in-one
+   * push that could not be taken back, and correcting the score left the
+   * leaderboard showing the old one.
+   */
+  async function runHoleEffects(
+    hole: number,
+    entered: { pid: string; strokes: number; wasScored: boolean }[],
+    listAfter: HoleScore[]
+  ) {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    const par = playable.find((h) => h.hole === hole)?.par;
+
+    // The first score of the round starts the voting clock.
+    try {
+      await supabase
+        .from("rounds")
+        .update({ first_score_at: new Date().toISOString() })
+        .eq("id", roundId)
+        .is("first_score_at", null);
+    } catch {
+      /* non-blocking */
+    }
+
+    const others = players
+      .map((p) => p.accountId)
+      .filter((id): id is string => Boolean(id) && id !== user?.id);
+
+    for (const { pid, strokes, wasScored } of entered) {
+      const who = players.find((p) => p.id === pid);
+      if (!who || !par) continue;
+
+      // Publish the total once this player's card is complete, so the
+      // standings and the awards vote see it.
+      const mineAll = listAfter.filter(
+        (x) => x.playerId === pid && playable.some((h) => h.hole === x.hole)
+      );
+      if (mineAll.length === playable.length && playable.length > 0) {
+        const gross = mineAll.reduce((sum, x) => sum + x.strokes, 0);
+        const frontHoles = mineAll.filter((x) => x.hole <= 9);
+        const front = frontHoles.length > 0
+          ? frontHoles.reduce((sum, x) => sum + x.strokes, 0)
+          : null;
+        try {
+          await supabase.from("score_entries").upsert(
+            {
+              round_id: roundId,
+              player_id: pid,
+              gross_score: gross,
+              front_nine_score: front,
+              entered_by: user?.id ?? null,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "round_id,player_id" }
+          );
+        } catch {
+          /* the hole scores are safe either way */
+        }
+      }
+
+      // An organizer changing someone else's existing score should say so.
+      if (canManage && user?.id && who.accountId && who.accountId !== user.id && wasScored) {
+        void notify({
+          userIds: [who.accountId],
+          title: trip.name,
+          message: `An organizer updated your hole ${hole} score to ${strokes}.`,
+          category: "essential",
+          url: `/t/${trip.joinCode}`,
+        });
+      }
+
+      // Callouts for this player on this hole.
+      const mine = listAfter
+        .filter((x) => x.playerId === pid && x.hole !== hole)
+        .map((x) => ({
+          hole: x.hole,
+          par: playable.find((h) => h.hole === x.hole)?.par ?? 4,
+          strokes: x.strokes,
+        }));
+      const events = detectCallouts({
+        playerName: who.name,
+        hole,
+        par,
+        strokes,
+        roundScores: [...mine, { hole, par, strokes }],
+      });
+      const big =
+        events.find((c) => c.level === "takeover") ??
+        events.find((c) => c.level === "celebrate");
+      if (big) setCelebration(big);
+
+      for (const c of events) {
+        try {
+          await sendMessage(supabase, { tripId: trip.id, userId: user?.id ?? "", body: c.text });
+        } catch {
+          /* a callout failing must never block scoring */
+        }
+        if (c.level === "takeover" || c.level === "celebrate" || c.snowman) {
+          try {
+            if (others.length > 0) {
+              await fetch("/api/push/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  userIds: others,
+                  title: trip.name,
+                  message: c.text,
+                  category: "live_action",
+                  kind: c.key,
+                  url: `/t/${trip.joinCode}`,
+                }),
+              });
+            }
+          } catch {
+            /* never block scoring on a notification */
+          }
+        }
+        if (c.level === "takeover" || c.snowman) {
+          try {
+            await recordMoment(supabase, {
+              tripId: trip.id,
+              roundId,
+              playerId: pid,
+              kind: c.key,
+              hole,
+              body: c.text,
+            });
+          } catch {
+            /* non-blocking */
+          }
+        }
+      }
+
+      // Play your way out of the snowman: tiered by handicap.
+      if (!events.some((c) => c.snowman) && clearsSnowman(who.handicapIndex, strokes, par)) {
+        try {
+          await clearSnowman(supabase, trip.id, pid);
+        } catch {
+          /* non-blocking */
+        }
+      }
+    }
+
+    // Match state, computed once for the hole rather than per keystroke.
     if (groupPlayers.length >= 2) {
       const teamOf = (id: string) => players.find((x) => x.id === id)?.team ?? "A";
       const aSide = groupPlayers.filter((p) => teamOf(p.id) === "A");
       const bSide = groupPlayers.filter((p) => teamOf(p.id) === "B");
       if (aSide.length > 0 && bSide.length > 0) {
-        // Best net score on each hole for each side.
-        const bestNet = (
-          side: typeof groupPlayers,
-          list: HoleScore[]
-        ): Record<number, number> => {
+        const bestNet = (side: typeof groupPlayers, list: HoleScore[]) => {
           const out: Record<number, number> = {};
           for (const h of playable) {
             const nets = side
               .map((p) => {
                 const sc = list.find((x) => x.playerId === p.id && x.hole === h.hole);
                 if (!sc) return null;
-                return sc.strokes - (allocation.find((a) => a.playerId === p.id)?.byHole[h.hole] ?? 0);
+                return (
+                  sc.strokes -
+                  (allocation.find((a) => a.playerId === p.id)?.byHole[h.hole] ?? 0)
+                );
               })
               .filter((n): n is number => n != null);
             if (nets.length === side.length && nets.length > 0) out[h.hole] = Math.min(...nets);
           }
           return out;
         };
-        const listBefore = scores;
-        const listAfter = [
-          ...scores.filter((x) => !(x.playerId === pid && x.hole === hole)),
-          { playerId: pid, hole, strokes },
-        ];
+        const listBefore = listAfter.filter((x) => x.hole !== hole);
         const before = standingFromHoles(bestNet(aSide, listBefore), bestNet(bSide, listBefore));
-        const afterState = standingFromHoles(bestNet(aSide, listAfter), bestNet(bSide, listAfter));
-
-        // Only react when this save actually completed the hole for both sides.
-        if (afterState.holesComplete > before.holesComplete) {
+        const after = standingFromHoles(bestNet(aSide, listAfter), bestNet(bSide, listAfter));
+        if (after.holesComplete > before.holesComplete) {
           const teamAName = aSide.map((p) => p.name).join(" & ");
           const teamBName = bSide.map((p) => p.name).join(" & ");
           const moments = [
-            detectLeadChange(before.standing, afterState.standing, teamAName, teamBName, hole),
-            detectCloseAtTurn(afterState.holesComplete, afterState.standing, teamAName, teamBName),
+            detectLeadChange(before.standing, after.standing, teamAName, teamBName, hole),
+            detectCloseAtTurn(after.holesComplete, after.standing, teamAName, teamBName),
           ].filter((m): m is NonNullable<typeof m> => Boolean(m));
-
           for (const m of moments) {
             try {
-              await sendMessage(supabase, { tripId: trip.id, userId: user?.id ?? "", body: m.text });
+              await sendMessage(supabase, {
+                tripId: trip.id,
+                userId: user?.id ?? "",
+                body: m.text,
+              });
             } catch {
-              /* never block scoring */
+              /* non-blocking */
             }
             try {
-              const others = players
-                .map((p) => p.accountId)
-                .filter((id): id is string => Boolean(id) && id !== user?.id);
               if (others.length > 0) {
                 await fetch("/api/push/send", {
                   method: "POST",
@@ -266,143 +439,41 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
         }
       }
     }
+  }
 
-    // Keep the published total honest. Once every hole is in for this player,
-    // their gross drives the standings and the awards vote, so a later fix has
-    // to flow through to score_entries too.
-    const after = [
-      ...scores.filter((x) => !(x.playerId === pid && x.hole === hole)),
-      { playerId: pid, hole, strokes },
-    ].filter((x) => x.playerId === pid && playable.some((h) => h.hole === x.hole));
-    if (after.length === playable.length && playable.length > 0) {
-      const gross = after.reduce((sum, x) => sum + x.strokes, 0);
-      const frontHoles = after.filter((x) => x.hole <= 9);
-      const front =
-        frontHoles.length > 0
-          ? frontHoles.reduce((sum, x) => sum + x.strokes, 0)
-          : null;
-      try {
-        await supabase.from("score_entries").upsert(
-          {
-            round_id: roundId,
-            player_id: pid,
-            gross_score: gross,
-            front_nine_score: front,
-            entered_by: user?.id ?? null,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "round_id,player_id" }
-        );
-      } catch {
-        /* never block scoring */
-      }
+  /**
+   * Confirm the hole: write all four scores, then run the effects once.
+   * Nothing leaves this device until the person has said the hole is right.
+   */
+  async function confirmHole(hole: number) {
+    if (confirming) return;
+    const ids = groupPlayers.map((p) => p.id);
+    if (ids.some((id) => draft[id] == null)) return;
+    setConfirming(true);
+    setError(null);
+
+    const entered = ids.map((pid) => ({
+      pid,
+      strokes: draft[pid] as number,
+      wasScored: scores.some((x) => x.playerId === pid && x.hole === hole),
+    }));
+
+    for (const e of entered) {
+      await saveScore(e.pid, hole, e.strokes);
     }
 
-    // An organizer fixing someone else's card is worth telling them about -
-    // their signed total may have moved.
-    if (canManage && user?.id) {
-      const owner = players.find((p) => p.id === pid);
-      if (owner?.accountId && owner.accountId !== user.id && wasScored) {
-        void notify({
-          userIds: [owner.accountId],
-          title: trip.name,
-          message: `An organizer updated your hole ${hole} score to ${strokes}.`,
-          category: "essential",
-          url: `/t/${trip.joinCode}`,
-        });
-      }
-    }
+    const listAfter: HoleScore[] = [
+      ...scores.filter((x) => x.hole !== hole),
+      ...entered.map((e) => ({ playerId: e.pid, hole, strokes: e.strokes })),
+    ];
 
-    // First score of the round starts the voting clock. The is-null filter
-    // makes this a no-op every time after; RLS may quietly skip it for
-    // non-organizers, and that's fine - any organizer entry stamps it.
-    if (scores.length === 0) {
-      try {
-        await supabase
-          .from("rounds")
-          .update({ first_score_at: new Date().toISOString() })
-          .eq("id", roundId)
-          .is("first_score_at", null);
-      } catch {
-        /* non-blocking */
-      }
-    }
+    await runHoleEffects(hole, entered, listAfter);
+    setConfirming(false);
+    setConfirmedHoles((prev) => (prev.includes(hole) ? prev : [...prev, hole]));
 
-    // Trash talk. The board sees it in the Clubhouse; the big ones take over
-    // this screen too.
-    const par = playable.find((h) => h.hole === hole)?.par;
-    const who = players.find((p) => p.id === pid);
-    if (par && who) {
-      const mine = scores
-        .filter((s) => s.playerId === pid && s.hole !== hole)
-        .map((s) => ({ hole: s.hole, par: playable.find((h) => h.hole === s.hole)?.par ?? 4, strokes: s.strokes }));
-      const events = detectCallouts({
-        playerName: who.name,
-        hole,
-        par,
-        strokes,
-        roundScores: [...mine, { hole, par, strokes }],
-      });
-      const big = events.find((c) => c.level === "takeover") ?? events.find((c) => c.level === "celebrate");
-      if (big) setCelebration(big);
-      for (const c of events) {
-        try {
-          await sendMessage(supabase, { tripId: trip.id, userId: user?.id ?? "", body: c.text });
-        } catch {
-          /* a callout failing must never block scoring */
-        }
-        // Push it out. The category engine decides who actually gets it based
-        // on their intensity setting and quiet hours.
-        if (c.level === "takeover" || c.level === "celebrate" || c.snowman) {
-          try {
-            const others = players
-              .map((p) => p.accountId)
-              .filter((id): id is string => Boolean(id) && id !== user?.id);
-            if (others.length > 0) {
-              await fetch("/api/push/send", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  userIds: others,
-                  title: trip.name,
-                  message: c.text,
-                  category: "live_action",
-                  kind: c.key,
-                  url: `/t/${trip.joinCode}`,
-                }),
-              });
-            }
-          } catch {
-            /* never block scoring on a notification */
-          }
-        }
-        // Persist the ones worth showing later, and the sticky snowman.
-        if (c.level === "takeover" || c.snowman) {
-          try {
-            await recordMoment(supabase, {
-              tripId: trip.id,
-              roundId,
-              playerId: pid,
-              kind: c.key,
-              hole,
-              body: c.text,
-            });
-          } catch {
-            /* non-blocking */
-          }
-        }
-      }
-      // Play your way out of the snowman: tiered by handicap.
-      if (events.length === 0 || !events.some((c) => c.snowman)) {
-        if (clearsSnowman(who.handicapIndex, strokes, par)) {
-          try {
-            await clearSnowman(supabase, trip.id, pid);
-          } catch {
-            /* non-blocking */
-          }
-        }
-      }
-    }
+    // Straight on to the next hole - that is what you want standing on a tee.
+    const idx = playable.findIndex((h) => h.hole === hole);
+    if (idx >= 0 && idx < playable.length - 1) setCurrent(playable[idx + 1].hole);
   }
 
   async function readScorecard(file: File) {
@@ -501,6 +572,11 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
         You are not in a tee time for this round yet. An admin sets those in Manage My Tournament.
       </div>
     );
+
+  const draftedCount = groupPlayers.filter(
+    (p) => (draft[p.id] ?? scoreFor(p.id, current)) != null
+  ).length;
+  const allDrafted = groupPlayers.length > 0 && draftedCount === groupPlayers.length;
 
   const strokesOn = (pid: string, hole: number) =>
     allocation.find((a) => a.playerId === pid)?.byHole[hole] ?? 0;
@@ -603,26 +679,19 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
         </p>
       </div>
 
-      {/* hole strip */}
-      <div className="flex gap-1 overflow-x-auto pb-1">
+      {/* Progress, not navigation. You play a round one hole at a time, and
+          letting people jump around was producing holes scored out of order. */}
+      <div className="flex gap-1 overflow-x-auto pb-1" aria-label="Holes completed">
         {playable.map((h) => {
           const done = allInForHole(h.hole);
           const isNow = h.hole === current;
           return (
-            <button
+            <span
               key={h.hole}
-              type="button"
-              onClick={() => setCurrent(h.hole)}
-              className={`min-w-[42px] rounded-xl px-2 py-1.5 text-center text-[12px] font-black ${
-                isNow
-                  ? "bg-fairway-900 text-white"
-                  : done
-                  ? "bg-emerald-100 text-emerald-700"
-                  : "bg-white text-slate-400"
+              className={`h-1.5 min-w-[14px] flex-1 rounded-full ${
+                isNow ? "bg-fairway-900" : done ? "bg-emerald-400" : "bg-sand-200"
               }`}
-            >
-              {h.hole}
-            </button>
+            />
           );
         })}
       </div>
@@ -639,8 +708,10 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
 
           <div className="space-y-2">
             {groupPlayers.map((p) => {
-              const val = scoreFor(p.id, holeInfo.hole);
+              const saved = scoreFor(p.id, holeInfo.hole);
+              const val = draft[p.id] ?? saved;
               const gets = strokesOn(p.id, holeInfo.hole);
+              const opts = scoreOptions(holeInfo.par);
               return (
                 <div key={p.id} className="rounded-xl bg-[#f7f6f1] p-2.5">
                   <div className="flex items-center gap-2">
@@ -649,31 +720,60 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
                       {p.name}
                       {gets > 0 ? (
                         <span className="ml-1 text-[12px] font-bold text-accent-dark">
-                          {"•".repeat(gets)} {gets} stroke{gets === 1 ? "" : "s"}
+                          {gets} stroke{gets === 1 ? "" : "s"} here
                         </span>
                       ) : null}
                     </span>
-                    {val !== null ? (
+                    {val != null ? (
                       <span className="text-[12px] font-bold text-slate-500">
                         net {val - gets}
                       </span>
-                    ) : null}
+                    ) : (
+                      <span className="text-[12px] font-bold text-slate-400">tap a score</span>
+                    )}
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                      <button
-                        key={n}
-                        type="button"
-                        disabled={busy}
-                        onClick={() => saveScore(p.id, holeInfo.hole, n)}
-                        className={`h-9 w-9 rounded-lg text-sm font-black ${
-                          val === n ? "bg-fairway-900 text-white" : "bg-white text-slate-600"
-                        }`}
-                      >
-                        {n}
-                      </button>
-                    ))}
+
+                  {/* Buttons are built from the par of THIS hole, so the same
+                      tap means Par on a 3 and on a 5. The number is what gets
+                      saved; the word underneath is just how golfers say it. */}
+                  <div className="mt-2 grid grid-cols-7 gap-1">
+                    {opts.map((o) => {
+                      const on = val === o.strokes;
+                      return (
+                        <button
+                          key={o.strokes}
+                          type="button"
+                          disabled={confirming}
+                          aria-label={`${p.name}: ${o.strokes}, ${o.spoken}`}
+                          onClick={() =>
+                            setDraft((d) => ({ ...d, [p.id]: o.strokes }))
+                          }
+                          className={`flex flex-col items-center rounded-lg border-[1.5px] py-1 ${
+                            on ? "border-fairway-900 bg-fairway-900 text-white" : TONE_CLASS[o.tone]
+                          }`}
+                        >
+                          <span className="text-[15px] font-black leading-none">{o.strokes}</span>
+                          <span className="mt-0.5 text-[8px] font-black uppercase leading-none">
+                            {o.label}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const raw = window.prompt(`${p.name} - how many shots on hole ${holeInfo.hole}?`);
+                      const n = Number((raw ?? "").trim());
+                      if (Number.isFinite(n) && n >= 1 && n <= 20) {
+                        setDraft((d) => ({ ...d, [p.id]: n }));
+                      }
+                    }}
+                    className="mt-1 w-full text-[11px] font-bold text-slate-400"
+                  >
+                    Something worse? Enter it by hand
+                  </button>
                 </div>
               );
             })}
@@ -682,21 +782,33 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
           <div className="mt-4 flex gap-2">
             <button
               type="button"
-              disabled={holeIdx <= 0}
-              onClick={() => setCurrent(playable[holeIdx - 1].hole)}
+              disabled={holeIdx <= 0 || confirming}
+              onClick={() => {
+                setDraft({});
+                setCurrent(playable[holeIdx - 1].hole);
+              }}
               className="rounded-2xl border-[1.5px] border-slate-300 px-4 py-3 font-black text-slate-600 disabled:opacity-40"
             >
               ‹
             </button>
             <button
               type="button"
-              disabled={!canAdvance || holeIdx >= playable.length - 1}
-              onClick={() => setCurrent(playable[holeIdx + 1].hole)}
-              className="flex-1 rounded-2xl bg-fairway-900 px-4 py-3 font-black text-white disabled:opacity-40"
+              disabled={!allDrafted || confirming}
+              onClick={() => void confirmHole(holeInfo.hole)}
+              className="flex-1 rounded-2xl bg-fairway-900 px-4 py-3.5 font-black text-white disabled:opacity-40"
             >
-              {canAdvance ? "Next hole ›" : "Everyone needs a score first"}
+              {confirming
+                ? "Saving…"
+                : allDrafted
+                ? `Confirm hole ${holeInfo.hole}`
+                : `${groupPlayers.length - draftedCount} still to score`}
             </button>
           </div>
+
+          <p className="mt-2 text-center text-[12px] leading-5 text-slate-500">
+            Nothing is saved or announced until you confirm. Check the numbers
+            first - a confirmed hole sends the callouts.
+          </p>
         </div>
       ) : null}
 
