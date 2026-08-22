@@ -53,11 +53,16 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
   >(null);
   const [photoNote, setPhotoNote] = useState<string | null>(null);
   const photoRef = useRef<HTMLInputElement>(null);
+  const loadedOnceRef = useRef(false);
 
   const load = useCallback(async () => {
     const supabase = getSupabaseClient();
     if (!supabase) return;
-    setLoading(true);
+    // Only block the screen on the FIRST load. After that keep showing the card
+    // we already have and refresh underneath - otherwise going offline mid-round
+    // replaces a working scorecard with a spinner that never resolves.
+    if (!loadedOnceRef.current) setLoading(true);
+    try {
     const setups = await loadRoundSetups(supabase, trip.id);
     const r = setups.find((x) => x.id === roundId) ?? null;
     setRound(r);
@@ -82,7 +87,13 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
         strokes: s.strokes as number,
       }))
     );
-    setLoading(false);
+    } catch {
+      // Offline or a flaky connection. Whatever is already on screen stays put,
+      // and the offline queue keeps accepting scores.
+    } finally {
+      loadedOnceRef.current = true;
+      setLoading(false);
+    }
   }, [roundId, trip.id]);
 
   useEffect(() => {
@@ -437,6 +448,19 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
   }
 
   if (loading) return <p className="text-sm text-slate-400">Loading the card…</p>;
+
+  if (!round) {
+    return (
+      <div className="rounded-2xl border-[1.5px] border-amber-200 bg-amber-50 p-4">
+        <p className="font-black text-amber-900">Can&apos;t load this round</p>
+        <p className="mt-1 text-[13px] leading-5 text-amber-900">
+          {online
+            ? "Something went wrong fetching the card. Pull down to try again."
+            : "You are offline and this round has not been opened on this phone yet. Get a signal once and it will work offline from then on."}
+        </p>
+      </div>
+    );
+  }
   if (!round) return <p className="text-sm text-slate-400">Round not found.</p>;
   if (holes.length === 0)
     return (

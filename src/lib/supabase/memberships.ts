@@ -424,12 +424,18 @@ export async function removeRosterPlayer(
 export async function setPlayerTeam(
   supabase: SupabaseClient,
   playerId: string,
-  teamDbId: string
+  teamDbId: string,
+  /**
+   * Keep their captain star. The team draft assigns EVERY player through this
+   * function, including the two captains, who are being written back to the
+   * side they already captain - stripping their star there would leave the
+   * tournament with no captains at all.
+   */
+  keepCaptain = false
 ): Promise<boolean> {
-  const { error } = await supabase
-    .from("players")
-    .update({ team_id: teamDbId, is_captain: false })
-    .eq("id", playerId);
+  const patch: Record<string, unknown> = { team_id: teamDbId };
+  if (!keepCaptain) patch.is_captain = false;
+  const { error } = await supabase.from("players").update(patch).eq("id", playerId);
   return !error;
 }
 

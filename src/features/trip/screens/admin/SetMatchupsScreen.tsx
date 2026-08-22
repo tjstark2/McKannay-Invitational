@@ -796,7 +796,28 @@ export function SetMatchupsScreen({
                 const inSlot = board
                   .map((m, i) => ({ m, i }))
                   .filter((x) => x.m.teeTimeId === slot.teeTimeId);
-                if (inSlot.length === 0) return null;
+                if (inSlot.length === 0) {
+                  // A tee time with nobody in it still gets a card, otherwise
+                  // the board silently shows fewer groups than the Rounds tab
+                  // and it looks like players have gone missing.
+                  return (
+                    <div
+                      key={slot.teeTimeId}
+                      className="rounded-2xl border-[1.5px] border-dashed border-amber-300 bg-amber-50 p-3"
+                    >
+                      <div className="flex items-baseline justify-between">
+                        <span className="font-black text-amber-900">{slot.label}</span>
+                        <span className="text-[11px] font-black uppercase tracking-wide text-amber-700">
+                          Empty
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[13px] leading-5 text-amber-900">
+                        Nobody is in this tee time, so there is nothing to draw.
+                        Add players to it or delete it on the Rounds tab.
+                      </p>
+                    </div>
+                  );
+                }
                 return (
                   <div
                     key={slot.teeTimeId}

@@ -74,9 +74,42 @@ export function FieldGroupBoard({
 
   return (
     <div>
+      <div className="mb-3 flex items-end gap-2 rounded-2xl bg-[#f3efe6] p-3">
+        <label className="flex-1">
+          <span className="block text-[11px] font-black uppercase tracking-wide text-slate-500">
+            First tee
+          </span>
+          <input
+            type="time"
+            value={toTimeInput(startTime)}
+            onChange={(e) => {
+              const next = fromTimeInput(e.target.value);
+              if (next) onStartTimeChange(next);
+            }}
+            className="mt-1 w-full rounded-xl border-[1.5px] border-sand-200 bg-white px-3 py-2 font-bold text-ink outline-none focus:border-fairway-900"
+          />
+        </label>
+        <label className="w-28">
+          <span className="block text-[11px] font-black uppercase tracking-wide text-slate-500">
+            Gap (min)
+          </span>
+          <input
+            inputMode="numeric"
+            value={String(stepMinutes)}
+            onChange={(e) => {
+              const n = Number(e.target.value.replace(/[^0-9]/g, ""));
+              onStepChange(Number.isFinite(n) && n > 0 ? n : 0);
+            }}
+            className="mt-1 w-full rounded-xl border-[1.5px] border-sand-200 bg-white px-3 py-2 font-bold text-ink outline-none focus:border-fairway-900"
+          />
+        </label>
+      </div>
+
       <div className="mb-3 flex items-center justify-between">
         <span className="text-[13px] font-bold text-slate-400">
-          {sel ? "Tap another player to swap" : "Tap two players to swap them"}
+          {sel
+            ? "Tap another player to swap"
+            : "Tap two players to swap them - any group, either team"}
         </span>
         {spread != null ? (
           <span
@@ -130,6 +163,7 @@ export function FieldGroupBoard({
                       name={p?.name}
                       size={20}
                       playerId={pid}
+                      ring={p?.team === "A" ? "#e5484d" : "#3b82f6"}
                     />
                     <span className="text-[13px] font-bold text-ink">{nameOf(pid)}</span>
                     {showHandicaps ? (
@@ -146,37 +180,6 @@ export function FieldGroupBoard({
             ) : null}
           </div>
         ))}
-      </div>
-
-      <div className="mt-3 flex items-end gap-2 rounded-2xl bg-[#f3efe6] p-3">
-        <label className="flex-1">
-          <span className="block text-[11px] font-black uppercase tracking-wide text-slate-500">
-            First tee
-          </span>
-          <input
-            type="time"
-            value={toTimeInput(startTime)}
-            onChange={(e) => {
-              const next = fromTimeInput(e.target.value);
-              if (next) onStartTimeChange(next);
-            }}
-            className="mt-1 w-full rounded-xl border-[1.5px] border-sand-200 bg-white px-3 py-2 font-bold text-ink outline-none focus:border-fairway-900"
-          />
-        </label>
-        <label className="w-28">
-          <span className="block text-[11px] font-black uppercase tracking-wide text-slate-500">
-            Gap (min)
-          </span>
-          <input
-            inputMode="numeric"
-            value={String(stepMinutes)}
-            onChange={(e) => {
-              const n = Number(e.target.value.replace(/[^0-9]/g, ""));
-              onStepChange(Number.isFinite(n) && n > 0 ? n : 0);
-            }}
-            className="mt-1 w-full rounded-xl border-[1.5px] border-sand-200 bg-white px-3 py-2 font-bold text-ink outline-none focus:border-fairway-900"
-          />
-        </label>
       </div>
 
       <div className="mt-3 flex gap-2 pb-8">

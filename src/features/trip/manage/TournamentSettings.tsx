@@ -271,11 +271,8 @@ export function TournamentSettings({
 
       {tab === "basics" && joinCode ? (
         <div className="mt-4 overflow-hidden">
-          <p className="mb-1 text-xs font-black uppercase tracking-wide text-slate-500">
+          <p className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">
             Tournament banner
-          </p>
-          <p className="mb-2 text-[13px] leading-5 text-slate-500">
-            The image behind the header on every screen.
           </p>
           <TripStateProvider initialJoinCode={joinCode}>
             <BackgroundsAdmin />

@@ -5,6 +5,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import { useAuth } from "@/features/auth/AuthContext";
 import { TeamDraftScreen } from "@/features/trip/manage/TeamDraftScreen";
 import { setPlayerTeam } from "@/lib/supabase/memberships";
+import { FloatingNote } from "@/components/ui/FloatingNote";
 import {
   loadRoster,
   setCaptain,
@@ -50,11 +51,14 @@ export function TeamsPanel({ tripId }: { tripId: string }) {
     }
     // Once a round is under way, moving people between teams would rewrite
     // matchups and points that are already being played for.
+    // Live means started AND not yet finished. Counting every started round
+    // left teams locked forever once any round had been played.
     const { count: liveRounds } = await supabase
       .from("rounds")
       .select("id", { count: "exact", head: true })
       .eq("trip_id", tripId)
-      .not("started_at", "is", null);
+      .not("started_at", "is", null)
+      .is("finished_at", null);
     setRoundLive((liveRounds ?? 0) > 0);
 
     const { data: p } = await supabase
@@ -212,9 +216,40 @@ export function TeamsPanel({ tripId }: { tripId: string }) {
           <div className="mt-2 space-y-1">
             {side(code).map((r) => (
               <div key={r.id} className="flex items-center gap-2 rounded-lg bg-[#f7f6f1] px-2.5 py-1.5">
-                <span className="flex-1 text-[13px] font-bold text-ink">
-                  {r.name} <span className="font-normal text-slate-400">({r.handicap})</span>
-                </span>
+                <span className="flex-1 truncate text-[13px] font-bold text-ink">{r.name}</span>
+                <input
+                  inputMode="decimal"
+                  aria-label={`Handicap for ${r.name}`}
+                  defaultValue={r.handicap == null || Number(r.handicap) === 0 ? "" : String(r.handicap)}
+                  placeholder="hcp"
+                  onBlur={async (e) => {
+                    const raw = e.target.value.trim();
+                    if (raw === "") return;
+                    const n = Number(raw);
+                    if (!Number.isFinite(n) || n < 0 || n > 54) {
+                      setError(`${raw} is not a handicap between 0 and 54.`);
+                      return;
+                    }
+                    const supabase = getSupabaseClient();
+                    if (!supabase) return;
+                    const { error: he } = await supabase
+                      .from("players")
+                      .update({ handicap_index: n })
+                      .eq("id", r.id)
+                      .select("id");
+                    if (he) {
+                      setError(`Couldn't save ${r.name}'s handicap.`);
+                      return;
+                    }
+                    note(`${r.name} set to ${n}`);
+                    refresh();
+                  }}
+                  className={`w-14 rounded-lg border-[1.5px] px-1.5 py-1 text-center text-[13px] font-black ${
+                    r.handicap == null || Number(r.handicap) === 0
+                      ? "border-amber-400 bg-amber-50"
+                      : "border-sand-200 bg-white"
+                  }`}
+                />
                 <button
                   type="button"
                   onClick={async () => {
@@ -224,8 +259,10 @@ export function TeamsPanel({ tripId }: { tripId: string }) {
                     note(r.isCaptain ? "Captain cleared" : `${r.name} is captain`);
                     refresh();
                   }}
-                  className={`rounded-full px-2.5 py-1 text-[11px] font-black ${
-                    r.isCaptain ? "bg-accent text-ink" : "bg-white text-slate-400"
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${
+                    r.isCaptain
+                      ? "bg-accent text-ink"
+                      : "border-[1.5px] border-fairway-900 bg-white text-fairway-900"
                   }`}
                 >
                   {r.isCaptain ? "⭐ Captain" : "Make captain"}
@@ -264,7 +301,8 @@ export function TeamsPanel({ tripId }: { tripId: string }) {
       ))}
 
       {error ? <p className="text-sm font-bold text-red-600">{error}</p> : null}
-      {toast ? <p className="text-sm font-bold text-emerald-700">{toast}</p> : null}
+      <FloatingNote text={toast} onDone={() => setToast(null)} />
+      <FloatingNote text={error} tone="error" onDone={() => setError(null)} />
 
       {confirmPick ? (
         <div className="fixed inset-0 z-[165] flex items-center justify-center bg-black/70 p-5">

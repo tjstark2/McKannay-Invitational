@@ -107,7 +107,8 @@ export function TeamDraftScreen({
       return;
     }
     for (const pid of result.a) {
-      const ok = await setPlayerTeam(supabase, pid, aId);
+      // Captains keep their star - they are being written to their own side.
+      const ok = await setPlayerTeam(supabase, pid, aId, pid === captainA);
       if (!ok) {
         setBusy(false);
         setError(`Couldn't move ${nameOf(pid)} to ${teamName("A")}.`);
@@ -115,7 +116,7 @@ export function TeamDraftScreen({
       }
     }
     for (const pid of result.b) {
-      const ok = await setPlayerTeam(supabase, pid, bId);
+      const ok = await setPlayerTeam(supabase, pid, bId, pid === captainB);
       if (!ok) {
         setBusy(false);
         setError(`Couldn't move ${nameOf(pid)} to ${teamName("B")}.`);

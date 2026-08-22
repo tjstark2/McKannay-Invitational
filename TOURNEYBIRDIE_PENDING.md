@@ -70,6 +70,24 @@ These are the things that stop you inviting people who are not you.
 
 ## Recently shipped
 
+**22 Aug 2026**
+- Captains no longer wiped by the team draft (setPlayerTeam was clearing the
+  star for every player it wrote, including the two captains).
+- Teams unlock again once a round finishes - "live" now means started AND not
+  finished, so any played round used to lock teams permanently.
+- Hole-by-hole no longer hangs on "Loading the card" offline: the load is
+  wrapped, only the first load blocks the screen, and a clear message replaces
+  the spinner if the round was never opened online.
+- Handicaps editable directly on Teams & Captains, so players with no account
+  (seeded or manually added) can finally be given one.
+- Move and error messages float above the page instead of rendering at the
+  bottom of a long tab where nobody sees them.
+- Field group board: time and gap controls moved above the group list, team
+  colour rings on each player.
+- Empty tee times now show as an amber card on the matchup board instead of
+  silently disappearing.
+- Banner heading shortened to stop it overflowing.
+
 **21 Aug 2026**
 - Special Access artwork for Wade (`Hawk_Dangerous11`) and Colum
   (`Osprey_LuckyRead`): logo badges and cards built to match the existing set
@@ -98,6 +116,19 @@ These are the things that stop you inviting people who are not you.
   tap targets, reduce-motion support.
 
 ---
+
+## Still open from the 22 Aug test pass
+
+- **Pro upgrade does not actually upgrade** (step 83). The screen returns to
+  the Pro tab correctly but the tournament stays free. Needs investigation.
+- **Post-round awards should be listed as Pro** in the feature list (step 81).
+- **Tee It Up shows all players, not just your group** (step 89). Needs a
+  closer look - it may be the organizer group picker being mistaken for the
+  roster, or a genuine scoping bug.
+- **Rounds tab is too busy.** TJ wants more of it behind tabs or folds.
+- **Push cannot be received on the computer** (steps 30, 74). Web push needs
+  notification permission, which Computer B does not have. The test document
+  should stop asking for it - swap the roles or mark those rows N/A.
 
 ## Open questions for TJ
 
