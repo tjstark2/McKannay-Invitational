@@ -70,6 +70,26 @@ These are the things that stop you inviting people who are not you.
 
 ## Recently shipped
 
+**22 Aug 2026 (third bundle)**
+- Confirming an already-scored hole did nothing: confirmHole required a draft
+  value for every player, and on a hole you scored earlier the draft is empty.
+  It now falls back to the saved score, and the button reads "Save changes to
+  hole N" so you can tell the two apart.
+- Signing wrote only to the database, never to the app's own state, so the
+  awards vote never opened and the signed gross never reached the leaderboard.
+  Signing now publishes through the trip state as well.
+- The organizer group picker only appeared with MORE than one tee time, so on a
+  single-group round an organizer could not open a signed card at all.
+- On a completed card, signing now sits ABOVE the hole entry, which is folded
+  behind "Need to fix a hole?" - previously "Confirm hole 18" was the most
+  prominent button on a finished round.
+- Two players earning a takeover on the same hole now queue instead of the
+  second replacing the first before you have read it.
+- SERVICE WORKER now caches the app shell. The app could not previously LAUNCH
+  without a signal - the offline score queue only helped if you already had it
+  open. Navigations are network-first with a cached fallback and the cache is
+  versioned, so a force-quit still lands on fresh code.
+
 **22 Aug 2026 (second bundle)**
 - Score entry rebuilt around confirm-then-write. Nothing is saved or announced
   until the whole hole is confirmed, so callouts and pushes fire exactly once

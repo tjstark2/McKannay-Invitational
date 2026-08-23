@@ -52,6 +52,10 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [celebration, setCelebration] = useState<Callout | null>(null);
+  // Two players can both earn a takeover on the same hole. They queue up and
+  // wait their turn rather than the second one replacing the first before you
+  // have read it.
+  const [celebrationQueue, setCelebrationQueue] = useState<Callout[]>([]);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoReview, setPhotoReview] = useState<
     { name: string; playerId: string; holes: { hole: number; strokes: number }[] }[] | null
@@ -63,6 +67,9 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
   const [draft, setDraft] = useState<Record<string, number>>({});
   const [confirming, setConfirming] = useState(false);
   const [confirmedHoles, setConfirmedHoles] = useState<number[]>([]);
+  // On a completed card the hole entry is hidden behind a button so signing is
+  // the obvious next step.
+  const [showAllHoles, setShowAllHoles] = useState(false);
 
   const load = useCallback(async () => {
     const supabase = getSupabaseClient();
@@ -261,6 +268,7 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
     entered: { pid: string; strokes: number; wasScored: boolean }[],
     listAfter: HoleScore[]
   ) {
+    const bigMoments: Callout[] = [];
     const supabase = getSupabaseClient();
     if (!supabase) return;
     const par = playable.find((h) => h.hole === hole)?.par;
@@ -341,7 +349,7 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
       const big =
         events.find((c) => c.level === "takeover") ??
         events.find((c) => c.level === "celebrate");
-      if (big) setCelebration(big);
+      if (big) bigMoments.push(big);
 
       for (const c of events) {
         try {
@@ -393,6 +401,11 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
           /* non-blocking */
         }
       }
+    }
+
+    if (bigMoments.length > 0) {
+      setCelebration(bigMoments[0]);
+      setCelebrationQueue(bigMoments.slice(1));
     }
 
     // Match state, computed once for the hole rather than per keystroke.
@@ -469,15 +482,19 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
   async function confirmHole(hole: number) {
     if (confirming) return;
     const ids = groupPlayers.map((p) => p.id);
-    if (ids.some((id) => draft[id] == null)) return;
+    // Fall back to what is already saved. Re-confirming a hole you scored
+    // earlier means the draft only holds the values you just changed, and
+    // requiring a draft entry for everyone made the button silently do nothing.
+    const resolved = ids.map((pid) => ({
+      pid,
+      strokes: draft[pid] ?? scoreFor(pid, hole),
+      wasScored: scores.some((x) => x.playerId === pid && x.hole === hole),
+    }));
+    if (resolved.some((r) => r.strokes == null)) return;
     setConfirming(true);
     setError(null);
 
-    const entered = ids.map((pid) => ({
-      pid,
-      strokes: draft[pid] as number,
-      wasScored: scores.some((x) => x.playerId === pid && x.hole === hole),
-    }));
+    const entered = resolved as { pid: string; strokes: number; wasScored: boolean }[];
 
     for (const e of entered) {
       await saveScore(e.pid, hole, e.strokes);
@@ -635,7 +652,7 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
         </div>
       ) : null}
 
-      {canManage && (round?.teeTimes.length ?? 0) > 1 ? (
+      {canManage && (round?.teeTimes.length ?? 0) > 0 ? (
         <div className="rounded-2xl border-[1.5px] border-sand-200 bg-white p-3">
           <p className="text-xs font-black uppercase tracking-wide text-slate-500">
             Scoring group
@@ -717,8 +734,32 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
         })}
       </div>
 
+      {completedHoles === playable.length ? (
+        <RoundConfirm
+          roundId={roundId}
+          groupPlayers={groupPlayers}
+          holes={playable}
+          scores={scores}
+          strokesOn={strokesOn}
+          onLocked={load}
+        />
+      ) : null}
+
+      {/* Once every hole is in, signing is the only thing left. Showing the
+          hole card above it left "Confirm hole 18" as the most prominent
+          button on a finished card. */}
+      {completedHoles === playable.length && !showAllHoles ? (
+        <button
+          type="button"
+          onClick={() => setShowAllHoles(true)}
+          className="w-full rounded-2xl border-[1.5px] border-sand-200 bg-white px-4 py-3 text-[13px] font-black text-slate-500"
+        >
+          Need to fix a hole? Reopen the scorecard
+        </button>
+      ) : null}
+
       {/* current hole */}
-      {holeInfo ? (
+      {holeInfo && (completedHoles < playable.length || showAllHoles) ? (
         <div className="rounded-2xl border-2 border-sand-200 bg-white p-4">
           <div className="mb-3 text-center">
             <p className="font-anton text-3xl tracking-tight text-ink">Hole {holeInfo.hole}</p>
@@ -808,9 +849,9 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
                 setDraft({});
                 setCurrent(playable[holeIdx - 1].hole);
               }}
-              className="rounded-2xl border-[1.5px] border-slate-300 px-4 py-3 font-black text-slate-600 disabled:opacity-40"
+              className="rounded-2xl border-[1.5px] border-slate-300 px-3 py-3 text-[13px] font-black text-slate-600 disabled:opacity-40"
             >
-              ‹
+              ‹ Hole {holeIdx > 0 ? playable[holeIdx - 1].hole : ""}
             </button>
             <button
               type="button"
@@ -820,9 +861,11 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
             >
               {confirming
                 ? "Saving…"
-                : allDrafted
-                ? `Confirm hole ${holeInfo.hole}`
-                : `${groupPlayers.length - draftedCount} still to score`}
+                : !allDrafted
+                ? `${groupPlayers.length - draftedCount} still to score`
+                : allInForHole(holeInfo.hole)
+                ? `Save changes to hole ${holeInfo.hole}`
+                : `Confirm hole ${holeInfo.hole}`}
             </button>
           </div>
 
@@ -884,7 +927,12 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
       {celebration ? (
         <div
           className="fixed inset-0 z-[180] flex items-center justify-center bg-black/80 p-6"
-          onClick={() => setCelebration(null)}
+          onClick={() => {
+            setCelebrationQueue((q) => {
+              setCelebration(q[0] ?? null);
+              return q.slice(1);
+            });
+          }}
         >
           <div className="text-center">
             <p className="text-[72px] leading-none">
@@ -893,7 +941,11 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
             <p className="mt-4 font-anton text-3xl leading-tight tracking-tight text-white">
               {celebration.text}
             </p>
-            <p className="mt-4 text-sm font-bold text-white/60">Tap anywhere to keep scoring</p>
+            <p className="mt-4 text-sm font-bold text-white/60">
+              {celebrationQueue.length > 0
+                ? `Tap for the next one (${celebrationQueue.length} more)`
+                : "Tap anywhere to keep scoring"}
+            </p>
           </div>
         </div>
       ) : null}
@@ -905,21 +957,12 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
         {firstIncomplete ? ` · next gap: hole ${firstIncomplete.hole}` : " · card complete"}
       </div>
 
-      {completedHoles === playable.length ? (
-        <RoundConfirm
-          roundId={roundId}
-          groupPlayers={groupPlayers}
-          holes={playable}
-          scores={scores}
-          strokesOn={strokesOn}
-          onLocked={load}
-        />
-      ) : (
+      {completedHoles < playable.length ? (
         <p className="text-[12px] leading-5 text-slate-500">
           Anyone in your tee time can enter scores for the group. When all {playable.length} holes are in,
           every player confirms the card before it counts.
         </p>
-      )}
+      ) : null}
     </div>
   );
 }

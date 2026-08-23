@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useAuth } from "@/features/auth/AuthContext";
 import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import type { Player } from "@/types";
@@ -93,6 +94,7 @@ export function RoundConfirm({
   onLocked?: () => void;
 }) {
   const { user } = useAuth();
+  const { upsertScore } = useTripState();
   const [confirmed, setConfirmed] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -160,6 +162,16 @@ export function RoundConfirm({
         setBusy(false);
         return setError(se.message);
       }
+      // Tell the app about it too. Writing only to the database left the
+      // in-memory state stale, so the awards vote never opened and the
+      // leaderboard showed nothing - the score existed but nothing knew.
+      upsertScore({
+        roundId,
+        playerId: me.id,
+        grossScore: myGross,
+        frontNineScore: myFront ?? undefined,
+        enteredBy: user?.id ?? null,
+      });
     }
 
     const { error: e } = await supabase.from("round_confirmations").upsert(
