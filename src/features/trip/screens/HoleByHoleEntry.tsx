@@ -975,7 +975,13 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
         >
           <div className="text-center">
             <p className="text-[72px] leading-none">
-              {celebration.key === "ace" ? "🕳️" : celebration.key === "albatross" ? "🦅" : celebration.key === "eagle" ? "🦅" : "🐦"}
+              {celebration.key === "ace"
+                ? "🕳️"
+                : celebration.key === "snowman"
+                ? "⛄"
+                : celebration.key === "albatross" || celebration.key === "eagle"
+                ? "🦅"
+                : "🐦"}
             </p>
             <p className="mt-4 font-anton text-3xl leading-tight tracking-tight text-white">
               {celebration.text}

@@ -65,10 +65,13 @@ export function detectCallouts(e: ScoreEvent): Callout[] {
   }
 
   // Snowman: an 8 on a par 5 is the classic, but any 8+ earns the hat.
+  // A takeover, same as an eagle - the snowman is half the fun of the trip and
+  // it changes the player's avatar until they play their way out of it, so it
+  // deserves the full screen rather than a quiet line in the chat.
   if (e.strokes >= 8) {
     out.push({
       key: "snowman",
-      level: "chat",
+      level: "takeover",
       snowman: true,
       text:
         e.par === 5

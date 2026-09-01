@@ -71,6 +71,21 @@ These are the things that stop you inviting people who are not you.
 
 ## Recently shipped
 
+**23 Aug 2026 (second bundle)**
+- Snowman is now a full-screen takeover, like an eagle, with its own icon. It
+  was chat-level, which is why an 8 looked like nothing happened.
+
+## Next build - agreed with TJ
+
+- **Live scoring across screens.** Pecking Order, The Nest and Matches all read
+  `score_entries`, which on a hole-by-hole round is empty until cards are
+  signed. Only the live table inside Tee It Up updates during play, so three of
+  the five screens look dead to anyone not holding the scorecard. This is the
+  biggest product gap outstanding.
+- **Show gross, to par AND net to par together** on those screens. One number
+  hides the handicap: two players can card the same 4 and sit a shot apart on
+  net, and right now nothing shows why.
+
 **23 Aug 2026**
 - FIRST AUTOMATED TESTS. `npm test`, 10 tests, no new dependency. Confirmed
   they fail when the old dropped-player bug is reintroduced.
