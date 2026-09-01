@@ -174,7 +174,13 @@ export default function ManagePage() {
     const supabase = getSupabaseClient();
     if (!supabase || !trip) return;
     if (approve) {
-      await approveMember(supabase, membershipId);
+      const ok = await approveMember(supabase, membershipId);
+      // A refused write matches zero rows and reports no error, so telling
+      // someone they are in before checking would be a lie.
+      if (!ok) {
+        await refresh(trip);
+        return;
+      }
       if (accountId) {
         void notify({
           userIds: [accountId],

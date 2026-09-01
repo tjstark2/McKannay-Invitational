@@ -42,6 +42,7 @@ export function AccountHome() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [trips, setTrips] = useState<MyTripSummary[] | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [pending, setPending] = useState<TripRef[]>([]);
   const [invitations, setInvitations] = useState<InvitationItem[]>([]);
   const [requestCounts, setRequestCounts] = useState<Record<string, number>>({});
@@ -62,6 +63,7 @@ export function AccountHome() {
     if (!supabase) return;
     let active = true;
     (async () => {
+      try {
       const prof = await supabase
         .from("profiles")
         .select("first_name,username")
@@ -84,6 +86,14 @@ export function AccountHome() {
       if (active) setRequestCounts(counts);
       const inv = await loadInvitations(supabase, user.id);
       if (active) setInvitations(inv);
+      } catch {
+        // Offline or a flaky connection. Show an empty list with an
+        // explanation rather than spinning on "Loading" forever.
+        if (active) {
+          setTrips([]);
+          setLoadFailed(true);
+        }
+      }
     })();
     return () => {
       active = false;
@@ -290,7 +300,15 @@ export function AccountHome() {
           </div>
         ) : null}
 
-        {trips === null ? (
+        {loadFailed ? (
+          <div className="mt-4 rounded-2xl border-[1.5px] border-amber-200 bg-amber-50 p-4">
+            <p className="font-black text-amber-900">Can&apos;t reach the server</p>
+            <p className="mt-1 text-[13px] leading-5 text-amber-900">
+              You look offline. Your tournaments will appear as soon as you have
+              a signal - pull down to try again.
+            </p>
+          </div>
+        ) : trips === null ? (
           <p className="mt-4 text-slate-400">Loading…</p>
         ) : trips.length === 0 ? (
           <div className="mt-4">

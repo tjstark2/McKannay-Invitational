@@ -7,6 +7,7 @@ import { roundHasVotes } from "@/features/voting/tally";
 import { VotingModal } from "@/features/voting/VotingModal";
 import { RevealModal } from "@/features/voting/RevealModal";
 import { ConfirmScoreModal } from "@/features/voting/ConfirmScoreModal";
+import { onSigned } from "@/features/voting/signedSignal";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { setOverlayOpen } from "@/features/trip/tour/overlayState";
 
@@ -73,6 +74,17 @@ export function PostRoundGate() {
     if (!s.enteredBy || s.enteredBy === user.id) return false;
     return !(confirmedRounds ?? []).includes(roundId);
   }
+
+  // Signing says so directly. This is the reliable path - the effect below
+  // depends on several collections having refreshed, which they have not by
+  // the time a signature completes.
+  useEffect(() => {
+    return onSigned((roundId) => {
+      if (!trip.isPro || !votingEnabled) return;
+      setConfirmedRounds((c) => (c ?? []).includes(roundId) ? c : [...(c ?? []), roundId]);
+      setVoteRoundId(roundId);
+    });
+  }, [trip.isPro, votingEnabled]);
 
   // Reveal: any concluded round (with votes) not yet seen by this user.
   useEffect(() => {

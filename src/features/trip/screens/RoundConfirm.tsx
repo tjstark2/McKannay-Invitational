@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useTripState } from "@/features/trip/state/TripStateContext";
+import { announceSigned } from "@/features/voting/signedSignal";
 import { useAuth } from "@/features/auth/AuthContext";
 import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import type { Player } from "@/types";
@@ -181,6 +182,8 @@ export function RoundConfirm({
     setBusy(false);
     if (e) return setError(e.message);
     setShowPreview(false);
+    // Tell the awards gate directly rather than hoping it notices.
+    announceSigned(roundId);
     // If exactly one player is still to sign, that is now blocking the round.
     const after = [...confirmed, me.id];
     const waiting = groupPlayers.filter((p) => !after.includes(p.id));

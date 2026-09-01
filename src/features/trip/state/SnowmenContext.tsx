@@ -50,6 +50,12 @@ export function SnowmenProvider({
     };
 
     reload();
+    // Belt and braces: the app can ask for a reload directly when it has just
+    // changed a snowman, so a dropped realtime socket does not leave a melted
+    // snowman on screen.
+    const manual = () => scheduleReload();
+    window.addEventListener("tb-snowmen-changed", manual);
+
     const channel = supabase.channel(`snowmen-${tripId}`);
     channel.on(
       "postgres_changes",
@@ -60,6 +66,7 @@ export function SnowmenProvider({
 
     return () => {
       cancelled = true;
+      window.removeEventListener("tb-snowmen-changed", manual);
       supabase.removeChannel(channel);
       if (reloadTimer.current) clearTimeout(reloadTimer.current);
     };

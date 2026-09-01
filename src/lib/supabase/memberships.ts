@@ -205,15 +205,24 @@ export async function listActiveMembers(
   return membersWithProfiles(supabase, tripId, "active");
 }
 
+/**
+ * Approve a join request.
+ *
+ * Selects the updated row back on purpose: a write blocked by row level
+ * security matches ZERO rows and reports no error at all, so checking only
+ * `error` would report success and we would tell someone they are in when
+ * they are not.
+ */
 export async function approveMember(
   supabase: SupabaseClient,
   membershipId: string
 ): Promise<boolean> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("trip_members")
     .update({ status: "active" })
-    .eq("id", membershipId);
-  return !error;
+    .eq("id", membershipId)
+    .select("id");
+  return !error && Boolean(data && data.length > 0);
 }
 
 // Promote a member to admin, or demote an admin back to member. Owner only.

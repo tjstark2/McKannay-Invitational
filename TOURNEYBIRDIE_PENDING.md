@@ -50,11 +50,12 @@ These are the things that stop you inviting people who are not you.
 
 ## Engineering debt
 
-- **No automated tests.** 35,000 lines, and every regression is caught by one
-  person on a phone. `scoring.ts` and `drawCompute.ts` are pure functions -
-  a handful of unit tests there would have caught the dropped-player bug
-  instantly instead of it surviving three test passes. Highest-value item on
-  this list.
+- **Automated tests STARTED 23 Aug.** `npm test` runs 10 tests over the draw
+  engine, the field grouping, the snake draft and the score labels, using
+  Node's built-in runner through tsx - no new dependency. Verified they catch
+  the historical dropped-player bug. Still to cover: `scoring.ts` (the two
+  handicap implementations that disagreed), the match-state moments, and the
+  offline queue.
 - **Audit every query against its mapper.** `loadRoundSetups` mapped
   `started_at` without selecting it, which made a working Start round button
   look dead across two sessions. A crude scan found that one; only two others
@@ -69,6 +70,24 @@ These are the things that stop you inviting people who are not you.
   seed can pick them up.
 
 ## Recently shipped
+
+**23 Aug 2026**
+- FIRST AUTOMATED TESTS. `npm test`, 10 tests, no new dependency. Confirmed
+  they fail when the old dropped-player bug is reintroduced.
+- Home no longer hangs on "Loading" offline - it says it cannot reach the
+  server instead of spinning forever.
+- Signing now tells the awards gate directly instead of relying on a reactive
+  effect whose data had not refreshed, which is why the vote never opened.
+- "Jump to hole N" button, plus a forward arrow, so you can reach the first
+  unscored hole without confirming every hole on the way.
+- Re-confirming a hole where nothing changed no longer re-fires its callouts.
+  This was the source of duplicate eagle and hole-in-one pushes.
+- Snowman clearing nudges the avatars directly, so a dropped realtime socket
+  cannot leave a melted snowman on screen.
+- Pro upgrade now writes with a select and reports refusal instead of looking
+  like it worked. A blocked update matches zero rows and reports no error.
+- approveMember now detects a silently refused write rather than telling
+  someone they are in when they are not.
 
 **22 Aug 2026 (third bundle)**
 - Confirming an already-scored hole did nothing: confirmHole required a draft

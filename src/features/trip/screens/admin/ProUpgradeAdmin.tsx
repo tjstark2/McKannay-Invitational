@@ -4,11 +4,13 @@ import { useState } from "react";
 import { Sparkles, Check } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { useTripState } from "@/features/trip/state/TripStateContext";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { useViewer } from "@/features/trip/state/ViewerContext";
 import { ProUpsell } from "@/features/trip/components/ProUpsell";
 
 export function ProUpgradeAdmin() {
   const { trip, updateTrip } = useTripState();
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
   const { canManage, isOwner } = useViewer();
   const [open, setOpen] = useState(false);
 
@@ -76,12 +78,39 @@ export function ProUpgradeAdmin() {
               emoji="✨"
               upgradeLabel="Make this a Pro tournament"
               skipLabel="Maybe later"
-              onUpgrade={() => {
+              onUpgrade={async () => {
+                // Write it directly and CHECK the result. Going through the
+                // optimistic state update left the screen looking upgraded
+                // while a refused write meant the tournament was still free -
+                // a blocked Supabase update matches zero rows and reports no
+                // error at all.
+                const supabase = getSupabaseClient();
+                if (!supabase) return;
+                setUpgradeError(null);
+                const { data, error } = await supabase
+                  .from("trips")
+                  .update({ is_pro: true, pro_since: new Date().toISOString() })
+                  .eq("id", trip.id)
+                  .select("id,is_pro");
+                if (error || !data || data.length === 0) {
+                  setUpgradeError(
+                    error?.message ??
+                      "The upgrade was refused. Only the tournament owner can do this."
+                  );
+                  return;
+                }
                 updateTrip({ isPro: true });
                 setOpen(false);
+                // Re-read everything so every screen agrees the trip is Pro.
+                if (typeof window !== "undefined") window.location.reload();
               }}
               onSkip={() => setOpen(false)}
             />
+            {upgradeError ? (
+              <p className="mt-2 rounded-xl border border-red-200 bg-red-50 p-2.5 text-[13px] font-bold text-red-700">
+                {upgradeError}
+              </p>
+            ) : null}
           </div>
         </div>
       ) : null}

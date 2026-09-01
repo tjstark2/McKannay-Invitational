@@ -393,10 +393,17 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
         }
       }
 
-      // Play your way out of the snowman: tiered by handicap.
+      // Play your way out of the snowman. The threshold is tiered by handicap:
+      // under 12 needs a birdie, 12-22 a par, above that a double bogey.
       if (!events.some((c) => c.snowman) && clearsSnowman(who.handicapIndex, strokes, par)) {
         try {
           await clearSnowman(supabase, trip.id, pid);
+          // Nudge the avatars in case the realtime update is missed - the
+          // provider reloads on any round_moments change, but a dropped socket
+          // would otherwise leave the snowman on screen until a reload.
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new Event("tb-snowmen-changed"));
+          }
         } catch {
           /* non-blocking */
         }
@@ -496,7 +503,10 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
 
     const entered = resolved as { pid: string; strokes: number; wasScored: boolean }[];
 
-    for (const e of entered) {
+    // Which of these are actually different from what is already saved?
+    const changed = entered.filter((e) => scoreFor(e.pid, hole) !== e.strokes);
+
+    for (const e of changed) {
       await saveScore(e.pid, hole, e.strokes);
     }
 
@@ -505,7 +515,12 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
       ...entered.map((e) => ({ playerId: e.pid, hole, strokes: e.strokes })),
     ];
 
-    await runHoleEffects(hole, entered, listAfter);
+    // Only announce when something actually changed. Re-confirming an
+    // untouched hole on the way forward used to re-fire every callout on it,
+    // which is where the duplicate eagle and hole-in-one pushes came from.
+    if (changed.length > 0) {
+      await runHoleEffects(hole, changed, listAfter);
+    }
     setConfirming(false);
     setConfirmedHoles((prev) => (prev.includes(hole) ? prev : [...prev, hole]));
 
@@ -841,7 +856,20 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
             })}
           </div>
 
-          <div className="mt-4 flex gap-2">
+          {firstIncomplete && firstIncomplete.hole !== holeInfo.hole ? (
+            <button
+              type="button"
+              onClick={() => {
+                setDraft({});
+                setCurrent(firstIncomplete.hole);
+              }}
+              className="mt-3 w-full rounded-2xl border-[1.5px] border-fairway-900 px-4 py-2.5 text-[13px] font-black text-fairway-900"
+            >
+              Jump to hole {firstIncomplete.hole} - the first one still open
+            </button>
+          ) : null}
+
+          <div className="mt-3 flex gap-2">
             <button
               type="button"
               disabled={holeIdx <= 0 || confirming}
@@ -866,6 +894,17 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
                 : allInForHole(holeInfo.hole)
                 ? `Save changes to hole ${holeInfo.hole}`
                 : `Confirm hole ${holeInfo.hole}`}
+            </button>
+            <button
+              type="button"
+              disabled={holeIdx >= playable.length - 1 || confirming}
+              onClick={() => {
+                setDraft({});
+                setCurrent(playable[holeIdx + 1].hole);
+              }}
+              className="rounded-2xl border-[1.5px] border-slate-300 px-3 py-3 text-[13px] font-black text-slate-600 disabled:opacity-40"
+            >
+              Hole {holeIdx < playable.length - 1 ? playable[holeIdx + 1].hole : ""} ›
             </button>
           </div>
 
