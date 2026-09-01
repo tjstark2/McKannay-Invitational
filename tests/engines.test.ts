@@ -143,3 +143,147 @@ test("an ace is always offered, whatever the par", () => {
     assert.equal(opts.length, par + 4, `par ${par} should offer ${par + 4} buttons`);
   }
 });
+
+/* ---------------------------------------------------------------- live rows */
+
+import { liveRowsForRound, toParLabel } from "../src/features/trip/scoring/liveStandings";
+
+const SAWGRASS_HOLES = [
+  { hole: 1, par: 4, si: 5 }, { hole: 2, par: 5, si: 13 }, { hole: 3, par: 3, si: 17 },
+  { hole: 4, par: 4, si: 1 }, { hole: 5, par: 4, si: 3 }, { hole: 6, par: 4, si: 9 },
+  { hole: 7, par: 4, si: 7 }, { hole: 8, par: 3, si: 15 }, { hole: 9, par: 5, si: 11 },
+  { hole: 10, par: 4, si: 8 }, { hole: 11, par: 5, si: 12 }, { hole: 12, par: 4, si: 14 },
+  { hole: 13, par: 3, si: 16 }, { hole: 14, par: 4, si: 2 }, { hole: 15, par: 4, si: 6 },
+  { hole: 16, par: 3, si: 10 }, { hole: 17, par: 4, si: 18 }, { hole: 18, par: 5, si: 4 },
+];
+
+const SAWGRASS_PLAYERS = [
+  { id: "tj", name: "TJ", handicapIndex: 10.4 },
+  { id: "grant", name: "Grant", handicapIndex: 8.1 },
+  { id: "kellogg", name: "Kellogg TJ", handicapIndex: 14.5 },
+  { id: "swaggy", name: "Swaggy", handicapIndex: 18.3 },
+];
+
+/** The scripted card from the test document, holes 1-3. */
+const CARD: Record<number, Record<string, number>> = {
+  1: { tj: 4, grant: 5, kellogg: 4, swaggy: 6 },
+  2: { tj: 6, grant: 5, kellogg: 7, swaggy: 8 },
+  3: { tj: 3, grant: 2, kellogg: 4, swaggy: 5 },
+};
+
+function scriptedScores(upTo: number) {
+  const out = [];
+  for (let h = 1; h <= upTo; h++) {
+    for (const [pid, strokes] of Object.entries(CARD[h])) {
+      out.push({ roundId: "r1", playerId: pid, hole: h, strokes });
+    }
+  }
+  return out;
+}
+
+const liveInput = (upTo: number) => ({
+  roundId: "r1",
+  groups: [{ playerIds: ["tj", "grant", "kellogg", "swaggy"], allowancePct: 100 }],
+  holes: SAWGRASS_HOLES,
+  holesCount: 18 as const,
+  nine: null,
+  tee: { rating: 74.0, slope: 149, par: 72 },
+  players: SAWGRASS_PLAYERS,
+  holeScores: scriptedScores(upTo),
+});
+
+test("live rows match the scripted card thru 3", () => {
+  const rows = liveRowsForRound(liveInput(3));
+  const by = Object.fromEntries(rows.map((r) => [r.playerId, r]));
+
+  // Par for holes 1-3 is 4 + 5 + 3 = 12.
+  assert.equal(by.grant.gross, 12);
+  assert.equal(by.grant.strokesGiven, 0, "Grant is the low man, he plays off scratch");
+  assert.equal(by.grant.netToPar, 0);
+
+  assert.equal(by.tj.gross, 13);
+  assert.equal(by.tj.strokesGiven, 0, "TJ gets 3 strokes but none on indexes 5, 13 or 17");
+  assert.equal(by.tj.netToPar, 1);
+
+  assert.equal(by.kellogg.gross, 15);
+  assert.equal(by.kellogg.strokesGiven, 1, "index 5 is inside his 9");
+  assert.equal(by.kellogg.netToPar, 2);
+
+  assert.equal(by.swaggy.gross, 19);
+  assert.equal(by.swaggy.strokesGiven, 2, "indexes 5 and 13 are inside his 14");
+  assert.equal(by.swaggy.netToPar, 5);
+});
+
+test("two players with the same gross can sit apart on net", () => {
+  // Hole 1 only: TJ and Kellogg TJ both card a 4.
+  const rows = liveRowsForRound(liveInput(1));
+  const by = Object.fromEntries(rows.map((r) => [r.playerId, r]));
+  assert.equal(by.tj.gross, by.kellogg.gross, "same strokes taken");
+  assert.equal(by.tj.netToPar, 0);
+  assert.equal(by.kellogg.netToPar, -1, "he gets a stroke on index 5, TJ does not");
+});
+
+test("live rows sort by net and report holes played", () => {
+  const rows = liveRowsForRound(liveInput(3));
+  assert.deepEqual(rows.map((r) => r.playerId), ["grant", "tj", "kellogg", "swaggy"]);
+  assert.ok(rows.every((r) => r.thru === 3));
+  assert.ok(rows.every((r) => !r.complete), "3 of 18 is not a finished card");
+});
+
+test("no scores means no rows, so screens can fall back", () => {
+  assert.equal(liveRowsForRound({ ...liveInput(0), holeScores: [] }).length, 0);
+});
+
+test("to par reads the way a golfer writes it", () => {
+  assert.equal(toParLabel(0), "E");
+  assert.equal(toParLabel(3), "+3");
+  assert.equal(toParLabel(-2), "-2");
+});
+
+/* --------------------------------------------------------- live match state */
+
+import { liveMatchStates } from "../src/features/trip/scoring/liveStandings";
+
+test("live match state reports holes up without deciding a winner", () => {
+  // 2v2: TJ + Grant against Kellogg TJ + Swaggy, through 3 holes.
+  const states = liveMatchStates(liveInput(3), [
+    { id: "m1", aPlayers: ["tj", "grant"], bPlayers: ["kellogg", "swaggy"] },
+  ]);
+  assert.equal(states.length, 1);
+  const m = states[0];
+  assert.equal(m.thru, 3, "all three holes have both sides in");
+  // Best net per hole: h1 A min(4,5)=4 vs B min(3,5)=3 -> B.
+  //                    h2 A min(6,5)=5 vs B min(7,7)=7 -> A.
+  //                    h3 A min(3,2)=2 vs B min(4,5)=4 -> A.
+  assert.equal(m.standing, 1, "A wins two holes to one");
+  assert.equal(m.label, "1 up");
+  assert.ok(!("winner" in m), "a live match must not declare a winner");
+});
+
+test("a hole only counts once both sides have finished it", () => {
+  const partial = {
+    ...liveInput(3),
+    // Drop one of B's scores on hole 3.
+    holeScores: liveInput(3).holeScores.filter(
+      (s) => !(s.hole === 3 && s.playerId === "swaggy")
+    ),
+  };
+  const [m] = liveMatchStates(partial, [
+    { id: "m1", aPlayers: ["tj", "grant"], bPlayers: ["kellogg", "swaggy"] },
+  ]);
+  assert.equal(m.thru, 2, "hole 3 is incomplete for side B so it does not count");
+});
+
+test("all square reads as all square", () => {
+  const [m] = liveMatchStates(liveInput(1), [
+    { id: "m1", aPlayers: ["tj"], bPlayers: ["grant"] },
+  ]);
+  // Hole 1: TJ net 4, Grant net 5 -> TJ up one.
+  assert.equal(m.standing, 1);
+  const [m2] = liveMatchStates(liveInput(1), [
+    { id: "m2", aPlayers: ["tj"], bPlayers: ["kellogg"] },
+  ]);
+  // TJ net 4 vs Kellogg net 3 -> Kellogg up one.
+  assert.equal(m2.standing, -1);
+  assert.equal(m2.label, "1 up");
+});

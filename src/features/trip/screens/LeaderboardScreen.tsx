@@ -3,6 +3,9 @@ import { buildLeaderboard, getTournamentAwards } from "@/lib/scoring";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useTripState } from "@/features/trip/state/TripStateContext";
+import { useLiveRound } from "@/features/trip/scoring/useLiveRound";
+import { toParLabel } from "@/features/trip/scoring/liveStandings";
+import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import { AvatarWithFrame } from "@/features/cosmetics/AvatarWithFrame";
 
 type LbRow = ReturnType<typeof buildLeaderboard>[number];
@@ -93,6 +96,9 @@ function AwardCard({
 export function LeaderboardScreen() {
   const { courses, matches, players, rounds, scores, scoringSettings } =
     useTripState();
+  // Live round, for hole-by-hole trips. Empty on a basic 9/18 trip, where a
+  // round is a single submitted number and there is nothing "during".
+  const live = useLiveRound();
 
   const leaderboard = buildLeaderboard(
     players,
@@ -114,8 +120,77 @@ export function LeaderboardScreen() {
 
   const [p1, p2, p3] = leaderboard;
 
+  const nameOf = (id: string) => players.find((p) => p.id === id)?.name ?? "-";
+  const playerOf = (id: string) => players.find((p) => p.id === id);
+
   return (
     <div className="space-y-4">
+      {/* Live round. This screen used to be empty for the whole of a
+          hole-by-hole round, because it only reads published totals - which do
+          not exist until a card is signed. */}
+      {live.rows.length > 0 && live.round ? (
+        <div className="rounded-2xl border-2 border-fairway-900 bg-white p-3">
+          <div className="mb-2 flex items-baseline justify-between">
+            <span className="text-xs font-black uppercase tracking-wide text-fairway-900">
+              Live · {live.round.title}
+            </span>
+            <span className="text-[11px] font-black uppercase tracking-wide text-slate-400">
+              {live.round.finishedAt ? "Final" : "In progress"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 border-b border-sand-200 pb-1 text-[10px] font-black uppercase tracking-wide text-slate-400">
+            <span>Player</span>
+            <span className="text-right">Score</span>
+            <span className="text-right">To par</span>
+            <span className="text-right">Net</span>
+          </div>
+
+          {live.rows.map((r) => {
+            const p = playerOf(r.playerId);
+            return (
+              <div
+                key={r.playerId}
+                className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 border-b border-sand-100 py-1.5 last:border-0"
+              >
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <PlayerAvatar
+                    avatarId={p?.avatarId}
+                    emoji={p?.avatarEmoji}
+                    name={p?.name}
+                    size={22}
+                    playerId={r.playerId}
+                    ring={p?.team === "A" ? "#e5484d" : "#3b82f6"}
+                  />
+                  <span className="truncate text-[13px] font-black text-ink">
+                    {nameOf(r.playerId)}
+                  </span>
+                  <span className="shrink-0 text-[11px] font-bold text-slate-400">
+                    thru {r.thru}
+                  </span>
+                </span>
+                <span className="text-right text-[13px] font-black text-ink">{r.gross}</span>
+                <span className="text-right text-[13px] font-bold text-slate-500">
+                  {toParLabel(r.toPar)}
+                </span>
+                <span
+                  className={`text-right text-[14px] font-black ${
+                    r.netToPar < 0 ? "text-emerald-700" : "text-ink"
+                  }`}
+                >
+                  {toParLabel(r.netToPar)}
+                </span>
+              </div>
+            );
+          })}
+
+          <p className="mt-2 text-[11px] leading-4 text-slate-400">
+            Score is what they actually shot. To par is that against the holes
+            played. Net takes their strokes off - that is what decides the match.
+          </p>
+        </div>
+      ) : null}
+
       <div className="flex items-start justify-between gap-3">
         <SectionHeader
           title="Leaderboard"

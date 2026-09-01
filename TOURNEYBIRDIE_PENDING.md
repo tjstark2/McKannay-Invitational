@@ -71,20 +71,34 @@ These are the things that stop you inviting people who are not you.
 
 ## Recently shipped
 
+**23 Aug 2026 (fourth bundle)**
+- Live scoring now on ALL of it: Pecking Order > Leaders (full table), Pecking
+  Order > Score (tentative points, clearly marked), Pecking Order > Matches
+  (holes up and thru, deliberately NOT a result), and The Nest.
+- Matches shows STATUS, not a winner. A match is not settled until the cards
+  are signed, and putting points on the board from a half-played round would
+  show numbers that can still move. The Score tab labels its points "if the
+  round ended now" for the same reason.
+- 3 more tests, 18 total, including one asserting a live match never declares
+  a winner.
+
+**23 Aug 2026 (third bundle)**
+- LIVE SCORING ON PECKING ORDER AND THE NEST. Both read published totals, which
+  on a hole-by-hole round do not exist until a card is signed - so both screens
+  were empty for the whole of a round while Tee It Up updated hole by hole.
+  A shared `useLiveRound` hook now reads hole scores directly and refreshes on
+  realtime. Basic 9/18 trips are untouched: a round there is a single submitted
+  number, so there is nothing "during" and the old behaviour stands.
+- Three columns everywhere: strokes shot, to par, and net to par after
+  handicap. One number was hiding the handicap - two players can card the same
+  4 and sit a shot apart.
+- 5 more tests covering the live maths, asserting the exact numbers in the test
+  document. 15 tests total.
+
 **23 Aug 2026 (second bundle)**
 - Snowman is now a full-screen takeover, like an eagle, with its own icon. It
   was chat-level, which is why an 8 looked like nothing happened.
 
-## Next build - agreed with TJ
-
-- **Live scoring across screens.** Pecking Order, The Nest and Matches all read
-  `score_entries`, which on a hole-by-hole round is empty until cards are
-  signed. Only the live table inside Tee It Up updates during play, so three of
-  the five screens look dead to anyone not holding the scorecard. This is the
-  biggest product gap outstanding.
-- **Show gross, to par AND net to par together** on those screens. One number
-  hides the handicap: two players can card the same 4 and sit a shot apart on
-  net, and right now nothing shows why.
 
 **23 Aug 2026**
 - FIRST AUTOMATED TESTS. `npm test`, 10 tests, no new dependency. Confirmed

@@ -16,6 +16,8 @@ import { NextRoundCard } from "@/features/trip/components/NextRoundCard";
 import { TripItineraryCard } from "@/features/trip/components/TripItineraryCard";
 import { StandingsCard } from "@/features/trip/components/StandingsCard";
 import { useTripState } from "@/features/trip/state/TripStateContext";
+import { useLiveRound } from "@/features/trip/scoring/useLiveRound";
+import { toParLabel } from "@/features/trip/scoring/liveStandings";
 import type { Screen } from "@/types";
 
 function AwardTile({
@@ -45,6 +47,7 @@ export function OverviewScreen({
 }: {
   setActiveScreen: (screen: Screen) => void;
 }) {
+  const live = useLiveRound();
   const {
     trip,
     teams,
@@ -342,8 +345,59 @@ export function OverviewScreen({
             </p>
           </div>
 
+          {/* Live standings for a hole-by-hole round. The "hot right now" and
+              front-nine widgets below only ever populate on a basic 9/18 trip,
+              because they read submitted totals - which do not exist until a
+              card is signed. */}
+          {live.rows.length > 0 && live.round ? (
+            <div className="mt-3 rounded-xl border-2 border-fairway-900 bg-white p-3">
+              <div className="mb-1.5 flex items-baseline justify-between">
+                <p className="text-xs font-black uppercase tracking-wide text-fairway-900">
+                  Live · {live.round.title}
+                </p>
+                <span className="text-[11px] font-black uppercase tracking-wide text-slate-400">
+                  {live.round.finishedAt ? "Final" : "In progress"}
+                </span>
+              </div>
+              {live.rows.slice(0, 5).map((r) => {
+                const p = players.find((x) => x.id === r.playerId);
+                return (
+                  <div key={r.playerId} className="flex items-center gap-2 py-1">
+                    <PlayerAvatar
+                      avatarId={p?.avatarId}
+                      emoji={p?.avatarEmoji}
+                      name={p?.name}
+                      size={20}
+                      playerId={r.playerId}
+                      ring={p?.team === "A" ? "#e5484d" : "#3b82f6"}
+                    />
+                    <span className="flex-1 truncate text-[13px] font-black text-ink">
+                      {p?.name ?? "-"}
+                    </span>
+                    <span className="text-[12px] font-bold text-slate-400">
+                      thru {r.thru}
+                    </span>
+                    <span className="w-8 text-right text-[13px] font-black text-ink">
+                      {r.gross}
+                    </span>
+                    <span
+                      className={`w-9 text-right text-[13px] font-black ${
+                        r.netToPar < 0 ? "text-emerald-700" : "text-ink"
+                      }`}
+                    >
+                      {toParLabel(r.netToPar)}
+                    </span>
+                  </div>
+                );
+              })}
+              <p className="mt-1 text-[11px] text-slate-400">
+                Strokes shot, then net to par after handicap.
+              </p>
+            </div>
+          ) : null}
+
           {/* hot right now */}
-          {!isGroupedRound && hot ? (
+          {!isGroupedRound && hot && live.rows.length === 0 ? (
             <div className="mt-3 rounded-xl bg-[#f3efe6] p-3 text-sm">
               <p className="font-black">🔥 Hot Right Now</p>
               <p className="mt-1 flex items-center gap-1.5 text-slate-600">

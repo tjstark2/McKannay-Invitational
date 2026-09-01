@@ -16,6 +16,7 @@ import { Pill } from "@/components/ui/Pill";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useTripState } from "@/features/trip/state/TripStateContext";
+import { useLiveRound } from "@/features/trip/scoring/useLiveRound";
 import type { Screen, TeamId } from "@/types";
 
 function MatchStatusPill({
@@ -55,6 +56,7 @@ export function MatchCenterScreen({
   setActiveScreen: (screen: Screen) => void;
   setSelectedMatchId: (matchId: string) => void;
 }) {
+  const live = useLiveRound();
   const {
     courses,
     matches,
@@ -385,6 +387,34 @@ export function MatchCenterScreen({
                     <ChevronRight className="h-5 w-5 text-slate-400" />
                   </div>
                 </div>
+
+                {/* Where the match stands right now. Deliberately NOT a result
+                    and NOT points - a match is not settled until the cards are
+                    signed, and putting points on the board from a half-played
+                    round would show numbers that can still move. */}
+                {(() => {
+                  const ls = live.matchStates.find((x) => x.matchId === match.id);
+                  if (!ls || ls.thru === 0) return null;
+                  const leader =
+                    ls.standing === 0
+                      ? null
+                      : ls.standing > 0
+                      ? match.aPlayers.map(getPlayerName).join(" & ")
+                      : match.bPlayers.map(getPlayerName).join(" & ");
+                  return (
+                    <div className="mt-2 flex items-center gap-2 rounded-xl bg-[#f3efe6] px-3 py-2">
+                      <span className="rounded-full bg-fairway-900 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white">
+                        Live
+                      </span>
+                      <span className="flex-1 text-[13px] font-black text-ink">
+                        {leader ? `${leader} ${ls.label}` : "All square"}
+                      </span>
+                      <span className="text-[12px] font-bold text-slate-500">
+                        thru {ls.thru}
+                      </span>
+                    </div>
+                  );
+                })()}
 
                 <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center">
                   <p className="text-sm font-bold text-red-800">
