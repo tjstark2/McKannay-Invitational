@@ -148,6 +148,10 @@ type TripMessageRow = {
   user_id: string;
   body: string;
   created_at: string;
+  kind?: string | null;
+  round_id?: string | null;
+  hole?: number | null;
+  parent_id?: string | null;
 };
 
 type ReactionRow = {
@@ -163,6 +167,10 @@ function mapMessage(row: TripMessageRow): TripMessage {
     userId: row.user_id,
     body: row.body,
     createdAt: row.created_at,
+    kind: (row.kind as "chat" | "callout") ?? "chat",
+    roundId: row.round_id ?? null,
+    hole: row.hole ?? null,
+    parentId: row.parent_id ?? null,
   };
 }
 
@@ -201,16 +209,40 @@ export async function loadReactions(
 }
 
 /** Post a chat message. Returns the saved row. */
+/**
+ * Post to the Clubhouse.
+ *
+ * `kind` decides which tab it lands in: 'chat' is a person talking, 'callout'
+ * is an automatic scoring moment that belongs in the Feed. Callouts carry the
+ * round (and hole) they came from so the Feed can group them, and a comment
+ * carries the parent it hangs under.
+ */
 export async function sendMessage(
   supabase: SupabaseClient,
-  args: { tripId: string; userId: string; body: string }
+  args: {
+    tripId: string;
+    userId: string;
+    body: string;
+    kind?: "chat" | "callout";
+    roundId?: string | null;
+    hole?: number | null;
+    parentId?: string | null;
+  }
 ): Promise<TripMessage> {
   const body = args.body.trim();
   if (!body) throw new Error("Message is empty.");
 
   const { data, error } = await supabase
     .from("trip_messages")
-    .insert({ trip_id: args.tripId, user_id: args.userId, body })
+    .insert({
+      trip_id: args.tripId,
+      user_id: args.userId,
+      body,
+      kind: args.kind ?? "chat",
+      round_id: args.roundId ?? null,
+      hole: args.hole ?? null,
+      parent_id: args.parentId ?? null,
+    })
     .select("*")
     .single();
 
@@ -252,7 +284,7 @@ export async function toggleReaction(
 
 const EPOCH = "1970-01-01T00:00:00Z";
 
-export type ClubhouseUnread = { photos: number; chat: number };
+export type ClubhouseUnread = { photos: number; chat: number; feed?: number };
 
 export type ReadState = { photosReadAt: string; chatReadAt: string };
 

@@ -316,19 +316,39 @@ export function OverviewScreen({
             </div>
           </div>
 
+          {/* On a hole-by-hole round these two boxes counted submitted totals,
+              which do not exist until cards are signed - so they read 0 / 8 all
+              day. Show holes played instead when a round is live. */}
           <div className="mt-4 grid grid-cols-2 gap-2 text-center">
-            <div className="rounded-xl bg-[#f3efe6] p-3">
-              <p className="text-xs font-bold text-slate-500">Front 9 In</p>
-              <p className="mt-1 font-anton text-2xl">
-                {dispFrontIn} / {dispTotal}
-              </p>
-            </div>
-            <div className="rounded-xl bg-[#f3efe6] p-3">
-              <p className="text-xs font-bold text-slate-500">Final In</p>
-              <p className="mt-1 font-anton text-2xl">
-                {dispFinalIn} / {dispTotal}
-              </p>
-            </div>
+            {live.rows.length > 0 ? (
+              <>
+                <div className="rounded-xl bg-[#f3efe6] p-3">
+                  <p className="text-xs font-bold text-slate-500">Cards going</p>
+                  <p className="mt-1 font-anton text-2xl">{live.rows.length}</p>
+                </div>
+                <div className="rounded-xl bg-[#f3efe6] p-3">
+                  <p className="text-xs font-bold text-slate-500">Furthest thru</p>
+                  <p className="mt-1 font-anton text-2xl">
+                    {Math.max(...live.rows.map((r) => r.thru))} / {live.holeCount}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="rounded-xl bg-[#f3efe6] p-3">
+                  <p className="text-xs font-bold text-slate-500">Front 9 In</p>
+                  <p className="mt-1 font-anton text-2xl">
+                    {dispFrontIn} / {dispTotal}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-[#f3efe6] p-3">
+                  <p className="text-xs font-bold text-slate-500">Final In</p>
+                  <p className="mt-1 font-anton text-2xl">
+                    {dispFinalIn} / {dispTotal}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
 
           {/* team momentum */}

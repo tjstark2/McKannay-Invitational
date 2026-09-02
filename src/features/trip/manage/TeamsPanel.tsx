@@ -51,14 +51,14 @@ export function TeamsPanel({ tripId }: { tripId: string }) {
     }
     // Once a round is under way, moving people between teams would rewrite
     // matchups and points that are already being played for.
-    // Live means started AND not yet finished. Counting every started round
-    // left teams locked forever once any round had been played.
+    // Teams lock once the tournament is under way - ANY round having started,
+    // finished or not. TJ's call: changing sides mid-trip rewrites matchups and
+    // points people have already played for.
     const { count: liveRounds } = await supabase
       .from("rounds")
       .select("id", { count: "exact", head: true })
       .eq("trip_id", tripId)
-      .not("started_at", "is", null)
-      .is("finished_at", null);
+      .not("started_at", "is", null);
     setRoundLive((liveRounds ?? 0) > 0);
 
     const { data: p } = await supabase
@@ -136,12 +136,11 @@ export function TeamsPanel({ tripId }: { tripId: string }) {
         {roundLive ? (
           <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-2.5">
             <p className="text-[13px] font-black text-amber-900">
-              A round is under way
+              The tournament has started
             </p>
             <p className="mt-0.5 text-[13px] leading-5 text-amber-900">
-              Teams are locked while a round is live - changing sides now would
-              rewrite matchups and points people are already playing for. Finish
-              the round first, or move one player by hand below.
+              Teams are locked for the rest of the trip. Changing sides now
+              would rewrite matchups and points people have already played for.
             </p>
           </div>
         ) : null}

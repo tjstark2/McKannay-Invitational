@@ -71,6 +71,31 @@ These are the things that stop you inviting people who are not you.
 
 ## Recently shipped
 
+**24 Aug 2026**
+- CLUBHOUSE SPLIT into Feed, Chat and Photos. Scoring callouts were posted as
+  chat messages, so a busy round buried real conversation under automated
+  lines and the unread badge meant nothing. Callouts now land in a Feed tabbed
+  by round, each one commentable; Chat is people talking only.
+- Snowman wording fixed - "put a snowman on the par 5 2" now reads
+  "Swaggy snowmanned hole 2. Ice in his veins."
+- Teams lock for the WHOLE tournament once any round has started (TJ's call),
+  not just while a round is live.
+- Finishing a round is BLOCKED until every score is in (TJ's call). It used to
+  warn and allow.
+- Leaders: even column widths, and a best-ball section showing where each pair
+  stands on a 2v2 round.
+- The Nest: live block moved to the top, and the Front 9 / Final counters -
+  which read 0 of 8 all day on a hole-by-hole round - are replaced by cards
+  going and furthest thru while a round is live.
+
+## Still open
+
+- **Step 57**: scoring on two devices in MEMBER1 did not sync - scores entered
+  on the phone did not appear on the computer. Not yet investigated.
+- **Feed unread count**: the Feed tab has no badge yet. Chat and Photos do.
+- **Basic-mode scoring** still pushes without confirming the write landed.
+- Tutorials and the create-a-tournament flow still describe the old Manage.
+
 **23 Aug 2026 (fourth bundle)**
 - Live scoring now on ALL of it: Pecking Order > Leaders (full table), Pecking
   Order > Score (tentative points, clearly marked), Pecking Order > Matches

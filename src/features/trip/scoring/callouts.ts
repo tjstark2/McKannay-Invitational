@@ -74,9 +74,9 @@ export function detectCallouts(e: ScoreEvent): Callout[] {
       level: "takeover",
       snowman: true,
       text:
-        e.par === 5
-          ? `⛄ ${e.playerName} put a snowman on the par 5 ${e.hole}. Building it one shot at a time.`
-          : `⛄ ${e.playerName} carded an ${e.strokes} on hole ${e.hole}. Frosty.`,
+        e.strokes === 8
+          ? `⛄ ${e.playerName} snowmanned hole ${e.hole}. Ice in his veins.`
+          : `⛄ ${e.playerName} carded a ${e.strokes} on hole ${e.hole}. Frosty out there.`,
     });
   } else if (over >= 3) {
     out.push({

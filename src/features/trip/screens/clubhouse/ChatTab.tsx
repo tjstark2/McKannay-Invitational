@@ -98,7 +98,11 @@ export function ChatTab({ onRead }: { onRead?: () => void }) {
           : EPOCH;
         setBaseline(baseline);
 
-        const msgs = await loadMessages(supabase, trip.id);
+        // People talking only. Automatic scoring moments live in the Feed
+        // tab now, and comments show under the moment they belong to - both
+        // used to flood this list.
+        const all = await loadMessages(supabase, trip.id);
+        const msgs = all.filter((m) => m.kind !== "callout" && !m.parentId);
         if (!active) return;
         setMessages(msgs);
 

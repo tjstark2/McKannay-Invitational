@@ -211,6 +211,13 @@ export type TripMessage = {
   userId: string;
   body: string;
   createdAt: string;
+  /** 'chat' is a person talking; 'callout' is an automatic scoring moment. */
+  kind?: "chat" | "callout";
+  /** Which round a callout came from, so the Feed can group by round. */
+  roundId?: string | null;
+  hole?: number | null;
+  /** Set when this is a comment hanging under a feed moment. */
+  parentId?: string | null;
 };
 
 export type TripMessageReaction = {

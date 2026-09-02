@@ -3,9 +3,10 @@
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { PhotosTab } from "@/features/trip/screens/clubhouse/PhotosTab";
 import { ChatTab } from "@/features/trip/screens/clubhouse/ChatTab";
+import { FeedTab } from "@/features/trip/screens/clubhouse/FeedTab";
 import type { ClubhouseUnread } from "@/lib/supabase/clubhouse";
 
-export type ClubhouseTab = "photos" | "chat";
+export type ClubhouseTab = "feed" | "chat" | "photos";
 
 export function ClubhouseScreen({
   tab,
@@ -18,9 +19,11 @@ export function ClubhouseScreen({
   unread: ClubhouseUnread;
   onRead: (tab: ClubhouseTab) => void;
 }) {
+  // Feed first: during a round it is the thing people actually want.
   const tabs: { id: ClubhouseTab; label: string; count: number }[] = [
-    { id: "photos", label: "Photos", count: unread.photos },
+    { id: "feed", label: "Feed", count: 0 },
     { id: "chat", label: "Chat", count: unread.chat },
+    { id: "photos", label: "Photos", count: unread.photos },
   ];
 
   return (
@@ -29,7 +32,7 @@ export function ClubhouseScreen({
         <ScreenHeader
           img="/brand/clubhouse.png"
           title="Clubhouse"
-          subtitle="Photos from the round and trash talk from the crew."
+          subtitle="What happened out there, and what everyone made of it."
         />
         <img
           src={
@@ -43,7 +46,7 @@ export function ClubhouseScreen({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-2 rounded-2xl border border-line bg-white p-1">
+      <div className="grid grid-cols-3 gap-2 rounded-2xl border border-line bg-white p-1">
         {tabs.map((t) => {
           const active = tab === t.id;
           return (
@@ -71,8 +74,9 @@ export function ClubhouseScreen({
         })}
       </div>
 
-      {tab === "photos" ? <PhotosTab onRead={() => onRead("photos")} /> : null}
+      {tab === "feed" ? <FeedTab onRead={() => onRead("feed")} /> : null}
       {tab === "chat" ? <ChatTab onRead={() => onRead("chat")} /> : null}
+      {tab === "photos" ? <PhotosTab onRead={() => onRead("photos")} /> : null}
     </div>
   );
 }

@@ -139,10 +139,10 @@ export function LeaderboardScreen() {
             </span>
           </div>
 
-          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 border-b border-sand-200 pb-1 text-[10px] font-black uppercase tracking-wide text-slate-400">
+          <div className="grid grid-cols-[1fr_2.6rem_2.6rem_2.6rem] gap-x-2 border-b border-sand-200 pb-1 text-[10px] font-black uppercase tracking-wide text-slate-400">
             <span>Player</span>
             <span className="text-right">Score</span>
-            <span className="text-right">To par</span>
+            <span className="text-right">Par</span>
             <span className="text-right">Net</span>
           </div>
 
@@ -151,7 +151,7 @@ export function LeaderboardScreen() {
             return (
               <div
                 key={r.playerId}
-                className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-3 border-b border-sand-100 py-1.5 last:border-0"
+                className="grid grid-cols-[1fr_2.6rem_2.6rem_2.6rem] items-center gap-x-2 border-b border-sand-100 py-1.5 last:border-0"
               >
                 <span className="flex min-w-0 items-center gap-1.5">
                   <PlayerAvatar
@@ -184,9 +184,41 @@ export function LeaderboardScreen() {
             );
           })}
 
+          {live.matchStates.length > 0 && live.round ? (
+            <div className="mt-3 border-t border-sand-200 pt-2">
+              <p className="mb-1 text-[10px] font-black uppercase tracking-wide text-slate-400">
+                Best ball - how each pair stands
+              </p>
+              {live.matchStates
+                .filter((ms) => ms.thru > 0)
+                .map((ms) => {
+                  const m = matches.find((x) => x.id === ms.matchId);
+                  if (!m) return null;
+                  const side = (ids: string[]) =>
+                    ids.map((id) => nameOf(id)).join(" & ");
+                  const leader =
+                    ms.standing === 0
+                      ? "All square"
+                      : ms.standing > 0
+                      ? `${side(m.aPlayers)} ${ms.label}`
+                      : `${side(m.bPlayers)} ${ms.label}`;
+                  return (
+                    <div key={ms.matchId} className="flex items-center gap-2 py-1">
+                      <span className="flex-1 truncate text-[13px] font-black text-ink">
+                        {leader}
+                      </span>
+                      <span className="text-[12px] font-bold text-slate-400">
+                        thru {ms.thru}
+                      </span>
+                    </div>
+                  );
+                })}
+            </div>
+          ) : null}
+
           <p className="mt-2 text-[11px] leading-4 text-slate-400">
-            Score is what they actually shot. To par is that against the holes
-            played. Net takes their strokes off - that is what decides the match.
+            Score is what they shot, Par is that against the holes played, Net
+            takes their strokes off. Net decides the match.
           </p>
         </div>
       ) : null}

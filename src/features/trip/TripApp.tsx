@@ -161,7 +161,7 @@ function TripAppInner() {
     ) => {
       if (fromUser === userId) return; // don't count your own
       if (viewing(tab)) return; // they're looking at it; the tab marks it read
-      setUnread((u) => ({ ...u, [tab]: u[tab] + 1 }));
+      setUnread((u) => ({ ...u, [tab]: (u[tab] ?? 0) + 1 }));
       if (activeScreenRef.current !== "clubhouse") {
         setActivityBanner(kind);
         if (bannerTimeoutRef.current) clearTimeout(bannerTimeoutRef.current);

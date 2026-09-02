@@ -353,7 +353,14 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
 
       for (const c of events) {
         try {
-          await sendMessage(supabase, { tripId: trip.id, userId: user?.id ?? "", body: c.text });
+          await sendMessage(supabase, {
+            tripId: trip.id,
+            userId: user?.id ?? "",
+            body: c.text,
+            kind: "callout",
+            roundId,
+            hole,
+          });
         } catch {
           /* a callout failing must never block scoring */
         }
@@ -454,6 +461,9 @@ export function HoleByHoleEntry({ roundId }: { roundId: string }) {
                 tripId: trip.id,
                 userId: user?.id ?? "",
                 body: m.text,
+                kind: "callout",
+                roundId,
+                hole,
               });
             } catch {
               /* non-blocking */

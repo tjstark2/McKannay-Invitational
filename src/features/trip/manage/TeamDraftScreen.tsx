@@ -131,6 +131,7 @@ export function TeamDraftScreen({
       await sendMessage(supabase, {
         tripId,
         userId: userId ?? "",
+        kind: "callout",
         body: `🪙 The draft is done.\n\n${teamName("A")}: ${result.a
           .map(nameOf)
           .join(", ")}\n${teamName("B")}: ${result.b.map(nameOf).join(", ")}\n\nHow it went:\n${order}`,

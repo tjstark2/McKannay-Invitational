@@ -260,15 +260,15 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
               const st = scoreState[finishTarget.id];
               const missing = st ? Math.max(0, st.expected - st.withScores) : 0;
               return missing > 0 ? (
-                <div className="mt-2 rounded-xl border-2 border-amber-300 bg-amber-50 p-2.5">
-                  <p className="text-[13px] font-black text-amber-900">
-                    {missing} of {st.expected} player{st.expected === 1 ? "" : "s"} still
-                    {missing === 1 ? " has" : " have"} no score
+                <div className="mt-2 rounded-xl border-2 border-red-300 bg-red-50 p-2.5">
+                  <p className="text-[13px] font-black text-red-900">
+                    Can&apos;t finish yet - {missing} of {st.expected} player
+                    {st.expected === 1 ? "" : "s"} {missing === 1 ? "has" : "have"} no score
                   </p>
-                  <p className="mt-0.5 text-[13px] leading-5 text-amber-900">
-                    Finishing now locks them out - they will need an organizer to
-                    enter their card afterwards. Usually you want to wait, or
-                    check who is missing on the leaderboard first.
+                  <p className="mt-0.5 text-[13px] leading-5 text-red-900">
+                    Every score has to be in before a round can be closed.
+                    Check who is missing on the leaderboard, or enter their card
+                    yourself from Tee It Up.
                   </p>
                 </div>
               ) : (
@@ -286,13 +286,24 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
                 className="flex-1 rounded-2xl border-[1.5px] border-slate-300 px-4 py-3 font-black text-slate-600">
                 Not yet
               </button>
-              <button type="button" onClick={async () => {
-                const t = finishTarget;
-                setConfirmFinish(null);
-                await doFinishRound(t.id, t.title);
-              }} className="flex-1 rounded-2xl bg-fairway-900 px-4 py-3 font-black text-white">
-                Finish it
-              </button>
+              {(() => {
+                const st = scoreState[finishTarget.id];
+                const missing = st ? Math.max(0, st.expected - st.withScores) : 0;
+                return (
+                  <button
+                    type="button"
+                    disabled={missing > 0}
+                    onClick={async () => {
+                      const t = finishTarget;
+                      setConfirmFinish(null);
+                      await doFinishRound(t.id, t.title);
+                    }}
+                    className="flex-1 rounded-2xl bg-fairway-900 px-4 py-3 font-black text-white disabled:opacity-40"
+                  >
+                    {missing > 0 ? "Scores missing" : "Finish it"}
+                  </button>
+                );
+              })()}
             </div>
           </div>
         </div>
