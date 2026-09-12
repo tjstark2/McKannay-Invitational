@@ -287,3 +287,96 @@ test("all square reads as all square", () => {
   assert.equal(m2.standing, -1);
   assert.equal(m2.label, "1 up");
 });
+
+/* ------------------------------------------------------- notification rules */
+//
+// The quiet hours, criticality and hold-queue tests live in the notifications
+// bundle, which is not deployed yet. They call inQuietHours, isCritical,
+// wantsCategory and nextQuietEnd - none of which exist in categories.ts until
+// that bundle ships. Put them back when it does.
+
+/* ------------------------------------------- net score is a FIELD contest */
+
+import { basisForFormat } from "../src/features/trip/scoring/liveStandings";
+import { allocateForMatch } from "../src/features/trip/scoring/strokeIndex";
+
+const AD_HOLES = [
+  { hole: 1, par: 4, si: 11 }, { hole: 2, par: 4, si: 7 }, { hole: 3, par: 3, si: 17 },
+  { hole: 4, par: 5, si: 9 }, { hole: 5, par: 4, si: 13 }, { hole: 6, par: 4, si: 3 },
+  { hole: 7, par: 3, si: 15 }, { hole: 8, par: 4, si: 5 }, { hole: 9, par: 5, si: 1 },
+  { hole: 10, par: 3, si: 18 }, { hole: 11, par: 4, si: 16 }, { hole: 12, par: 4, si: 12 },
+  { hole: 13, par: 4, si: 6 }, { hole: 14, par: 5, si: 8 }, { hole: 15, par: 3, si: 14 },
+  { hole: 16, par: 4, si: 10 }, { hole: 17, par: 5, si: 2 }, { hole: 18, par: 4, si: 4 },
+];
+const AD_TEE = { rating: 71.6, slope: 135, par: 72 };
+
+const alloc = (players: { playerId: string; name: string; index: number }[],
+               basis: "relative" | "full") =>
+  allocateForMatch({
+    players, tee: AD_TEE, holes: AD_HOLES, holesCount: 18, nine: null,
+    allowancePct: 100, basis,
+  });
+
+test("net score rounds use the full course handicap, not the group", () => {
+  assert.equal(basisForFormat("net_score"), "full");
+  assert.equal(basisForFormat("best_ball"), "relative");
+  assert.equal(basisForFormat("match_play"), "relative");
+  assert.equal(basisForFormat(null), "relative");
+});
+
+test("a player's net must not depend on who they teed off with", () => {
+  // The same golfer, in two different groups. Under "full" his strokes are
+  // identical; under "relative" they are not - which is the bug that had to be
+  // fixed by hand during the 2026 trip.
+  const withScratch = [
+    { playerId: "kody", name: "Kody", index: 16.0 },
+    { playerId: "joe", name: "Joe", index: 0.0 },
+  ];
+  const withHighHandicaps = [
+    { playerId: "kody", name: "Kody", index: 16.0 },
+    { playerId: "dcole", name: "Dcole", index: 19.6 },
+  ];
+
+  const fullA = alloc(withScratch, "full").find((x) => x.playerId === "kody")!;
+  const fullB = alloc(withHighHandicaps, "full").find((x) => x.playerId === "kody")!;
+  assert.equal(fullA.strokes, fullB.strokes, "full basis is group independent");
+  assert.equal(fullA.strokes, 18, "16.0 index plays off 18 at Atlantic Dunes");
+
+  const relA = alloc(withScratch, "relative").find((x) => x.playerId === "kody")!;
+  const relB = alloc(withHighHandicaps, "relative").find((x) => x.playerId === "kody")!;
+  assert.notEqual(relA.strokes, relB.strokes, "relative basis DOES depend on the group");
+});
+
+test("Saturday of the 2026 trip resolves the way it was scored by hand", () => {
+  // Real cards. Net = gross - full course handicap at Atlantic Dunes.
+  const field = [
+    { playerId: "hank", name: "@hankalan", index: 10.6, gross: 87, team: "B" },
+    { playerId: "dcole", name: "@dcole", index: 19.6, gross: 100, team: "B" },
+    { playerId: "kody", name: "Kody", index: 16.0, gross: 97, team: "A" },
+    { playerId: "ryan", name: "Ryan", index: 10.9, gross: 93, team: "B" },
+    { playerId: "anthony", name: "@apalladino", index: 14.4, gross: 97, team: "A" },
+    { playerId: "joe", name: "@joegowdy", index: 0.0, gross: 85, team: "A" },
+    { playerId: "colum", name: "Colum", index: 13.7, gross: 101, team: "A" },
+    { playerId: "wade", name: "Wade", index: 10.3, gross: 98, team: "B" },
+    { playerId: "tj", name: "TJ", index: 13.3, gross: 104, team: "A" },
+    { playerId: "ben", name: "Ben", index: 16.2, gross: 108, team: "B" },
+  ];
+  const strokes = alloc(field, "full");
+  const ranked = field
+    .map((p) => ({
+      ...p,
+      net: p.gross - strokes.find((s) => s.playerId === p.playerId)!.courseHandicap,
+    }))
+    .sort((a, b) => a.net - b.net);
+
+  assert.deepEqual(
+    ranked.slice(0, 5).map((r) => r.name),
+    ["@hankalan", "@dcole", "Kody", "Ryan", "@apalladino"],
+    "top five by net"
+  );
+  assert.equal(ranked[0].net, 75, "Hank had the low net");
+
+  const top5 = ranked.slice(0, 5);
+  assert.equal(top5.filter((r) => r.team === "A").length, 2, "McKannay took 2");
+  assert.equal(top5.filter((r) => r.team === "B").length, 3, "Dietz took 3");
+});

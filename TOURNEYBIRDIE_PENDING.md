@@ -71,6 +71,30 @@ These are the things that stop you inviting people who are not you.
 
 ## Recently shipped
 
+**24 Aug 2026 (second bundle) - notifications**
+- FOUND AND FIXED: quiet hours SILENTLY DROPPED notifications. Anything
+  generated between 10pm and 6am was discarded and the reminder log marked it
+  sent, so it never retried. The night-before reminder was the worst case - it
+  hangs off a calendar DATE, so it fired around 10pm, inside quiet hours, and
+  could vanish entirely with nothing reporting it.
+- Reminders now hang off the REAL tee time (round_date plus arrival_time), so
+  the evening-before reminder lands in the evening. Added a 45-minute
+  "you are on the tee" warning.
+- Notifications are now RECORDED, one row per recipient, delivered or held.
+  That gives the notification centre its history and lets a held one wait for
+  morning instead of vanishing.
+- Critical notifications bypass quiet hours: teeing off soon, the tee warning,
+  a round starting, and an organizer changing your score. The test was "could
+  you have acted differently if you had known at 2am" - for a tee time yes, for
+  a birdie no.
+- NOTIFICATION CENTRE on Profile: everything you were sent, newest first, with
+  unread marks, mark-all-read, and tapping through to where it happened. Plus a
+  plain-English guide to what each category covers.
+- New triggers: comments on a feed moment, a nudge to whoever is holding up a
+  round (and to the organizers who cannot close it), and a handicap-missing
+  reminder to the player rather than only the organizer.
+- 6 more tests, 24 total, covering quiet hours, criticality and the hold queue.
+
 **24 Aug 2026**
 - CLUBHOUSE SPLIT into Feed, Chat and Photos. Scoring callouts were posted as
   chat messages, so a busy round buried real conversation under automated
@@ -87,6 +111,34 @@ These are the things that stop you inviting people who are not you.
 - The Nest: live block moved to the top, and the Front 9 / Final counters -
   which read 0 of 8 all day on a hole-by-hole round - are replaced by cards
   going and furthest thru while a round is live.
+
+## Found during the 2026 trip - fixed, not yet deployed
+
+- **Net score rounds used group-relative strokes.** allocateForMatch always
+  measured everyone off the lowest handicap IN THEIR GROUP, which is right for
+  match play but wrong for a field-wide individual net round: a player's result
+  depended on who they teed off with. Saturday's standings had to be worked out
+  by hand. Now takes a `basis` of "relative" or "full", chosen from the round
+  format, with tests using the real Saturday cards as the fixture.
+
+## Found during the 2026 trip - STILL OPEN
+
+- **Matches created outside the app never resolve.** resolveMatch reads
+  manual_result for any round with a group_size, and nothing fills it in unless
+  the match came through the draw tool. Cost about an hour on Thursday. It
+  should fall back to computing the result from the hole scores.
+- **Net score rounds have no tiebreak.** The top five are taken with a plain
+  slice, so players tied at the cut are separated by arbitrary sort order.
+  Needs a countback (back nine, last six, last three, 18th) or an explicit
+  half-point split.
+- **No top-five marker on a net score round.** The Leaders tab sorts by net but
+  nothing shows which places are actually scoring points, or the cut line.
+- **Stroke indexes came from a web source and were wrong.** Harbour Town's were
+  completely different from the physical card and had to be corrected on the
+  morning of the round. Course setup should make hole data easy to verify
+  against a photographed card.
+- **Signing is the hidden gate.** Points do not appear until cards are signed,
+  and nothing on the leaderboard says so. Every round this trip needed chasing.
 
 ## Still open
 

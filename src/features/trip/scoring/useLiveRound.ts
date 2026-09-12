@@ -109,6 +109,9 @@ export function useLiveRound(): LiveRound {
           handicapIndex: p.handicapIndex,
         })),
         holeScores,
+        // Drives whether strokes are relative to the group or the full course
+        // handicap. A net_score round is scored across the whole field.
+        format: live.format,
       };
       const rows = liveRowsForRound(liveInput);
       const matchStates = liveMatchStates(

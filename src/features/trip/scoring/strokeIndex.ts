@@ -92,8 +92,25 @@ export type MatchStrokes = {
 };
 
 /**
- * Full allocation for one match/group. Everyone is measured off the lowest
- * course handicap in the group (that player plays off scratch for the match).
+ * Stroke allocation for a group of players.
+ *
+ * TWO MODES, and using the wrong one silently produces wrong results:
+ *
+ *   "relative"  (default) Everyone is measured off the LOWEST course handicap
+ *               in the group, who plays off scratch. This is right for match
+ *               play - a 2v2 or a singles match is a contest between the
+ *               people in it, so only the difference between them matters.
+ *
+ *   "full"      Everyone plays off their own full course handicap. This is
+ *               right for a field-wide competition - individual net, where a
+ *               player is ranked against everyone in the tournament, not
+ *               against whoever they happened to tee off with.
+ *
+ * Using "relative" for a net-score round makes a player's result depend on who
+ * they were drawn with: grouped with a scratch golfer you look worse, grouped
+ * with three high handicappers you look better, off identical golf. That is
+ * exactly what happened in the 2026 McKannay Invitational, where the Saturday
+ * standings had to be recomputed by hand.
  */
 export function allocateForMatch(params: {
   players: (PlayerHandicap & { name: string })[];
@@ -102,11 +119,18 @@ export function allocateForMatch(params: {
   holesCount: 9 | 18;
   nine: "front" | "back" | null;
   allowancePct: number;
+  /** Defaults to "relative" so existing match-play callers are unchanged. */
+  basis?: "relative" | "full";
 }): MatchStrokes[] {
   const { players, tee, holes, holesCount, nine, allowancePct } = params;
   const eligible = holesInPlay(holes, holesCount, nine);
   const chs = players.map((p) => ({ ...p, ch: courseHandicapFloored(p.index, tee) }));
-  const low = chs.reduce((min, p) => Math.min(min, p.ch), Infinity);
+  // "full" measures everyone off zero, so each player keeps their own whole
+  // course handicap rather than only the difference from the group's best.
+  const low =
+    params.basis === "full"
+      ? 0
+      : chs.reduce((min, p) => Math.min(min, p.ch), Infinity);
 
   return chs.map((p) => {
     const strokes = strokesReceived(p.ch, low, allowancePct, holesCount);

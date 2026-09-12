@@ -65,7 +65,19 @@ export type LiveRoundInput = {
   tee: { rating: number | null; slope: number | null; par: number };
   players: { id: string; name: string; handicapIndex: number }[];
   holeScores: HoleScoreLite[];
+  /**
+   * The round's format. A net_score round is a FIELD-WIDE competition, so
+   * everyone plays off their own full course handicap. Match play formats are
+   * contests within a group, so strokes are relative to the group's low man.
+   * Getting this wrong makes a player's net depend on who they teed off with.
+   */
+  format?: string | null;
 };
+
+/** Which stroke basis a format demands. */
+export function basisForFormat(format?: string | null): "relative" | "full" {
+  return format === "net_score" || format === "stroke_play" ? "full" : "relative";
+}
 
 /**
  * Build live rows for one hole-by-hole round.
@@ -101,6 +113,7 @@ export function liveRowsForRound(input: LiveRoundInput): LiveRow[] {
       holesCount: input.holesCount,
       nine: input.nine,
       allowancePct: g.allowancePct,
+      basis: basisForFormat(input.format),
     }).forEach((a) => strokesFor.set(a.playerId, a.byHole));
   }
 
@@ -222,6 +235,7 @@ export function liveMatchStates(
       holesCount: input.holesCount,
       nine: input.nine,
       allowancePct: g.allowancePct,
+      basis: basisForFormat(input.format),
     }).forEach((a) => strokesFor.set(a.playerId, a.byHole));
   }
 
