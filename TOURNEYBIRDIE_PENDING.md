@@ -112,6 +112,29 @@ These are the things that stop you inviting people who are not you.
   which read 0 of 8 all day on a hole-by-hole round - are replaced by cards
   going and furthest thru while a round is live.
 
+## Bundle 2 - the screens
+
+- **Four tabs, down from five:** Home, Standings, Trip, Clubhouse. The first tab
+  changes what it IS: "Home" between rounds, "Round" (with the Tee It Up bird)
+  while one is live. The nav never changes shape.
+- **Round screen while a round is live.** One screen instead of five, in the
+  order a golfer asks: your match state big at the top (2 up / 1 down / all
+  square) with a per-hole won-lost-halved strip, then this hole and score
+  entry, then collapsed rows for team points, all matches and the full
+  scorecard. The survey's loudest complaint was not seeing the match score.
+- **Full scorecard view**, the whole card at once, with holes where each player
+  gets a shot shaded - "I didn't notice he was stroking for five holes".
+- **Standings** shows team score and the individual leaderboard together, with
+  every match below. Replaces the six Pecking Order sub-tabs.
+- **Trip tab** holds the browsing people do off the course: schedule with every
+  group, teams, players, rules. Locker dissolved into it.
+- **Player and match detail open as sheets** over the current screen and
+  dismiss back to where you were, instead of navigating away. Every existing
+  "open this player" in the app became a sheet automatically.
+- **Past scorecards** - Locker was the only way back into a closed round's card,
+  which is how an organizer fixes one. That now lives on Home between rounds.
+- Known: the guided tour still describes the old layout. Rewritten in Bundle 3.
+
 ## Bundle 1 - the engine (deployed after the 2026 trip)
 
 The tournament now moves itself through the day. Everything below was done by

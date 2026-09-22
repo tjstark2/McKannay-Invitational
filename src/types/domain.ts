@@ -18,7 +18,8 @@ export type Screen =
   | "admin"
   | "more"
   | "clubhouse"
-  | "courseDetail";
+  | "courseDetail"
+  | "trip";
 
 export type RoundFormat =
   | "best_ball"

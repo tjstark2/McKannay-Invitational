@@ -200,6 +200,12 @@ export type LiveMatchState = {
   standing: number;
   /** "2 UP", "ALL SQUARE", "3 DOWN" from side A's point of view. */
   label: string;
+  /**
+   * Hole by hole, in playing order: who won each completed hole. This is the
+   * per-hole payoff of entering scores hole by hole - it shows HOW a match got
+   * to 2 up, not just that it is.
+   */
+  holes: { hole: number; winner: "A" | "B" | "T" }[];
 };
 
 /**
@@ -254,17 +260,25 @@ export function liveMatchStates(
   return matches.map((m) => {
     let standing = 0;
     let thru = 0;
+    const holes: { hole: number; winner: "A" | "B" | "T" }[] = [];
     for (const h of playable) {
       const a = bestNetOn(m.aPlayers, h.hole);
       const b = bestNetOn(m.bPlayers, h.hole);
       if (a == null || b == null) continue;
       thru += 1;
-      if (a < b) standing += 1;
-      else if (b < a) standing -= 1;
+      if (a < b) {
+        standing += 1;
+        holes.push({ hole: h.hole, winner: "A" });
+      } else if (b < a) {
+        standing -= 1;
+        holes.push({ hole: h.hole, winner: "B" });
+      } else {
+        holes.push({ hole: h.hole, winner: "T" });
+      }
     }
     const up = Math.abs(standing);
     const label =
       thru === 0 ? "Not started" : standing === 0 ? "All square" : `${up} up`;
-    return { matchId: m.id, thru, standing, label };
+    return { matchId: m.id, thru, standing, label, holes };
   });
 }

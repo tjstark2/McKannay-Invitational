@@ -1,43 +1,45 @@
 import type { Screen } from "@/types";
 
+/**
+ * Four tabs, down from five. The first one changes what it IS with the state
+ * of the tournament: Home between rounds, Round while one is live - where you
+ * score. The nav never changes shape, so nobody gets lost; what changes is
+ * what home means.
+ */
 export function BottomNav({
   activeScreen,
   setActiveScreen,
   clubhouseUnread = 0,
+  roundLive = false,
 }: {
   activeScreen: Screen;
   setActiveScreen: (screen: Screen) => void;
   clubhouseUnread?: number;
+  /** A round is being played right now. */
+  roundLive?: boolean;
 }) {
   const items: { id: Screen; label: string; img: string }[] = [
-    { id: "overview", label: "The Nest", img: "/brand/the-nest.png" },
-    { id: "tournament", label: "Pecking Order", img: "/brand/pecking-order.png" },
-    { id: "addScore", label: "Tee It Up", img: "/brand/tee-it-up.png" },
+    roundLive
+      ? { id: "overview", label: "Round", img: "/brand/tee-it-up.png" }
+      : { id: "overview", label: "Home", img: "/brand/the-nest.png" },
+    { id: "tournament", label: "Standings", img: "/brand/pecking-order.png" },
+    { id: "trip", label: "Trip", img: "/brand/locker.png" },
     { id: "clubhouse", label: "Clubhouse", img: "/brand/clubhouse.png" },
-    { id: "more", label: "Locker", img: "/brand/locker.png" },
   ];
 
-  const tournamentScreens: Screen[] = [
-    "tournament",
-    "scoreboard",
-    "matchCenter",
-    "matchDetail",
-    "schedule",
-    "leaderboard",
-    "teams",
-    "teamDetail",
-    "players",
-    "playerProfile",
-  ];
+  // Which tab lights up for screens reached from inside it.
+  const tabFor = (screen: Screen): Screen => {
+    if (["tournament", "scoreboard", "matchCenter", "matchDetail", "leaderboard"].includes(screen)) return "tournament";
+    if (["trip", "schedule", "teams", "teamDetail", "players", "rules", "courseDetail", "more"].includes(screen)) return "trip";
+    if (["overview", "addScore", "playerProfile"].includes(screen)) return "overview";
+    return screen;
+  };
 
   return (
     <div className="fixed bottom-0 left-1/2 z-50 w-full max-w-md -translate-x-1/2 rounded-t-[26px] border-t border-line bg-white/95 px-3 pb-4 pt-2 shadow-[0_-10px_28px_-18px_rgba(11,36,24,0.45)] backdrop-blur">
-      <div className="grid grid-cols-5 items-end gap-1">
+      <div className="grid grid-cols-4 items-end gap-1">
         {items.map((item) => {
-          const active =
-            item.id === "tournament"
-              ? tournamentScreens.includes(activeScreen)
-              : activeScreen === item.id;
+          const active = tabFor(activeScreen) === item.id;
 
           return (
             <button

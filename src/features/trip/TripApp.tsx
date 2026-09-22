@@ -10,6 +10,10 @@ import { whenOverlaysClear } from "@/features/trip/tour/overlayState";
 import { MomentTakeover } from "@/features/trip/components/MomentTakeover";
 import { ChampionTakeover } from "@/features/trip/components/ChampionTakeover";
 import { BottomNav } from "@/features/trip/components/BottomNav";
+import { Sheet } from "@/features/trip/components/Sheet";
+import { RoundHome } from "@/features/trip/screens/RoundHome";
+import { StandingsScreen } from "@/features/trip/screens/StandingsScreen";
+import { TripScreen } from "@/features/trip/screens/TripScreen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { CourseDetailScreen } from "@/features/trip/screens/CourseDetailScreen";
 import { ClubhouseScreen } from "@/features/trip/screens/ClubhouseScreen";
@@ -113,6 +117,13 @@ function TripAppInner() {
   }, []);
   const [tournamentTab, setTournamentTab] =
     useState<TournamentTab>("scoreboard");
+  // Detail opens as a sheet over the current screen rather than a new screen,
+  // so you always land back exactly where you were.
+  const [sheet, setSheet] = useState<"player" | "match" | null>(null);
+  const [tripSection, setTripSection] = useState<"schedule" | "teams" | "players" | "rules">("schedule");
+  // The round being played right now, if any. While one is live, Home IS the
+  // round - score entry, your match, the standings - instead of a separate tab.
+  const activeRound = rounds.find((r) => r.startedAt && !r.finishedAt) ?? null;
   const [clubhouseTab, setClubhouseTab] = useState<ClubhouseTab>("photos");
   const [unread, setUnread] = useState<ClubhouseUnread>({ photos: 0, chat: 0 });
   const [activityBanner, setActivityBanner] = useState<
@@ -281,24 +292,47 @@ function TripAppInner() {
   }
 
   function goToScreen(screen: Screen) {
-    if (DRILL_IN.includes(screen) && screen !== activeScreen) {
-      setScreenStack((prev) => [...prev, activeScreen]);
-    } else if (!DRILL_IN.includes(screen)) {
-      setScreenStack([]);
+    // Player and match detail are sheets now, not screens. Every existing
+    // "open this player" in the app routes here, so all of them become sheets
+    // without touching the screens that call them.
+    if (screen === "playerProfile") {
+      setSheet("player");
+      return;
     }
-    if (
-      screen === "scoreboard" ||
-      screen === "matchCenter" ||
-      screen === "schedule" ||
-      screen === "leaderboard" ||
-      screen === "teams" ||
-      screen === "players"
-    ) {
+    if (screen === "matchDetail") {
+      setSheet("match");
+      return;
+    }
+    setSheet(null);
+
+    // Scoring lives on the Round home while a round is live.
+    if (screen === "addScore" && activeRound) {
+      setScreenStack([]);
+      setActiveScreen("overview");
+      return;
+    }
+
+    // Competition -> Standings.
+    if (screen === "scoreboard" || screen === "matchCenter" || screen === "leaderboard") {
+      setScreenStack([]);
       setTournamentTab(screen);
       setActiveScreen("tournament");
       return;
     }
 
+    // Reference -> Trip. Locker ("more") dissolved into it.
+    if (screen === "schedule" || screen === "teams" || screen === "players" || screen === "rules" || screen === "more") {
+      setScreenStack([]);
+      setTripSection(screen === "more" ? "rules" : screen);
+      setActiveScreen("trip");
+      return;
+    }
+
+    if (DRILL_IN.includes(screen) && screen !== activeScreen) {
+      setScreenStack((prev) => [...prev, activeScreen]);
+    } else if (!DRILL_IN.includes(screen)) {
+      setScreenStack([]);
+    }
     setActiveScreen(screen);
   }
 
@@ -333,85 +367,57 @@ function TripAppInner() {
 
         <main className="px-5 py-6">
           {activeScreen === "overview" ? (
-            <OverviewScreen setActiveScreen={goToScreen} />
+            activeRound ? (
+              <RoundHome
+                round={activeRound}
+                onOpenMatch={(id) => {
+                  setSelectedMatchId(id);
+                  setSheet("match");
+                }}
+                onOpenPlayer={(id) => {
+                  setSelectedPlayerId(id);
+                  setSheet("player");
+                }}
+              />
+            ) : (
+              <>
+                <OverviewScreen setActiveScreen={goToScreen} />
+                {/* Locker used to be the only way back into a scorecard once a
+                    round had closed - which is how an organizer fixes a card.
+                    With Locker gone it lives here, between rounds. */}
+                {rounds.some((r) => r.startedAt) ? (
+                  <button
+                    type="button"
+                    onClick={() => goToScreen("addScore")}
+                    className="mt-4 w-full rounded-2xl border border-line bg-white px-4 py-3 text-left text-[14px] font-black text-fairway-900"
+                  >
+                    {canManage ? "View or fix a scorecard" : "View your scorecards"}
+                  </button>
+                ) : null}
+              </>
+            )
+          ) : null}
+
+          {activeScreen === "trip" ? (
+            <TripScreen
+              key={tripSection}
+              initial={tripSection}
+              setActiveScreen={goToScreen}
+              setSelectedCourseId={setSelectedCourseId}
+              setSelectedTeamId={setSelectedTeamId}
+              setSelectedPlayerId={setSelectedPlayerId}
+            />
           ) : null}
 
           {showTournamentShell ? (
-            <div className="space-y-4">
-              <ScreenHeader
-                img="/brand/pecking-order.png"
-                title="Pecking Order"
-                subtitle="Scores, matches, schedule, leaders, teams, and players."
-              />
-
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { id: "scoreboard", label: "Score" },
-                  { id: "matchCenter", label: "Matches" },
-                  { id: "schedule", label: "Schedule" },
-                  { id: "leaderboard", label: "Leaders" },
-                  { id: "teams", label: "Teams" },
-                  { id: "players", label: "Players" },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    data-tour={`tab-${tab.id}`}
-                    onClick={() => setTournamentTab(tab.id as TournamentTab)}
-                    className={`rounded-xl px-3 py-2 text-sm font-extrabold transition ${
-                      tournamentTab === tab.id
-                        ? "bg-fairway-900 text-white shadow-[0_8px_16px_-10px_rgba(19,100,63,0.8)]"
-                        : "border border-line bg-white text-slate-600"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-
-              {tournamentTab === "scoreboard" ? (
-                <ScoreboardScreen setActiveScreen={goToScreen} />
-              ) : null}
-
-              {tournamentTab === "matchCenter" ? (
-                <MatchCenterScreen
-                  setActiveScreen={goToScreen}
-                  setSelectedMatchId={setSelectedMatchId}
-                />
-              ) : null}
-
-              {tournamentTab === "schedule" ? (
-                <ScheduleScreen
-                  setActiveScreen={goToScreen}
-                  setSelectedCourseId={setSelectedCourseId}
-                />
-              ) : null}
-
-              {tournamentTab === "leaderboard" ? <LeaderboardScreen /> : null}
-
-              {tournamentTab === "teams" ? (
-                <TeamsScreen
-                  setActiveScreen={goToScreen}
-                  setSelectedTeamId={setSelectedTeamId}
-                />
-              ) : null}
-
-              {tournamentTab === "players" ? (
-                <PlayersScreen
-                  setActiveScreen={goToScreen}
-                  setSelectedPlayerId={setSelectedPlayerId}
-                />
-              ) : null}
-            </div>
+            <StandingsScreen setActiveScreen={goToScreen} setSelectedMatchId={setSelectedMatchId} />
           ) : null}
 
           {activeScreen === "addScore" ? <AddScoreScreen /> : null}
 
-          {activeScreen === "playerProfile" ? (
-            <PlayerProfileScreen
-              playerId={selectedPlayerId}
-              setActiveScreen={goToScreen}
-            />
-          ) : null}
+          <Sheet open={sheet === "player"} onClose={() => setSheet(null)} label="Player">
+            <PlayerProfileScreen playerId={selectedPlayerId} setActiveScreen={goToScreen} />
+          </Sheet>
 
           {activeScreen === "teamDetail" ? (
             <TeamDetailScreen
@@ -421,12 +427,9 @@ function TripAppInner() {
             />
           ) : null}
 
-          {activeScreen === "matchDetail" ? (
-            <MatchDetailScreen
-              matchId={selectedMatchId}
-              setActiveScreen={goToScreen}
-            />
-          ) : null}
+          <Sheet open={sheet === "match"} onClose={() => setSheet(null)} label="Match">
+            <MatchDetailScreen matchId={selectedMatchId} setActiveScreen={goToScreen} />
+          </Sheet>
 
           {activeScreen === "rules" ? <RulesScreen /> : null}
 
@@ -491,6 +494,7 @@ function TripAppInner() {
           activeScreen={activeScreen}
           setActiveScreen={goToScreen}
           clubhouseUnread={unread.photos + unread.chat}
+          roundLive={Boolean(activeRound)}
         />
       </div>
     </div>

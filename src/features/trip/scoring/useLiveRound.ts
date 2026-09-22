@@ -21,11 +21,13 @@ import { loadCourseTees } from "@/lib/supabase/courseHoles";
 import {
   liveRowsForRound,
   liveMatchStates,
+  basisForFormat,
   type HoleScoreLite,
   type LiveMatchState,
   type LiveRow,
 } from "@/features/trip/scoring/liveStandings";
 import { useTripState } from "@/features/trip/state/TripStateContext";
+import { allocateForMatch, holesInPlay } from "@/features/trip/scoring/strokeIndex";
 
 export type LiveRound = {
   round: RoundSetup | null;
@@ -34,8 +36,16 @@ export type LiveRound = {
   matchStates: LiveMatchState[];
   /** How many holes the round has, for "thru N of 18". */
   holeCount: number;
+  /** The holes in play, for the scorecard: number, par, stroke index. */
+  holes: { hole: number; par: number; si: number }[];
+  /** Every score entered so far this round. */
+  holeScores: HoleScoreLite[];
+  /** Shots each player receives on each hole, same basis as the match maths. */
+  strokes: Record<string, Record<number, number>>;
   loading: boolean;
 };
+
+const EMPTY = { holes: [], holeScores: [], strokes: {} };
 
 export function useLiveRound(): LiveRound {
   const { trip, players, matches } = useTripState();
@@ -44,6 +54,7 @@ export function useLiveRound(): LiveRound {
     rows: [],
     matchStates: [],
     holeCount: 18,
+    ...EMPTY,
     loading: true,
   });
 
@@ -53,7 +64,7 @@ export function useLiveRound(): LiveRound {
 
     // Only hole-by-hole trips have a "during".
     if (trip.scoringMode !== "hole_by_hole") {
-      setState({ round: null, rows: [], matchStates: [], holeCount: 18, loading: false });
+      setState({ round: null, rows: [], matchStates: [], holeCount: 18, ...EMPTY, loading: false });
       return;
     }
 
@@ -66,7 +77,7 @@ export function useLiveRound(): LiveRound {
         [...setups].reverse().find((r) => r.startedAt) ??
         null;
       if (!live || !live.courseId) {
-        setState({ round: null, rows: [], matchStates: [], holeCount: 18, loading: false });
+        setState({ round: null, rows: [], matchStates: [], holeCount: 18, ...EMPTY, loading: false });
         return;
       }
 
@@ -121,11 +132,33 @@ export function useLiveRound(): LiveRound {
           .map((m) => ({ id: m.id, aPlayers: m.aPlayers, bPlayers: m.bPlayers }))
       );
 
+      // Shots per player per hole, for marking stroke holes on the scorecard.
+      // Same allocation the match maths uses, so the card and the result agree.
+      const strokes: Record<string, Record<number, number>> = {};
+      for (const g of liveInput.groups) {
+        const group = g.playerIds
+          .map((id) => liveInput.players.find((p) => p.id === id))
+          .filter((p): p is NonNullable<typeof p> => Boolean(p));
+        if (group.length === 0) continue;
+        allocateForMatch({
+          players: group.map((p) => ({ playerId: p.id, name: p.name, index: p.handicapIndex })),
+          tee: liveInput.tee,
+          holes: liveInput.holes,
+          holesCount: liveInput.holesCount,
+          nine: liveInput.nine,
+          allowancePct: g.allowancePct,
+          basis: basisForFormat(liveInput.format),
+        }).forEach((a) => (strokes[a.playerId] = a.byHole));
+      }
+
       setState({
         round: live,
         rows,
         matchStates,
         holeCount: holesCount,
+        holes: holesInPlay(holes, holesCount, live.nine),
+        holeScores,
+        strokes,
         loading: false,
       });
     } catch {
