@@ -380,3 +380,122 @@ test("Saturday of the 2026 trip resolves the way it was scored by hand", () => {
   assert.equal(top5.filter((r) => r.team === "A").length, 2, "McKannay took 2");
   assert.equal(top5.filter((r) => r.team === "B").length, 3, "Dietz took 3");
 });
+
+/* --------------------------------------------------------------- round clock */
+
+import {
+  parseClock,
+  teeOffAt,
+  roundClosesAt,
+  localDate,
+  localHour,
+} from "../src/features/trip/scoring/roundClock";
+
+test("tee times read the way they are written", () => {
+  assert.equal(parseClock("7:30 AM"), 450);
+  assert.equal(parseClock("10:03am"), 603);
+  assert.equal(parseClock("2:06 PM"), 846);
+  assert.equal(parseClock("12:15 AM"), 15, "midnight hour");
+  assert.equal(parseClock("12:15 PM"), 735, "noon hour");
+  assert.equal(parseClock("7:30 AM #1"), 450, "match labels carry a suffix");
+  assert.equal(parseClock("TBD"), null);
+});
+
+test("a Hilton Head tee time is the right instant in September", () => {
+  // September is daylight time: New York is UTC-4, so 7:30 local is 11:30 UTC.
+  const at = teeOffAt("2026-09-11", "7:30 AM", "America/New_York")!;
+  assert.equal(at.toISOString(), "2026-09-11T11:30:00.000Z");
+});
+
+test("the same tee time is an hour later in UTC in December", () => {
+  // December is standard time: UTC-5. The December trip crosses this change,
+  // and getting it wrong would open scoring an hour early or late.
+  const at = teeOffAt("2026-12-11", "7:30 AM", "America/New_York")!;
+  assert.equal(at.toISOString(), "2026-12-11T12:30:00.000Z");
+});
+
+test("a round closes three hours after the last score", () => {
+  // Last score 1pm local (17:00 UTC in September) -> closes 4pm local.
+  const close = roundClosesAt("2026-09-11T17:00:00.000Z", "2026-09-11", "America/New_York")!;
+  assert.equal(close.toISOString(), "2026-09-11T20:00:00.000Z");
+});
+
+test("a late round closes at 9pm, not three hours after", () => {
+  // Last score 7pm local -> 9pm cap comes first.
+  const close = roundClosesAt("2026-09-11T23:00:00.000Z", "2026-09-11", "America/New_York")!;
+  assert.equal(close.toISOString(), "2026-09-12T01:00:00.000Z", "9pm EDT");
+});
+
+test("a score after 9pm still gets its three hours", () => {
+  // Nobody should be closed out the instant they finish.
+  const close = roundClosesAt("2026-09-12T02:00:00.000Z", "2026-09-11", "America/New_York")!;
+  assert.equal(close.toISOString(), "2026-09-12T05:00:00.000Z");
+});
+
+test("no scores means the round never closes itself", () => {
+  assert.equal(roundClosesAt(null, "2026-09-11", "America/New_York"), null);
+});
+
+test("local date and hour follow the trip's zone, not the server's", () => {
+  const at = new Date("2026-09-12T02:00:00.000Z"); // 10pm on the 11th in New York
+  assert.equal(localDate(at, "America/New_York"), "2026-09-11");
+  assert.equal(localHour(at, "America/New_York"), 22);
+});
+
+/* ------------------------------------------------------- notification rules */
+
+import {
+  inQuietHours,
+  isCritical,
+  nextQuietEnd,
+  wantsCategory,
+  shouldDeliver,
+} from "../src/features/notifications/categories";
+
+const at = (hour: number) => new Date(2026, 8, 1, hour, 0, 0);
+const note = (category: string, kind: string) =>
+  ({ category, kind, title: "t", message: "m" }) as Parameters<typeof wantsCategory>[0];
+
+test("quiet hours wrap midnight", () => {
+  const p = { quiet_start: 22, quiet_end: 6, time_zone: null };
+  assert.equal(inQuietHours(p, at(23)), true);
+  assert.equal(inQuietHours(p, at(2)), true);
+  assert.equal(inQuietHours(p, at(6)), false);
+  assert.equal(inQuietHours(p, at(14)), false);
+});
+
+test("critical means acting late would cost you something", () => {
+  assert.equal(isCritical("tee_warning"), true);
+  assert.equal(isCritical("round_open"), true);
+  assert.equal(isCritical("score_changed"), true);
+  assert.equal(isCritical("eagle"), false, "fun, but nothing to do at 2am");
+  assert.equal(isCritical(null), false);
+});
+
+test("wanting a notification is separate from when it arrives", () => {
+  // The fix: a wanted notification at 2am is HELD, not dropped.
+  assert.equal(wantsCategory(note("clubhouse", "message"), { clubhouse_level: "off" }), false);
+  assert.equal(wantsCategory(note("clubhouse", "message"), {}), true);
+  assert.equal(wantsCategory(note("essential", "tee_warning"), { clubhouse_level: "off" }), true);
+});
+
+test("a wanted notification at 2am is not delivered right then", () => {
+  const p = { quiet_start: 22, quiet_end: 6, time_zone: null };
+  assert.equal(shouldDeliver(note("round_day", "night_before"), p, at(2)), false, "held for morning");
+  assert.equal(shouldDeliver(note("essential", "tee_warning"), p, at(2)), true, "critical goes now");
+});
+
+test("a held notification waits for morning, not forever", () => {
+  const p = { quiet_start: 22, quiet_end: 6, time_zone: null };
+  const late = new Date(nextQuietEnd(p, at(23)));
+  assert.equal(late.getHours(), 6);
+  assert.equal(late.getDate(), 2, "11pm waits until the next morning");
+  const early = new Date(nextQuietEnd(p, at(2)));
+  assert.equal(early.getDate(), 1, "2am waits only until later that morning");
+});
+
+test("mentions still arrive when the clubhouse is set to mentions only", () => {
+  const p = { clubhouse_level: "mentions" as const };
+  assert.equal(wantsCategory(note("clubhouse", "mention"), p), true);
+  assert.equal(wantsCategory(note("clubhouse", "message"), p), false);
+});

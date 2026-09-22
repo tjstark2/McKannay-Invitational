@@ -4,7 +4,14 @@
 
 import webpush from "web-push";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { shouldDeliver, type Category, type Prefs } from "@/features/notifications/categories";
+import {
+  inQuietHours,
+  isCritical,
+  nextQuietEnd,
+  wantsCategory,
+  type Category,
+  type Prefs,
+} from "@/features/notifications/categories";
 
 export type PushArgs = {
   userIds: string[];
@@ -13,6 +20,8 @@ export type PushArgs = {
   category: Category;
   kind?: string;
   url?: string;
+  /** Which tournament it came from - for the record and the notification centre. */
+  tripId?: string | null;
 };
 
 /** Service-role client, or null when the env isn't configured. */
@@ -67,7 +76,22 @@ export async function sendPushToUsers(
     title: args.title,
     message: args.message,
   };
-  const wanted = userIds.filter((id) => shouldDeliver(notification, prefById.get(id) ?? null));
+  // Two questions, answered separately. Does this person want it at all? And
+  // if so, is it a civil hour? Wanted-but-asleep WAITS for morning. It used to
+  // be thrown away, which silently lost notifications all through 2026.
+  const wanted: string[] = [];
+  const held: { userId: string; until: string }[] = [];
+  for (const id of userIds) {
+    const prefs = prefById.get(id) ?? null;
+    if (!wantsCategory(notification, prefs)) continue;
+    if (args.category === "essential" || isCritical(args.kind) || !inQuietHours(prefs)) {
+      wanted.push(id);
+    } else {
+      held.push({ userId: id, until: nextQuietEnd(prefs) });
+    }
+  }
+
+  await recordNotifications(admin, args, wanted, held);
   if (wanted.length === 0) return 0;
 
   const { data: subs } = await admin
@@ -102,6 +126,85 @@ export async function sendPushToUsers(
   );
   if (dead.length > 0) {
     await admin.from("push_subscriptions").delete().in("id", dead);
+  }
+  return sent;
+}
+
+/** One row per recipient: delivered now, or held with a time to send. */
+async function recordNotifications(
+  admin: SupabaseClient,
+  args: PushArgs,
+  delivered: string[],
+  held: { userId: string; until: string }[]
+): Promise<void> {
+  const base = {
+    trip_id: args.tripId ?? null,
+    category: args.category,
+    kind: args.kind ?? null,
+    title: args.title,
+    body: args.message,
+    url: args.url ?? null,
+  };
+  const rows = [
+    ...delivered.map((user_id) => ({ ...base, user_id, delivered_at: new Date().toISOString() })),
+    ...held.map((h) => ({ ...base, user_id: h.userId, hold_until: h.until })),
+  ];
+  if (rows.length === 0) return;
+  try {
+    await admin.from("notifications").insert(rows);
+  } catch {
+    // Bookkeeping must never stop a notification going out.
+  }
+}
+
+/**
+ * Send everything held overnight whose time has come. Called by the cron.
+ * Identical messages are grouped so one push covers everyone waiting on it.
+ */
+export async function flushHeldNotifications(admin: SupabaseClient): Promise<number> {
+  const { data } = await admin
+    .from("notifications")
+    .select("id,user_id,title,body,url")
+    .is("delivered_at", null)
+    .not("hold_until", "is", null)
+    .lte("hold_until", new Date().toISOString())
+    .limit(300);
+  const rows = (data ?? []) as { id: string; user_id: string; title: string; body: string; url: string | null }[];
+  if (rows.length === 0) return 0;
+
+  const groups = new Map<string, { title: string; body: string; url: string | null; ids: string[]; users: string[] }>();
+  for (const r of rows) {
+    const key = `${r.title}\u0000${r.body}\u0000${r.url ?? ""}`;
+    const g = groups.get(key) ?? { title: r.title, body: r.body, url: r.url, ids: [], users: [] };
+    g.ids.push(r.id);
+    g.users.push(r.user_id);
+    groups.set(key, g);
+  }
+
+  let sent = 0;
+  for (const g of groups.values()) {
+    const { data: subs } = await admin
+      .from("push_subscriptions")
+      .select("endpoint,p256dh,auth")
+      .in("user_id", g.users);
+    const payload = JSON.stringify({ title: g.title, body: g.body, url: g.url || "/home" });
+    await Promise.all(
+      ((subs ?? []) as Record<string, unknown>[]).map(async (s) => {
+        try {
+          await webpush.sendNotification(
+            { endpoint: s.endpoint as string, keys: { p256dh: s.p256dh as string, auth: s.auth as string } },
+            payload
+          );
+          sent += 1;
+        } catch {
+          /* a dead subscription is pruned on the next normal send */
+        }
+      })
+    );
+    await admin
+      .from("notifications")
+      .update({ delivered_at: new Date().toISOString(), hold_until: null })
+      .in("id", g.ids);
   }
   return sent;
 }

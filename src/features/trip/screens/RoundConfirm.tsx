@@ -191,14 +191,14 @@ export function RoundConfirm({
       await notify({
         userIds: [waiting[0].accountId],
         title: "Your card is waiting",
-        message: `Everyone else in your group has signed. Sign the card to lock the round.`,
+        message: `Everyone else has confirmed. Check your card and vote for the awards.`,
         category: "essential",
       });
     } else if (waiting.length > 1) {
       await notify({
         userIds: waiting.map((p) => p.accountId),
         title: "Card ready to sign",
-        message: "All the holes are in. Check it over and sign your card.",
+        message: "Your round is in. Check your card and vote for the awards.",
         category: "my_card",
       });
     }
@@ -208,7 +208,7 @@ export function RoundConfirm({
 
   return (
     <div className="rounded-2xl border-2 border-fairway-900 bg-white p-4">
-      <p className="font-anton text-2xl tracking-tight text-ink">Sign the card</p>
+      <p className="font-anton text-2xl tracking-tight text-ink">Your round is in</p>
       <p className="mt-1 text-[13px] leading-5 text-slate-600">
         Every player in the group signs off. Once everyone has, the round locks and the awards vote opens.
       </p>
@@ -225,7 +225,7 @@ export function RoundConfirm({
                 {t?.gross} gross · {t?.net} net
               </span>
               <span className={`text-[12px] font-black ${done ? "text-emerald-700" : "text-slate-300"}`}>
-                {done ? "signed" : "waiting"}
+                {done ? "confirmed" : "waiting"}
               </span>
             </div>
           );
@@ -236,7 +236,7 @@ export function RoundConfirm({
 
       {allConfirmed ? (
         <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-[13px] font-bold text-emerald-800">
-          Card signed by everyone. This round is locked.
+          Everyone has confirmed. Points are posting.
         </div>
       ) : me && !confirmed.includes(me.id) ? (
         <button
@@ -244,14 +244,14 @@ export function RoundConfirm({
           onClick={() => setShowPreview(true)}
           className="mt-3 w-full rounded-2xl bg-fairway-900 px-4 py-3.5 font-black text-white"
         >
-          Review and sign
+          Check your card and vote
         </button>
       ) : me ? (
         <p className="mt-3 text-[13px] font-bold text-slate-500">
-          You have signed. Waiting on the rest of the group.
+          You're confirmed. Waiting on the rest of your group - it closes on its own if they don't.
         </p>
       ) : (
-        <p className="mt-3 text-[13px] text-slate-500">Only players in this group can sign the card.</p>
+        <p className="mt-3 text-[13px] text-slate-500">Only players in this group can confirm this card.</p>
       )}
 
       {showPreview ? (

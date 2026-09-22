@@ -112,6 +112,44 @@ These are the things that stop you inviting people who are not you.
   which read 0 of 8 all day on a hole-by-hole round - are replaced by cards
   going and furthest thru while a round is live.
 
+## Bundle 1 - the engine (deployed after the 2026 trip)
+
+The tournament now moves itself through the day. Everything below was done by
+hand in SQL during the McKannay Invitational.
+
+- **The server can close a round.** The score lock only trusted logged-in
+  organizers, so the automatic jobs and the SQL Editor were blocked - every
+  "Ask an organizer to change a score" error from Saturday. It now trusts the
+  server itself.
+- **Closing a round does the whole job.** Resolves every match from the hole
+  scores (matches made outside the draw tool never resolved before, so points
+  silently never posted), publishes every complete card's total (180 holes
+  counted for nothing on Saturday because only signing published a total),
+  confirms outstanding cards, and points the tournament at the next round.
+- **The manual Finish round button runs the same close.** It used to just stamp
+  the round finished and skip all of the above.
+- **Scoring opens on its own** 30 minutes before the first tee, if the round is
+  ready. The organizer is told. If it is not ready, it holds and says exactly
+  what is missing instead of silently doing nothing.
+- **Readiness is checked per round** 12 hours out and again at 3, so a missing
+  matchup is caught the night before rather than on the first tee.
+- **Rounds close on their own** 3 hours after the last score or 9pm local,
+  whichever is first, with one reminder 30 minutes before.
+- **New notifications:** night before, per-group 30-minute tee warning (one per
+  tee time), your round is in, 30 minutes before close, round final, and
+  organizer notices for opened / held / not ready / closed.
+- **Quiet hours hold instead of drop.** Every notification is written down; one
+  generated at 2am now waits for morning. Tee warnings, scoring opening and
+  score changes bypass quiet hours.
+- **Trips carry a time zone**, so "7:30 AM" means the right instant - tested
+  across the daylight-saving change the December trip will cross.
+- **Signing is reworded as confirm and vote** - it is the way into the awards,
+  not a certification chore.
+- The old `notifications-aug24` bundle is superseded and should NOT be deployed.
+- 35 tests, up from 21.
+
+**Needs TJ:** cron-job.org must run every 10 minutes, not hourly.
+
 ## Found during the 2026 trip - fixed, not yet deployed
 
 - **Net score rounds used group-relative strokes.** allocateForMatch always

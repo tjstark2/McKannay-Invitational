@@ -50,7 +50,9 @@ export type Notification = {
   url?: string;
 };
 
-function inQuietHours(prefs: Prefs, now = new Date()): boolean {
+/** Is it currently inside this person's quiet hours? */
+export function inQuietHours(prefsRaw: Partial<Prefs> | null, now = new Date()): boolean {
+  const prefs: Prefs = { ...DEFAULT_PREFS, ...(prefsRaw ?? {}) };
   const tz = prefs.time_zone;
   let hour: number;
   try {
@@ -65,19 +67,35 @@ function inQuietHours(prefs: Prefs, now = new Date()): boolean {
   return start <= end ? hour >= start && hour < end : hour >= start || hour < end;
 }
 
-/** The single decision: does this person get this notification right now? */
-export function shouldDeliver(
-  n: Notification,
-  prefsRaw: Partial<Prefs> | null,
-  now = new Date()
-): boolean {
+/**
+ * Notifications that ignore quiet hours.
+ *
+ * The test: could you have done something differently if you had known at
+ * 2am? For a tee time, yes. For a birdie in the chat, no. Everything else is
+ * HELD until quiet hours end rather than dropped - dropping is what silently
+ * swallowed notifications during the 2026 trip.
+ */
+export const CRITICAL_KINDS = [
+  "tee_warning",    // your group tees off in 30 minutes
+  "round_open",     // scoring is open, tell the organizer
+  "round_started",  // your group is scoring now
+  "score_changed",  // an organizer altered a score of yours
+];
+
+export function isCritical(kind?: string | null): boolean {
+  return Boolean(kind && CRITICAL_KINDS.includes(kind));
+}
+
+/**
+ * Does this person want this category at all?
+ *
+ * Deliberately says NOTHING about the time of day. A wanted notification at
+ * 2am should wait for morning, not vanish - so "want" and "when" are two
+ * separate questions, and mixing them is the bug this replaces.
+ */
+export function wantsCategory(n: Notification, prefsRaw: Partial<Prefs> | null): boolean {
   const prefs: Prefs = { ...DEFAULT_PREFS, ...(prefsRaw ?? {}) };
-
-  // Essentials always go. Missing one means standing on the wrong tee.
   if (n.category === "essential") return true;
-
-  if (inQuietHours(prefs, now)) return false;
-
   switch (n.category) {
     case "round_day":
       return prefs.round_day;
@@ -100,4 +118,25 @@ export function shouldDeliver(
     default:
       return true;
   }
+}
+
+/** When this person's quiet hours next end - when a held notification goes. */
+export function nextQuietEnd(prefsRaw: Partial<Prefs> | null, now = new Date()): string {
+  const prefs: Prefs = { ...DEFAULT_PREFS, ...(prefsRaw ?? {}) };
+  const at = new Date(now);
+  at.setMinutes(0, 0, 0);
+  if (at.getHours() >= prefs.quiet_end) at.setDate(at.getDate() + 1);
+  at.setHours(prefs.quiet_end);
+  return at.toISOString();
+}
+
+/** Kept for callers that want one yes/no: wanted, and either critical or awake. */
+export function shouldDeliver(
+  n: Notification,
+  prefsRaw: Partial<Prefs> | null,
+  now = new Date()
+): boolean {
+  if (!wantsCategory(n, prefsRaw)) return false;
+  if (n.category === "essential" || isCritical(n.kind)) return true;
+  return !inQuietHours(prefsRaw, now);
 }

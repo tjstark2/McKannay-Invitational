@@ -24,7 +24,6 @@ import {
   deleteTeeTime,
   setTeeTimePlayers,
   startRound,
-  finishRound,
   reopenRound,
   setCurrentRound,
   type RosterPlayerLite,
@@ -138,15 +137,24 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
     const sb = getSupabaseClient();
     if (!sb) { setError("No connection to the database."); return; }
     note("Finishing…");
-    const fi = await finishRound(sb, roundId);
-    if (!fi.ok) { setError(`Couldn't finish the round: ${fi.error}`); return; }
-    await notify({
-      userIds: roster.map((x) => x.accountId).filter((id) => id !== user?.id),
-      title,
-      message: `${title} is in the books. Have a look at where things stand.`,
-      category: "round_day",
-      url: joinCode ? `/t/${joinCode}` : "/home",
-    });
+    // Runs the same close as the automatic one - resolves matches, publishes
+    // every card's total, confirms outstanding cards, advances to the next
+    // round and tells everyone. Stamping the round finished directly skipped
+    // all of that, which is how points went missing on the 2026 trip.
+    const { data: sess } = await sb.auth.getSession();
+    const res = await fetch("/api/rounds/finalize", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${sess.session?.access_token ?? ""}`,
+      },
+      body: JSON.stringify({ roundId }),
+    }).catch(() => null);
+    const body = res ? await res.json().catch(() => ({})) : {};
+    if (!res || !res.ok || !body.ok) {
+      setError(`Couldn't finish ${title}: ${body.error ?? "no connection"}`);
+      return;
+    }
     void notifyEvent("voting_concluded_sweep", tripId);
     note("Round finished");
     refresh();
