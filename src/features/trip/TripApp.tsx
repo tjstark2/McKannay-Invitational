@@ -11,7 +11,9 @@ import { MomentTakeover } from "@/features/trip/components/MomentTakeover";
 import { ChampionTakeover } from "@/features/trip/components/ChampionTakeover";
 import { BottomNav } from "@/features/trip/components/BottomNav";
 import { Sheet } from "@/features/trip/components/Sheet";
+import { FirstVisitHint } from "@/features/trip/components/FirstVisitHint";
 import { RoundHome } from "@/features/trip/screens/RoundHome";
+import { LiveRoundProvider } from "@/features/trip/scoring/useLiveRound";
 import { StandingsScreen } from "@/features/trip/screens/StandingsScreen";
 import { TripScreen } from "@/features/trip/screens/TripScreen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -76,7 +78,8 @@ function TripAppInner() {
   useEffect(() => {
     if (loading || !trip?.id || isOwner) return;
     try {
-      const key = `tb_tour_v3_${trip.id}_member`;
+      // v4: the four-tab layout. Everyone sees the new tour once.
+      const key = `tb_tour_v4_${trip.id}_member`;
       if (!localStorage.getItem(key)) {
         // Wait for anything covering the screen (post-round awards, voting
         // reveal) before spotlighting, and only mark it shown once it starts.
@@ -340,6 +343,7 @@ function TripAppInner() {
 
   return (
     <SnowmenProvider tripId={trip.id}>
+    <LiveRoundProvider>
     <div className="min-h-screen bg-[#f7f6f1] text-slate-900">
       <div className="relative mx-auto min-h-screen max-w-md bg-[#f7f6f1] pb-28 shadow-phone">
         <div className="absolute right-4 top-4 z-[70]">
@@ -366,6 +370,36 @@ function TripAppInner() {
         ) : null}
 
         <main className="px-5 py-6">
+          {/* Taught one screen at a time, the first time you arrive. */}
+          {activeScreen === "overview" && activeRound ? (
+            <FirstVisitHint
+              id="round"
+              title="This is your round"
+              body="Your match is at the top - the strip shows each hole won, lost or halved. Enter scores below, one hole at a time. Tap Confirm to save each hole."
+            />
+          ) : null}
+          {activeScreen === "tournament" ? (
+            <FirstVisitHint
+              id="standings"
+              title="Who's winning"
+              body="Team score first, then everyone's net score, then every match. It updates as scores go in."
+            />
+          ) : null}
+          {activeScreen === "trip" ? (
+            <FirstVisitHint
+              id="trip"
+              title="Everything about the trip"
+              body="Tee times and groups, the teams, the players and the rules. Tap any name to see their card."
+            />
+          ) : null}
+          {activeScreen === "clubhouse" ? (
+            <FirstVisitHint
+              id="clubhouse"
+              title="The Clubhouse"
+              body="The feed shows big moments as they happen - comment on them. Chat is for talking, photos for photos."
+            />
+          ) : null}
+
           {activeScreen === "overview" ? (
             activeRound ? (
               <RoundHome
@@ -498,6 +532,7 @@ function TripAppInner() {
         />
       </div>
     </div>
+    </LiveRoundProvider>
     </SnowmenProvider>
   );
 }

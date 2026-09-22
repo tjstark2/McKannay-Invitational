@@ -32,6 +32,15 @@ export default function EditProfilePage() {
   const [phone, setPhone] = useState("");
   const [marketing, setMarketing] = useState(false);
   const [sms, setSms] = useState(false);
+  // Your golf - feeds the awards and personal touches. Every field here
+  // earns its place by unlocking something specific; nothing is asked "just
+  // in case".
+  const [nickname, setNickname] = useState("");
+  const [favoriteGolfer, setFavoriteGolfer] = useState("");
+  const [homeCourse, setHomeCourse] = useState("");
+  const [bestRound, setBestRound] = useState("");
+  const [holeInOnes, setHoleInOnes] = useState("");
+  const [birthday, setBirthday] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,7 +62,9 @@ export default function EditProfilePage() {
     (async () => {
       const p = await supabase
         .from("profiles")
-        .select("first_name,last_name,username,city,state,phone,marketing_opt_in,sms_opt_in")
+        .select(
+          "first_name,last_name,username,city,state,phone,marketing_opt_in,sms_opt_in,nickname,favorite_golfer,home_course,best_round,hole_in_ones,birthday"
+        )
         .eq("id", user.id)
         .maybeSingle();
       if (!active || !p.data) {
@@ -69,6 +80,12 @@ export default function EditProfilePage() {
       setPhone((p.data.phone as string) ?? "");
       setMarketing(Boolean(p.data.marketing_opt_in));
       setSms(Boolean(p.data.sms_opt_in));
+      setNickname((p.data.nickname as string) ?? "");
+      setFavoriteGolfer((p.data.favorite_golfer as string) ?? "");
+      setHomeCourse((p.data.home_course as string) ?? "");
+      setBestRound(p.data.best_round != null ? String(p.data.best_round) : "");
+      setHoleInOnes(p.data.hole_in_ones != null ? String(p.data.hole_in_ones) : "");
+      setBirthday((p.data.birthday as string) ?? "");
       setReady(true);
     })();
     return () => {
@@ -102,6 +119,12 @@ export default function EditProfilePage() {
         phone: phone.trim() || null,
         marketing_opt_in: marketing,
         sms_opt_in: sms,
+        nickname: nickname.trim() || null,
+        favorite_golfer: favoriteGolfer.trim() || null,
+        home_course: homeCourse.trim() || null,
+        best_round: bestRound.trim() ? Math.round(Number(bestRound)) : null,
+        hole_in_ones: holeInOnes.trim() ? Math.round(Number(holeInOnes)) : null,
+        birthday: birthday || null,
       })
       .eq("id", user.id);
     setBusy(false);
@@ -211,6 +234,41 @@ export default function EditProfilePage() {
               onChange={(e) => setPhone(e.target.value)}
               placeholder="(555) 123-4567"
             />
+          </div>
+
+          <div className="rounded-2xl border border-sand-100 bg-white p-4">
+            <p className="font-black text-ink">Your golf</p>
+            <p className="mt-0.5 text-[13px] text-slate-500">
+              All optional. The more you fill in, the more personal your awards get.
+            </p>
+            <div className="mt-3 space-y-3">
+              <div>
+                <label className={lbl}>Nickname</label>
+                <input className={inp} value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="What the group calls you" maxLength={30} />
+              </div>
+              <div>
+                <label className={lbl}>Favorite golfer</label>
+                <input className={inp} value={favoriteGolfer} onChange={(e) => setFavoriteGolfer(e.target.value)} placeholder="Tiger Woods" maxLength={60} />
+              </div>
+              <div>
+                <label className={lbl}>Home course</label>
+                <input className={inp} value={homeCourse} onChange={(e) => setHomeCourse(e.target.value)} placeholder="Torrey Pines South" maxLength={80} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={lbl}>Best round</label>
+                  <input className={inp} type="number" inputMode="numeric" min={50} max={150} value={bestRound} onChange={(e) => setBestRound(e.target.value)} placeholder="78" />
+                </div>
+                <div>
+                  <label className={lbl}>Holes in one</label>
+                  <input className={inp} type="number" inputMode="numeric" min={0} max={50} value={holeInOnes} onChange={(e) => setHoleInOnes(e.target.value)} placeholder="0" />
+                </div>
+              </div>
+              <div>
+                <label className={lbl}>Birthday</label>
+                <input className={inp} type="date" value={birthday} onChange={(e) => setBirthday(e.target.value)} />
+              </div>
+            </div>
           </div>
 
           <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-white border border-sand-100 p-3">

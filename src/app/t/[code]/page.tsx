@@ -146,7 +146,7 @@ export default function TripCodePage() {
 
         {gate.status === "pending" ? (
           <div className="mt-6 rounded-2xl border border-sand-100 bg-white p-5">
-            <p className="font-black text-fairway-900">Request Sent ✓</p>
+            <p className="font-black text-fairway-900">Request sent</p>
             <p className="mt-1 text-sm text-slate-500">
               The organizer needs to approve you. You&apos;ll see this
               tournament on your dashboard once you&apos;re in.
@@ -155,15 +155,15 @@ export default function TripCodePage() {
         ) : (
           <>
             <p className="mt-5 text-slate-600">
-              You&apos;re not part of this tournament yet. Ask the organizer to
-              let you in.
+              Ask to join and the organizer will let you in. You&apos;ll set
+              your handicap once you&apos;re approved.
             </p>
             <button
               onClick={ask}
               disabled={busy}
               className="mt-6 w-full rounded-2xl bg-accent px-4 py-4 font-black text-ink disabled:opacity-50"
             >
-              {busy ? "Sending…" : "Request to join"}
+              {busy ? "Sending…" : "Ask to join"}
             </button>
           </>
         )}

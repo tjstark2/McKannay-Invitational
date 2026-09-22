@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/AuthContext";
 import {
   StateSelect,
@@ -9,6 +9,18 @@ import {
 } from "@/features/account/identity";
 
 export function SignUpForm() {
+  // The tournament an invite link pointed at. Carried through sign-up and the
+  // email confirmation so a new player lands IN the tournament, not on an
+  // empty dashboard wondering where it went.
+  const [next, setNext] = useState("");
+  useEffect(() => {
+    try {
+      const p = new URLSearchParams(window.location.search).get("next");
+      if (p && p.startsWith("/")) setNext(p);
+    } catch {
+      /* ignore */
+    }
+  }, []);
   const { signUp } = useAuth();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -54,6 +66,7 @@ export function SignUpForm() {
       password,
       marketingOptIn,
       smsOptIn,
+      next: next || undefined,
     });
     setBusy(false);
     if (!result.ok) {
@@ -63,7 +76,7 @@ export function SignUpForm() {
     if (result.needsConfirmation) {
       setSentTo(email.trim());
     } else {
-      window.location.href = "/home";
+      window.location.href = next || "/home";
     }
   }
 
@@ -79,7 +92,7 @@ export function SignUpForm() {
           account, then come back and sign in.
         </p>
         <a
-          href="/signin"
+          href={next ? `/signin?next=${encodeURIComponent(next)}` : "/signin"}
           className="mt-6 inline-block w-full rounded-2xl bg-fairway-900 px-4 py-3.5 font-black text-white"
         >
           Go to sign in
@@ -224,7 +237,10 @@ export function SignUpForm() {
         </p>
         <p className="text-center text-sm text-slate-500">
           Already have an account?{" "}
-          <a href="/signin" className="font-black text-fairway-900">
+          <a
+            href={next ? `/signin?next=${encodeURIComponent(next)}` : "/signin"}
+            className="font-black text-fairway-900"
+          >
             Sign in
           </a>
         </p>

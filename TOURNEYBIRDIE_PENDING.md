@@ -112,6 +112,37 @@ These are the things that stop you inviting people who are not you.
   which read 0 of 8 all day on a hole-by-hole round - are replaced by cards
   going and furthest thru while a round is live.
 
+## Bundle 3 - getting in
+
+- **Password reset.** Did not exist - someone who forgot theirs had no way back
+  in. "Forgot your password?" on sign-in emails a link to a new reset page,
+  which handles every form the link can arrive in and says plainly if it has
+  expired or was opened on a different device.
+- **Invite links survive sign-up.** A new player following an invite used to
+  confirm their email and land on an empty dashboard with the tournament lost.
+  The destination is now carried through sign-up AND the confirmation email.
+- **Your golf** on the profile: nickname, favourite golfer, home course, best
+  round, holes in one, birthday. All optional - they feed the awards later.
+- **Tutorial rewritten for the four-tab layout**, in three layers: a welcome on
+  first login, a short tour of the four tabs the first time you open a
+  tournament, and a one-line hint the first time you open each screen. The old
+  tour pointed at tabs that no longer exist, and the nav never carried the
+  anchors it was trying to spotlight. Everyone sees the new tour once.
+- **Join screen** reworded: "Ask to join", and it says the handicap comes after
+  approval.
+- Awards left as they are, by decision - to be expanded properly later.
+- **Fixed: Standings crashed with "This page couldn't load"** (Bundle 2 bug).
+  Every live screen opened a Supabase subscription with the same fixed name.
+  Asking for a name that already exists returns the one already running, and
+  adding a listener to that throws. Standings shows three live screens at once,
+  so the second one crashed the page; expanding Full scorecard on the Round
+  screen would have done the same. Now ONE shared live round feeds every
+  screen - one fetch, one subscription - with a unique name and a guard so a
+  realtime failure can never take a page down again.
+
+**Needs TJ:** Supabase redirect URLs must allow /reset-password, and custom
+SMTP (Resend) to lift the few-an-hour email cap.
+
 ## Bundle 2 - the screens
 
 - **Four tabs, down from five:** Home, Standings, Trip, Clubhouse. The first tab

@@ -44,6 +44,7 @@ export function BottomNav({
           return (
             <button
               key={item.id}
+              data-tour={`nav-${item.id}`}
               onClick={() => setActiveScreen(item.id)}
               className={`flex flex-col items-center gap-1 text-[10px] font-extrabold leading-tight ${
                 active ? "text-fairway-900" : "text-slate-400"

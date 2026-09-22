@@ -13,7 +13,7 @@
 // submitted number, so `live` comes back empty and screens fall back to their
 // existing behaviour.
 
-import { useCallback, useEffect, useState } from "react";
+import { createContext, createElement, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { loadRoundSetups, type RoundSetup } from "@/lib/supabase/roundSegments";
 import { loadCourseHoles } from "@/lib/supabase/courseHoles";
@@ -47,7 +47,8 @@ export type LiveRound = {
 
 const EMPTY = { holes: [], holeScores: [], strokes: {} };
 
-export function useLiveRound(): LiveRound {
+function useLiveRoundSource(): LiveRound {
+  const instance = useRef(Math.random().toString(36).slice(2, 10));
   const { trip, players, matches } = useTripState();
   const [state, setState] = useState<LiveRound>({
     round: null,
@@ -177,16 +178,24 @@ export function useLiveRound(): LiveRound {
     const supabase = getSupabaseClient();
     if (!supabase || trip.scoringMode !== "hole_by_hole") return;
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const channel = supabase.channel(`live-standings-${trip.id}`);
-    channel.on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "hole_scores" },
-      () => {
-        if (timer) clearTimeout(timer);
-        timer = setTimeout(load, 400);
-      }
-    );
-    channel.subscribe();
+    // A name unique to this subscription. Asking Supabase for a channel name
+    // that already exists hands back the one ALREADY running, and adding a
+    // listener to that throws - which is what crashed Standings, where three
+    // screens asked for the same name at once.
+    const channel = supabase.channel(`live-standings-${trip.id}-${instance.current}`);
+    try {
+      channel.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "hole_scores" },
+        () => {
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(load, 400);
+        }
+      );
+      channel.subscribe();
+    } catch {
+      // Live updates are a nicety. Never let them take the page down.
+    }
     return () => {
       if (timer) clearTimeout(timer);
       supabase.removeChannel(channel);
@@ -194,4 +203,39 @@ export function useLiveRound(): LiveRound {
   }, [trip.id, load, trip.scoringMode]);
 
   return state;
+}
+
+
+// ---------------------------------------------------------------- sharing
+
+/**
+ * One live round for the whole tournament, shared by every screen.
+ *
+ * Each screen used to run its own copy: its own fetch of the round, holes,
+ * tees and scores, and its own live subscription. Standings shows three live
+ * screens at once, so that was three times the work - and three subscriptions
+ * with the same name, which is what crashed the page. Now the provider loads
+ * it once and every screen reads the same answer.
+ */
+const LiveRoundContext = createContext<LiveRound | null>(null);
+
+const IDLE: LiveRound = {
+  round: null,
+  rows: [],
+  matchStates: [],
+  holeCount: 18,
+  holes: [],
+  holeScores: [],
+  strokes: {},
+  loading: false,
+};
+
+export function LiveRoundProvider({ children }: { children: ReactNode }) {
+  const value = useLiveRoundSource();
+  return createElement(LiveRoundContext.Provider, { value }, children);
+}
+
+/** The live round. Outside the provider it is simply empty, never an error. */
+export function useLiveRound(): LiveRound {
+  return useContext(LiveRoundContext) ?? IDLE;
 }

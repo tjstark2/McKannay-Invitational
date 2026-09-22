@@ -46,34 +46,35 @@ export function startSpotlightTour(steps: SpotStep[]) {
   write({ steps, i: 0 });
 }
 
-// The player (non-owner) walkthrough - same spotlight style as the owner tour,
-// highlighting the real controls a member uses inside the tournament.
+// First time inside a tournament: the four tabs and what each is for. Kept
+// short on purpose - the rest is taught one screen at a time, the first time
+// you open each one, when you actually need it.
 export function buildMemberSpotlight(code: string, isPro: boolean): SpotStep[] {
   const p = `/t/${code}`;
   const steps: SpotStep[] = [
-    { path: p, title: "Welcome to the tournament! 🏌️", body: "Quick tour of the few things you'll use most. Takes 20 seconds." },
-    { path: p, tourneyTab: "schedule", anchor: "tab-schedule", title: "Check the Schedule", body: "Rounds, courses, tee times, and when to arrive all live under Schedule - peek here before every round." },
-    { path: p, anchor: "nav-addScore", title: "Enter your scores", body: "Tap 'Tee It Up' to log scores. Submit after the front 9, then again after 18 - your net and the standings update as you play." },
-    { path: p, anchor: "nav-addScore", title: "2v2 best ball: one submits", body: "In a 2v2 best ball round, only ONE person in each pair submits the group's score - one entry covers your team." },
-    { path: p, tourneyTab: "leaderboard", anchor: "tab-leaderboard", title: "Watch the standings", body: "The Leaders tab shows live net standings and team points as scores roll in." },
+    { path: p, title: "You're in", body: "Four tabs run the whole trip. Twenty seconds and you'll know where everything is." },
+    { path: p, appScreen: "overview", anchor: "nav-overview", title: "Home becomes your round", body: "Between rounds this is your next tee time and your matchup. Once your round starts it turns into the scorecard - your match at the top, then the hole you're on." },
+    { path: p, appScreen: "tournament", anchor: "nav-tournament", title: "Standings", body: "Team score, the individual leaderboard, and every match, all on one screen." },
+    { path: p, appScreen: "trip", anchor: "nav-trip", title: "Trip", body: "Everyone's tee times, the teams, the players and the rules. Tap any name to see their card." },
+    { path: p, anchor: "nav-clubhouse", title: "Clubhouse", body: "Chat, photos, and a feed of the best and worst moments as they happen." },
   ];
   if (isPro) {
-    steps.push({ path: p, title: "Awards & Trip Wrapped ✨", body: "After each round you'll vote on superlatives, and at the end there's a shareable Trip Wrapped. Watch for the prompts!" });
+    steps.push({ path: p, title: "After every round", body: "When your group finishes you'll get a nudge to check your card and vote for the awards. That's what posts your points." });
   }
-  steps.push({ path: p, title: "That's it - have fun!", body: "You can revisit any tab anytime. Good luck out there." });
+  steps.push({ path: p, appScreen: "overview", title: "That's it", body: "Good luck out there." });
   return steps;
 }
 
-// Admins (not the owner) get the player basics AND a tour of the admin controls
-// they can use inside the tournament.
+// Admins play too, so they get the same tour plus what's theirs to run.
 export function buildAdminSpotlight(code: string, isPro: boolean): SpotStep[] {
-  const p = `/t/${code}`;
-  const steps: SpotStep[] = [
-    { path: p, title: "You're an admin here 👋", body: "You can both play and help run the tournament. Quick tour of the essentials." },
-    { path: p, tourneyTab: "schedule", anchor: "tab-schedule", title: "Check the Schedule", body: "Rounds, courses, tee times, and when to arrive live under Schedule." },
-    { path: p, anchor: "nav-addScore", title: "Enter scores", body: "Tap 'Tee It Up' to log scores - submit after the front 9, then again after 18. In 2v2 best ball only one person per pair submits." },
-    { path: p, tourneyTab: "leaderboard", anchor: "tab-leaderboard", title: "Watch the standings", body: "The Leaders tab shows live net standings and team points." },
-  ];
+  const steps = buildMemberSpotlight(code, isPro);
+  const last = steps.pop()!;
+  steps.push({
+    path: `/t/${code}`,
+    title: "What's yours to run",
+    body: "Rounds open on their own 30 minutes before the first tee and close themselves once everyone's done. You'll be told if a round isn't ready - usually matchups not drawn - and exactly what's missing. Everything else is in Manage.",
+  });
+  steps.push(last);
   return steps;
 }
 

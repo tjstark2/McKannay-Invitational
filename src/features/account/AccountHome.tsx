@@ -25,6 +25,7 @@ import { BrandHeaderMark } from "@/features/trip/components/Brand";
 import { TourHost } from "@/features/trip/tour/spotlight";
 import { AccountMenu } from "@/features/account/AccountMenu";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { FirstVisitHint } from "@/features/trip/components/FirstVisitHint";
 
 const STATUS_META: Record<TripStatus, { label: string; cls: string; dot: string }> = {
   in_progress: { label: "In Progress", cls: "bg-mint/15 text-fairway-900", dot: "bg-mint" },
@@ -173,6 +174,11 @@ export function AccountHome() {
       </header>
 
       <main className="mx-auto max-w-3xl px-5 py-8">
+        <FirstVisitHint
+          id="home"
+          title="Welcome to TourneyBirdie"
+          body="Every tournament you're in shows up here. Tap one to go inside. Got an invite link? Open it and you'll be asked to join."
+        />
         <h1 className="text-3xl font-black text-ink">
           Welcome{firstName ? `, ${firstName}` : ""} 👋
         </h1>

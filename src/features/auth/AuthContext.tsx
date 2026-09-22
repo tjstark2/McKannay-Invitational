@@ -22,6 +22,12 @@ export type SignUpInput = {
   password: string;
   marketingOptIn: boolean;
   smsOptIn: boolean;
+  /**
+   * Where to land after confirming the email - usually the tournament an
+   * invite link pointed at. Without this, a new player confirmed their email
+   * and arrived at their dashboard with the tournament lost.
+   */
+  next?: string;
 };
 
 type AuthResult = {
@@ -38,6 +44,10 @@ type AuthContextValue = {
   signUp: (input: SignUpInput) => Promise<AuthResult>;
   signIn: (email: string, password: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
+  /** Email a link to set a new password. There was no way to do this before. */
+  requestPasswordReset: (email: string) => Promise<AuthResult>;
+  /** Set a new password - used on the page the reset link opens. */
+  updatePassword: (password: string) => Promise<AuthResult>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -84,7 +94,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const base =
         process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
         (typeof window !== "undefined" ? window.location.origin : "");
-      const redirectTo = base ? `${base}/signin` : undefined;
+      const next = input.next && input.next.startsWith("/") ? input.next : "";
+      const redirectTo = base
+        ? `${base}/signin${next ? `?next=${encodeURIComponent(next)}` : ""}`
+        : undefined;
 
       const { data, error } = await supabase.auth.signUp({
         email: input.email.trim(),
@@ -124,14 +137,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [supabase]
   );
 
+  const requestPasswordReset = useCallback(
+    async (email: string): Promise<AuthResult> => {
+      if (!supabase) return { ok: false, error: "Accounts aren't available yet." };
+      const base =
+        process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+        (typeof window !== "undefined" ? window.location.origin : "");
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${base}/reset-password`,
+      });
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    },
+    [supabase]
+  );
+
+  const updatePassword = useCallback(
+    async (password: string): Promise<AuthResult> => {
+      if (!supabase) return { ok: false, error: "Accounts aren't available yet." };
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    },
+    [supabase]
+  );
+
   const signOut = useCallback(async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
   }, [supabase]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, session, loading, configured, signUp, signIn, signOut }),
-    [user, session, loading, configured, signUp, signIn, signOut]
+    () => ({ user, session, loading, configured, signUp, signIn, signOut, requestPasswordReset, updatePassword }),
+    [user, session, loading, configured, signUp, signIn, signOut, requestPasswordReset, updatePassword]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
