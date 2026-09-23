@@ -14,7 +14,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadRoundSetups, type RoundSetup } from "@/lib/supabase/roundSegments";
 import { loadCourseHoles, loadCourseTees } from "@/lib/supabase/courseHoles";
-import { liveMatchStates, type HoleScoreLite } from "@/features/trip/scoring/liveStandings";
+import { liveMatchStates, liveRowsForRound, type HoleScoreLite } from "@/features/trip/scoring/liveStandings";
 import {
   CLOSE_REMINDER_MINUTES,
   OPEN_LEAD_MINUTES,
@@ -230,6 +230,105 @@ async function publishTotals(
   return incomplete;
 }
 
+
+/**
+ * The trip's final score, worked out once when the last round closes and then
+ * stored. Two sources, because the 2026 trip had both:
+ *   - match points, from every resolved match
+ *   - net score rounds, where the best N net scores in the FIELD each take a
+ *     point for their team rather than winning a match
+ * Recomputing later from matches alone would have said 4-6 when the real
+ * answer was 6-9, which is why this is recorded rather than re-derived.
+ */
+async function computeTripResult(
+  admin: SupabaseClient,
+  trip: Trip,
+  setups: RoundSetup[],
+  players: PlayerRow[]
+): Promise<{ a: number; b: number }> {
+  const { data: teamRows } = await admin.from("teams").select("id,code").eq("trip_id", trip.id);
+  const codeOfTeam = new Map(
+    ((teamRows ?? []) as { id: string; code: string }[]).map((t) => [t.id, t.code])
+  );
+  const teamOf = (playerId: string) => {
+    const p = players.find((x) => x.id === playerId);
+    return p?.team_id ? codeOfTeam.get(p.team_id) ?? null : null;
+  };
+
+  let a = 0;
+  let b = 0;
+
+  // ---- match points -------------------------------------------------------
+  const roundIds = setups.map((r) => r.id);
+  if (roundIds.length > 0) {
+    const { data: mRows } = await admin
+      .from("matches")
+      .select("points,manual_result")
+      .in("round_id", roundIds);
+    for (const m of (mRows ?? []) as { points: number | null; manual_result: string | null }[]) {
+      const pts = Number(m.points ?? 0);
+      if (m.manual_result === "A") a += pts;
+      else if (m.manual_result === "B") b += pts;
+      else if (m.manual_result === "T") {
+        a += pts / 2;
+        b += pts / 2;
+      }
+    }
+  }
+
+  // ---- net score rounds ---------------------------------------------------
+  const { data: settings } = await admin
+    .from("scoring_settings")
+    .select("net_score_points_override")
+    .eq("trip_id", trip.id)
+    .maybeSingle();
+  const override = (settings as { net_score_points_override?: number | null } | null)
+    ?.net_score_points_override;
+
+  for (const setup of setups.filter((r) => r.format === "net_score" && r.courseId)) {
+    const [holes, tees, hsRes] = await Promise.all([
+      loadCourseHoles(admin, setup.courseId!),
+      loadCourseTees(admin, setup.courseId!),
+      admin.from("hole_scores").select("round_id,player_id,hole_number,strokes").eq("round_id", setup.id),
+    ]);
+    const holeScores: HoleScoreLite[] = ((hsRes.data ?? []) as Record<string, unknown>[]).map((r) => ({
+      roundId: r.round_id as string,
+      playerId: r.player_id as string,
+      hole: r.hole_number as number,
+      strokes: r.strokes as number,
+    }));
+    if (holeScores.length === 0) continue;
+    const tee = tees.find((t) => t.id === setup.teeId) ?? tees[0] ?? null;
+    const coursePar = holes.reduce((sum, h) => sum + h.par, 0) || 72;
+
+    // basis "full" comes from the net_score format: a field-wide competition
+    // measures everyone off their own whole course handicap.
+    const rows = liveRowsForRound({
+      roundId: setup.id,
+      groups: setup.teeTimes.map((tt) => ({
+        playerIds: tt.playerIds,
+        allowancePct: setup.segments.find((sg) => sg.teeTimeId === tt.id)?.allowancePct ?? 100,
+      })),
+      holes,
+      holesCount: (setup.holesCount === 9 ? 9 : 18) as 9 | 18,
+      nine: setup.nine,
+      tee: { rating: tee?.rating ?? null, slope: tee?.slope ?? null, par: coursePar },
+      players: players.map((p) => ({ id: p.id, name: p.display_name, handicapIndex: p.handicap_index ?? 0 })),
+      holeScores,
+      format: setup.format,
+    }).filter((r) => r.complete);
+
+    const count = override && override > 0 ? override : Math.floor(rows.length / 2);
+    for (const r of rows.slice(0, count)) {
+      const code = teamOf(r.playerId);
+      if (code === "A") a += 1;
+      else if (code === "B") b += 1;
+    }
+  }
+
+  return { a, b };
+}
+
 /**
  * Close a round. Idempotent: the reminder log makes sure it only ever runs
  * once per round, however many cron ticks see it as due.
@@ -280,6 +379,25 @@ export async function finalizeRound(
     .filter((r) => r.id !== setup.id && !r.finishedAt)
     .sort((a, b) => a.roundNumber - b.roundNumber)[0];
   await admin.from("trips").update({ current_round_id: next?.id ?? null }).eq("id", trip.id);
+
+  // Last round of the trip: record how it finished, once, so the series has a
+  // champion that never has to be worked out again.
+  if (!next) {
+    try {
+      const { a, b } = await computeTripResult(admin, trip, allRounds, players);
+      await admin
+        .from("trips")
+        .update({
+          final_points_a: a,
+          final_points_b: b,
+          winner_team: a > b ? "A" : b > a ? "B" : null,
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", trip.id);
+    } catch {
+      // Never let the trip summary stop the round closing.
+    }
+  }
 
   let sent = 0;
   const members = await activeMemberIds(admin, trip.id);

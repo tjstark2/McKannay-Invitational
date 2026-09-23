@@ -26,6 +26,7 @@ import { TourHost } from "@/features/trip/tour/spotlight";
 import { AccountMenu } from "@/features/account/AccountMenu";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FirstVisitHint } from "@/features/trip/components/FirstVisitHint";
+import { SeriesLinks } from "@/features/series/SeriesLinks";
 
 const STATUS_META: Record<TripStatus, { label: string; cls: string; dot: string }> = {
   in_progress: { label: "In Progress", cls: "bg-mint/15 text-fairway-900", dot: "bg-mint" },
@@ -174,6 +175,7 @@ export function AccountHome() {
       </header>
 
       <main className="mx-auto max-w-3xl px-5 py-8">
+        <SeriesLinks />
         <FirstVisitHint
           id="home"
           title="Welcome to TourneyBirdie"

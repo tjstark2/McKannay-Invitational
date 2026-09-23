@@ -112,6 +112,29 @@ These are the things that stop you inviting people who are not you.
   which read 0 of 8 all day on a hole-by-hole round - are replaced by cards
   going and furthest thru while a round is live.
 
+## Bundle 4 - the Series
+
+- **A Series sits above Trips.** "McKannay Invitational" owns MCK2026 and
+  whatever comes next. People are linked by ACCOUNT, so the same person carries
+  across years even though their player row is new each trip. Teams deliberately
+  do not carry: career records belong to people, team history to trips.
+- **Visible, not plumbing.** A series card on the dashboard opens a page with
+  the trophy and its current holder, an all-time table (trips, matches won,
+  points, best round, trophies) and head-to-head between any two players across
+  every year, plus an archive of every trip.
+- **Each trip records its own final result** when the last round closes -
+  points for each side, the winner, and when it finished. Stored rather than
+  re-derived, because the 2026 result cannot be rebuilt from matches alone:
+  Saturday was scored on net across the field, so recomputing would say 4-6
+  when the real answer was 6-9.
+- **The engine computes that result from both sources** - match points, and
+  net-score rounds where the best N in the field each take a point - reusing
+  the same scoring maths the live screens use.
+- **MCK2026 migrated in** as trip 1, with its real result: Team Dietz 9-6.
+- 7 more tests (42 total) covering career records, trophies across changing
+  team letters, unresolved matches counting for nobody, and head-to-head only
+  counting opponents rather than partners.
+
 ## Bundle 3 - getting in
 
 - **Password reset.** Did not exist - someone who forgot theirs had no way back

@@ -499,3 +499,111 @@ test("mentions still arrive when the clubhouse is set to mentions only", () => {
   assert.equal(wantsCategory(note("clubhouse", "mention"), p), true);
   assert.equal(wantsCategory(note("clubhouse", "message"), p), false);
 });
+
+/* ------------------------------------------------------------ career records */
+
+import { buildCareerTable, headToHead, tripResultLine } from "../src/features/series/career";
+
+// Two years of the same series. Wade and TJ play both; the player ROW ids
+// differ each year, the accounts do not.
+const CAREER_TRIPS = [
+  { id: "t26", name: "2026", sequence: 1, finalA: 6, finalB: 9, winner: "B", completedAt: "2026-09-12" },
+  { id: "t27", name: "2027", sequence: 2, finalA: 8, finalB: 7, winner: "A", completedAt: "2027-09-12" },
+];
+const CAREER_PLAYERS = [
+  { id: "p1", tripId: "t26", accountId: "wade", name: "Wade", team: "B" },
+  { id: "p2", tripId: "t26", accountId: "tj", name: "TJ", team: "A" },
+  { id: "p3", tripId: "t27", accountId: "wade", name: "Wade", team: "A" },
+  { id: "p4", tripId: "t27", accountId: "tj", name: "TJ", team: "B" },
+  { id: "p5", tripId: "t27", accountId: null, name: "Guest", team: "B" },
+];
+const CAREER_MATCHES = [
+  { id: "m1", tripId: "t26", points: 1, result: "B", aPlayers: ["p2"], bPlayers: ["p1"] },
+  { id: "m2", tripId: "t26", points: 2, result: "T", aPlayers: ["p2"], bPlayers: ["p1"] },
+  { id: "m3", tripId: "t27", points: 1, result: "A", aPlayers: ["p3"], bPlayers: ["p4"] },
+  { id: "m4", tripId: "t27", points: 1, result: null, aPlayers: ["p3"], bPlayers: ["p4"] },
+];
+const CAREER_SCORES = [
+  { tripId: "t26", playerId: "p1", gross: 98 },
+  { tripId: "t27", playerId: "p3", gross: 91 },
+  { tripId: "t26", playerId: "p2", gross: 104 },
+];
+
+test("the same person across two trips is one career row", () => {
+  const rows = buildCareerTable({
+    trips: CAREER_TRIPS,
+    players: CAREER_PLAYERS,
+    matches: CAREER_MATCHES,
+    scores: CAREER_SCORES,
+  });
+  const wade = rows.find((r) => r.accountId === "wade")!;
+  assert.equal(wade.trips, 2, "different player rows, same account");
+  assert.equal(wade.won, 2, "won in 2026 and 2027");
+  assert.equal(wade.halved, 1);
+  assert.equal(wade.points, 1 + 1 + 1, "1 + 1 for wins, half of 2 for the tie");
+  assert.equal(wade.bestGross, 91, "best across the series, not per trip");
+  assert.equal(wade.trophies, 2, "team B won 2026, team A won 2027 - Wade was on both");
+});
+
+test("teams do not carry across years, so trophies follow the stored result", () => {
+  const rows = buildCareerTable({
+    trips: CAREER_TRIPS,
+    players: CAREER_PLAYERS,
+    matches: CAREER_MATCHES,
+    scores: CAREER_SCORES,
+  });
+  const tj = rows.find((r) => r.accountId === "tj")!;
+  // TJ was on A in 2026 (lost) and B in 2027 (lost). Same letter, different side.
+  assert.equal(tj.trophies, 0);
+  assert.equal(tj.lost, 2);
+});
+
+test("a match that never resolved counts for nobody", () => {
+  const rows = buildCareerTable({
+    trips: CAREER_TRIPS,
+    players: CAREER_PLAYERS,
+    matches: CAREER_MATCHES,
+    scores: [],
+  });
+  const wade = rows.find((r) => r.accountId === "wade")!;
+  assert.equal(wade.matches, 3, "four matches, one unresolved");
+});
+
+test("a player with no account is left out rather than counted twice", () => {
+  const rows = buildCareerTable({
+    trips: CAREER_TRIPS,
+    players: CAREER_PLAYERS,
+    matches: CAREER_MATCHES,
+    scores: [],
+  });
+  assert.equal(rows.length, 2, "Wade and TJ only - the guest has no account");
+});
+
+test("head to head only counts meetings on opposite sides", () => {
+  const h = headToHead("wade", "tj", { players: CAREER_PLAYERS, matches: CAREER_MATCHES });
+  assert.equal(h.wins, 2, "Wade beat TJ in both years");
+  assert.equal(h.losses, 0);
+  assert.equal(h.halved, 1);
+  assert.equal(h.meetings.length, 3, "the unresolved match is not a meeting");
+
+  // And it reads the other way round from TJ's side.
+  const back = headToHead("tj", "wade", { players: CAREER_PLAYERS, matches: CAREER_MATCHES });
+  assert.equal(back.wins, 0);
+  assert.equal(back.losses, 2);
+});
+
+test("partners are not opponents", () => {
+  const partners = [{ id: "mx", tripId: "t26", points: 2, result: "A", aPlayers: ["p1", "p2"], bPlayers: [] }];
+  const h = headToHead("wade", "tj", { players: CAREER_PLAYERS, matches: partners });
+  assert.equal(h.meetings.length, 0);
+});
+
+test("the trip result reads as it finished", () => {
+  const names = (code: string) => (code === "A" ? "Team McKannay" : "Team Dietz");
+  assert.equal(tripResultLine(CAREER_TRIPS[0], names), "Team Dietz won 9 - 6");
+  assert.equal(tripResultLine(CAREER_TRIPS[1], names), "Team McKannay won 8 - 7");
+  assert.equal(
+    tripResultLine({ ...CAREER_TRIPS[0], finalA: null, finalB: null, winner: null }, names),
+    "Not finished"
+  );
+});
