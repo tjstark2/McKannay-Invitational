@@ -20,8 +20,8 @@ These are the things that stop you inviting people who are not you.
   stack trace. Needs one npm dependency and a DSN from the Sentry dashboard.
 - **Database backups / point-in-time recovery.** Supabase dashboard, paid
   tier. One bad migration currently has no undo.
-- **Pro billing.** Pro is a manual database flag. Fine for friends, not for
-  strangers who expect to pay for it.
+- **Pro billing - built (Bundle F), not switched on.** Needs Stripe keys in
+  Vercel; see "Turning on payments".
 
 ## Needs a design decision before it can be built
 
@@ -40,7 +40,7 @@ These are the things that stop you inviting people who are not you.
 - **Create-a-tournament flow** does not match how Manage actually behaves now.
 - Coin toss uses team colours and names - teams have no logo field to draw.
 - Landing page has a "Coming soon" block.
-- Pro and Birdie Boss can both be switched on free - no billing yet.
+- Pro and Birdie Boss are free until billing is switched on (Bundle F).
 - Feed comments can't be edited or deleted yet (chat can, since Bundle E).
 
 ## Engineering debt
@@ -106,6 +106,57 @@ These are the things that stop you inviting people who are not you.
 - The Nest: live block moved to the top, and the Front 9 / Final counters -
   which read 0 of 8 all day on a hole-by-hole round - are replaced by cards
   going and furthest thru while a round is live.
+
+## Bundle F - payments (needs bundleF_billing.sql first)
+
+Built to take real money; ships in free preview until the Stripe keys go in.
+
+- **Stripe Checkout for Pro (per tournament, organizers buy it) and Birdie
+  Boss (per person).** Prices live in Stripe - the app reads them, and
+  whether each is one-off or monthly, from the Price itself. Change a price in
+  Stripe, no deploy.
+- **Free preview until switched on.** Needs BILLING_MODE=live AND all four
+  Stripe values in Vercel; anything less stays free, so a half-set-up deploy
+  can never charge without being able to deliver.
+- **Granted twice-safely:** on the page Stripe returns to (instant) and by the
+  webhook (if they close the tab). The session id is unique, so the second
+  changes nothing. A cancelled Boss subscription takes Boss away unless they
+  also have it another way.
+- **Promo codes on at checkout** - a 100% code comps a trip without a card.
+- **The app can no longer switch Pro or Boss on itself.** It used to write the
+  flags from the browser, so anyone could make their own tournament Pro. The
+  database now quietly ignores those changes from signed-in users; the server
+  and the SQL editor still can. Existing Pro trips and Bosses are recorded as
+  comps in the new purchases table.
+- **Fixed:** picking a premium bird and tapping upgrade saved the bird before
+  any payment - with checkout that would have been a free premium bird. It now
+  waits for the upgrade to actually land.
+- **Honest pitches:** "Ad-free" removed from Birdie Boss (there are no ads);
+  the Boss perks are one list; every upgrade button shows the real price, or
+  "Free while in preview".
+- 5 more tests, 77 total: the webhook signature (wrong secret, tampered,
+  replayed), live-only-when-complete, Stripe encoding, price labels, and
+  return links that can't leave the app.
+
+To switch on: see "Turning on payments" below.
+
+### Turning on payments
+
+1. Stripe dashboard (start in Test mode), Product catalog: add "TourneyBirdie
+   Pro" with a one-off price, and "Birdie Boss" with a monthly or one-off
+   price. Copy each price id (starts price_).
+2. Developers, API keys: copy the secret key (starts sk_).
+3. Developers, Webhooks, Add endpoint:
+   https://www.tourneybirdie.com/api/billing/webhook with events
+   checkout.session.completed, checkout.session.async_payment_succeeded,
+   customer.subscription.deleted. Copy the signing secret (starts whsec_).
+4. Vercel, Settings, Environment Variables: STRIPE_SECRET_KEY,
+   STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_PRO, STRIPE_PRICE_BOSS, and
+   BILLING_MODE = live. Redeploy.
+5. Test with card 4242 4242 4242 4242, any future date, any CVC. Then repeat
+   1-4 with live keys.
+6. To comp a group: Product catalog, Coupons, 100% off, then add a promotion
+   code (e.g. DEC2026).
 
 ## Bundle E - polish (needs bundleE_polish.sql first)
 

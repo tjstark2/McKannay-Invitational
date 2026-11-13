@@ -1,5 +1,6 @@
 "use client";
 
+import { upgradeOrCheckout } from "@/lib/billing";
 import { useCallback, useEffect, useState } from "react";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { useParams, useRouter } from "next/navigation";
@@ -62,6 +63,15 @@ export default function ManagePage() {
   const [isOwnerViewer, setIsOwnerViewer] = useState(false);
   // Handing the tournament over: who it's going to, and any error.
   const [handOverTo, setHandOverTo] = useState<string | null>(null);
+  const [upsellBusy, setUpsellBusy] = useState(false);
+  const [upsellError, setUpsellError] = useState<string | null>(null);
+  // Back from Stripe: ?upgraded=pro (done) or ?upgraded=pending (paid, still landing).
+  const [upgradedNote, setUpgradedNote] = useState<string | null>(null);
+  useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get("upgraded");
+    if (v === "pro") setUpgradedNote("You're Pro. Everyone in this tournament has it now.");
+    else if (v === "pending") setUpgradedNote("Payment received - Pro switches on within a minute. Refresh if you don't see it.");
+  }, []);
   const [handOverError, setHandOverError] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [editingSize, setEditingSize] = useState(false);
@@ -512,6 +522,11 @@ export default function ManagePage() {
           </div>
         </div>
       ) : null}
+      {upgradedNote ? (
+        <div className="mb-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-900">
+          ✨ {upgradedNote}
+        </div>
+      ) : null}
       <p className="text-xs font-extrabold uppercase tracking-wide text-accent-dark">
         Manage tournament
       </p>
@@ -795,14 +810,22 @@ export default function ManagePage() {
         <ProUpsellModal
           topic={upsell}
           onClose={() => setUpsell(null)}
+          busy={upsellBusy}
+          error={upsellError}
           onUpgrade={async () => {
-            const supabase = getSupabaseClient();
-            if (supabase && trip) {
-              await supabase.from("trips").update({ is_pro: true }).eq("id", trip.id);
+            if (!trip) return;
+            setUpsellBusy(true);
+            setUpsellError(null);
+            const r = await upgradeOrCheckout("pro", { tripId: trip.id, returnPath: `/manage/${trip.joinCode}` });
+            setUpsellBusy(false);
+            if (r.status === "error") {
+              setUpsellError(r.error);
+              return;
             }
+            if (r.status === "checkout") return; // off to Stripe
             setUpsell(null);
             setMtab("pro");
-            if (trip) await refresh(trip);
+            await refresh(trip);
           }}
         />
       ) : null}

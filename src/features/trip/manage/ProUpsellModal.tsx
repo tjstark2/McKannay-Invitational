@@ -1,5 +1,8 @@
 "use client";
 
+import { priceNote, useBillingConfig } from "@/lib/billing";
+import { PRO_HEADLINES } from "@/features/pro/proFeatures";
+
 /**
  * Context-tailored Pro upsell. The pitch is driven by WHAT the user tapped, so
  * a member poking the hole-by-hole toggle sees the live-scoring story, while a
@@ -64,7 +67,7 @@ const PITCHES: Record<UpsellTopic, Pitch> = {
     eyebrow: "Pro",
     title: "Upgrade this tournament",
     lede: "Everything that makes the trip feel like a real event.",
-    bullets: ["Hole-by-hole live scoring", "Clubhouse photos and chat", "Matchup draws", "Trip Wrapped"],
+    bullets: PRO_HEADLINES.map((f) => f.title),
   },
 };
 
@@ -72,12 +75,17 @@ export function ProUpsellModal({
   topic,
   onClose,
   onUpgrade,
+  busy = false,
+  error = null,
 }: {
   topic: UpsellTopic;
   onClose: () => void;
   onUpgrade?: () => void;
+  busy?: boolean;
+  error?: string | null;
 }) {
   const p = PITCHES[topic] ?? PITCHES.general;
+  const billing = useBillingConfig();
   return (
     <div className="fixed inset-0 z-[150] flex items-end justify-center bg-black/60 sm:items-center">
       <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-gradient-to-b from-[#0b3b2e] to-[#0b2418] p-6 text-white sm:rounded-3xl">
@@ -108,13 +116,16 @@ export function ProUpsellModal({
         </ul>
 
         <div className="mt-6 space-y-2">
+          {error ? <p className="rounded-xl bg-red-500/20 p-3 text-sm font-bold text-red-100">{error}</p> : null}
           <button
             type="button"
             onClick={onUpgrade ?? onClose}
-            className="w-full rounded-2xl bg-accent px-4 py-3.5 font-black text-ink"
+            disabled={busy}
+            className="w-full rounded-2xl bg-accent px-4 py-3.5 font-black text-ink disabled:opacity-60"
           >
-            Upgrade to Pro
+            {busy ? "One sec..." : `Upgrade to Pro${billing?.live && billing.prices.pro ? ` - ${billing.prices.pro}` : ""}`}
           </button>
+          <p className="text-center text-xs font-semibold text-white/50">{priceNote(billing, "pro")}</p>
           <button type="button" onClick={onClose} className="w-full py-2 text-sm font-bold text-white/50">
             Maybe later
           </button>

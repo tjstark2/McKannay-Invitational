@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { SmilePlus, Crown, X } from "lucide-react";
 import { useBirdieBoss } from "@/features/account/birdieBoss";
+import { priceNote, useBillingConfig } from "@/lib/billing";
 import {
   BOSS_STICKERS,
   bossSrc,
@@ -68,6 +69,7 @@ export function ReactionControls({
 }) {
   const router = useRouter();
   const { isBoss, upgrade } = useBirdieBoss();
+  const billing = useBillingConfig();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"standard" | "boss">("standard");
   const [declines, setDeclines] = useState(() => readDeclines(tripId));
@@ -230,7 +232,7 @@ export function ReactionControls({
             <div className="p-5 text-center">
               <p className="text-sm font-semibold text-slate-600">
                 Boss stickers are an individual upgrade - unlock them plus every
-                avatar and an ad-free app. Free while in preview.
+                avatar, frame and nameplate. {priceNote(billing, "boss")}
               </p>
               <button
                 onClick={acceptUpsell}

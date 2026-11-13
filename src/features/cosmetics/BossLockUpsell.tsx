@@ -1,6 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
+import { priceNote, useBillingConfig } from "@/lib/billing";
 
 export function BossLockUpsell({
   open,
@@ -13,6 +14,7 @@ export function BossLockUpsell({
   onUpgrade: () => void;
   upgrading: boolean;
 }) {
+  const billing = useBillingConfig();
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-5">
@@ -34,8 +36,9 @@ export function BossLockUpsell({
         <div className="p-5 text-center">
           <p className="text-sm font-semibold text-slate-600">
             Frames, nameplates, and avatars like this are a Birdie Boss perk -
-            plus Boss reaction stickers and an ad-free app. Free while in preview.
+            plus Boss reaction stickers. It&apos;s yours in every tournament.
           </p>
+          <p className="mt-2 text-xs font-bold text-slate-400">{priceNote(billing, "boss")}</p>
           <button
             onClick={onUpgrade}
             disabled={upgrading}

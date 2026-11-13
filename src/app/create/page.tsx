@@ -1,5 +1,6 @@
 "use client";
 
+import { startUpgrade, upgradeOrCheckout, useBillingConfig } from "@/lib/billing";
 import { PRO_HEADLINES } from "@/features/pro/proFeatures";
 import { useEffect, useMemo, useState } from "react";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
@@ -177,6 +178,8 @@ export default function CreatePage() {
   const [oddConfirm, setOddConfirm] = useState(false);
   const [postStep, setPostStep] = useState<0 | 1>(0);
   const [upgradedNow, setUpgradedNow] = useState(false);
+  const [proCheckoutUrl, setProCheckoutUrl] = useState<string | null>(null);
+  const billing = useBillingConfig();
   const [invitePeople, setInvitePeople] = useState<{ id: string; name: string; sub: string }[]>([]);
   const [invited, setInvited] = useState<Set<string>>(new Set());
   const [teamAName, setTeamAName] = useState("Team A");
@@ -313,15 +316,12 @@ export default function CreatePage() {
       }
       const tripId = created.tripId;
 
-      // Structured state + the up-front Pro choice (no billing yet - free preview).
+      // Structured state. Pro is NOT set here any more - only the server can
+      // switch it on (free in preview, after payment once billing is live).
       try {
         await supabase
           .from("trips")
-          .update({
-            state: stateAbbr.trim() || null,
-            is_pro: wantsPro,
-            ...(wantsPro ? { pro_since: new Date().toISOString() } : {}),
-          })
+          .update({ state: stateAbbr.trim() || null })
           .eq("id", tripId);
       } catch {
         /* non-fatal */
@@ -374,6 +374,15 @@ export default function CreatePage() {
         }
       }
 
+      // The up-front Pro choice, now that everything else is saved. In preview
+      // this grants it; with billing live it hands back a checkout page,
+      // offered on the finish screen rather than yanking them away mid-setup.
+      if (wantsPro) {
+        const r = await startUpgrade("pro", { tripId, returnPath: `/manage/${code}` });
+        if (r.status === "granted") setUpgradedNow(true);
+        else if (r.status === "checkout") setProCheckoutUrl(r.url);
+      }
+
       setCreatedTripId(tripId);
       setCreatedCode(code);
       setBusy(false);
@@ -390,7 +399,7 @@ export default function CreatePage() {
   }
 
   if (createdCode) {
-    const isPro = wantsPro || upgradedNow;
+    const isPro = upgradedNow;
     const joinUrl = `https://www.tourneybirdie.com/t/${createdCode}`;
     const share = async () => {
       const text = `Join my tournament "${name}" on TourneyBirdie - code ${createdCode}\n${joinUrl}`;
@@ -400,13 +409,16 @@ export default function CreatePage() {
       } catch { /* ignore */ }
     };
     const upgradeNow = async () => {
-      const supabase = getSupabaseClient();
-      if (supabase && createdTripId) {
-        setUpgrading(true);
-        await supabase.from("trips").update({ is_pro: true, pro_since: new Date().toISOString() }).eq("id", createdTripId);
-        setUpgrading(false);
+      if (proCheckoutUrl) {
+        window.location.href = proCheckoutUrl;
+        return;
       }
-      setUpgradedNow(true);
+      if (!createdTripId) return;
+      setUpgrading(true);
+      const r = await upgradeOrCheckout("pro", { tripId: createdTripId, returnPath: `/manage/${createdCode}` });
+      setUpgrading(false);
+      if (r.status === "granted") setUpgradedNow(true);
+      else if (r.status === "error") setError(r.error);
     };
     return (
       <AuthShell>
@@ -440,7 +452,7 @@ export default function CreatePage() {
                     <li key={f.title}>{f.emoji} {f.title}</li>
                   ))}
                 </ul>
-                <button onClick={upgradeNow} disabled={upgrading} className="mt-3 w-full rounded-2xl bg-accent px-4 py-3 font-black text-ink disabled:opacity-50">{upgrading ? "Upgrading…" : "Upgrade to Pro ✨"}</button>
+                <button onClick={upgradeNow} disabled={upgrading} className="mt-3 w-full rounded-2xl bg-accent px-4 py-3 font-black text-ink disabled:opacity-50">{upgrading ? "Upgrading…" : proCheckoutUrl ? `Finish upgrading to Pro${billing?.prices.pro ? ` - ${billing.prices.pro}` : ""}` : "Upgrade to Pro ✨"}</button>
               </div>
             )}
 
@@ -517,7 +529,7 @@ export default function CreatePage() {
           ))}
         </div>
 
-        {step === 0 ? <Paywall wantsPro={wantsPro} setWantsPro={setWantsPro} onNext={() => setStep(1)} onCancel={() => router.push("/home")} /> : null}
+        {step === 0 ? <Paywall wantsPro={wantsPro} setWantsPro={setWantsPro} proPrice={billing?.live ? billing.prices.pro : null} onNext={() => setStep(1)} onCancel={() => router.push("/home")} /> : null}
 
         {step === 1 ? (
           <div>
@@ -768,11 +780,13 @@ export default function CreatePage() {
 function Paywall({
   wantsPro,
   setWantsPro,
+  proPrice,
   onNext,
   onCancel,
 }: {
   wantsPro: boolean;
   setWantsPro: (v: boolean) => void;
+  proPrice: string | null;
   onNext: () => void;
   onCancel: () => void;
 }) {
@@ -802,7 +816,7 @@ function Paywall({
         ))}
       </div>
 
-      <p className="mt-3 text-center text-xs text-emerald-100/70">{wantsPro ? "Pro • free while in beta" : "Free • upgrade anytime"}</p>
+      <p className="mt-3 text-center text-xs text-emerald-100/70">{wantsPro ? (proPrice ? `Pro • ${proPrice} per tournament, paid at the end` : "Pro • free while in preview") : "Free • upgrade anytime"}</p>
       <button onClick={onNext} className={`mt-3 w-full rounded-2xl px-4 py-4 font-black ${wantsPro ? "bg-accent text-ink" : "bg-white text-fairway-900"}`}>
         {wantsPro ? "Start with Pro ✨" : "Start Free"}
       </button>

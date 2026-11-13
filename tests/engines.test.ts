@@ -1003,3 +1003,55 @@ test("the reveal opens with the group's votes and ends on the biggest award", ()
   assert.ok(cards[0].line.includes("TJ"), "voted line names the winner");
   assert.equal(cards[0].stat, "3 votes");
 });
+
+/* ---------------------------------------------------------------- billing */
+
+import { createHmac } from "node:crypto";
+import { billingEnv, formEncode, formatPrice, verifyStripeSignature } from "../src/lib/server/stripe";
+import { safeReturnPath, withParam } from "../src/lib/server/billing";
+
+test("billing only goes live when every key is there", () => {
+  const all = {
+    BILLING_MODE: "live", STRIPE_SECRET_KEY: "sk", STRIPE_WEBHOOK_SECRET: "wh",
+    STRIPE_PRICE_PRO: "price_pro", STRIPE_PRICE_BOSS: "price_boss",
+  } as NodeJS.ProcessEnv;
+  assert.equal(billingEnv(all).live, true);
+  assert.equal(billingEnv({ ...all, BILLING_MODE: "preview" }).live, false, "switched off");
+  assert.equal(billingEnv({ ...all, STRIPE_WEBHOOK_SECRET: "" }).live, false, "can't take money it can't confirm");
+  assert.equal(billingEnv({ ...all, STRIPE_PRICE_BOSS: undefined }).live, false);
+  assert.equal(billingEnv({} as NodeJS.ProcessEnv).live, false, "nothing set is the free preview");
+});
+
+test("a webhook is only trusted with the right, recent signature", () => {
+  const body = '{"type":"checkout.session.completed"}';
+  const t = 1_800_000_000;
+  const sig = createHmac("sha256", "whsec_test").update(`${t}.${body}`).digest("hex");
+  assert.equal(verifyStripeSignature(body, `t=${t},v1=${sig}`, "whsec_test", t), true);
+  assert.equal(verifyStripeSignature(body, `t=${t},v1=${sig}`, "wrong_secret", t), false, "wrong secret");
+  assert.equal(verifyStripeSignature(body + " ", `t=${t},v1=${sig}`, "whsec_test", t), false, "tampered body");
+  assert.equal(verifyStripeSignature(body, `t=${t},v1=${sig}`, "whsec_test", t + 3600), false, "replayed an hour later");
+  assert.equal(verifyStripeSignature(body, null, "whsec_test", t), false);
+  assert.equal(verifyStripeSignature(body, "garbage", "whsec_test", t), false);
+});
+
+test("checkout requests are encoded the way Stripe reads them", () => {
+  const q = formEncode({ mode: "payment", line_items: [{ price: "p_1", quantity: 1 }], metadata: { trip_id: "" }, skip: undefined });
+  assert.equal(
+    decodeURIComponent(q),
+    "mode=payment&line_items[0][price]=p_1&line_items[0][quantity]=1&metadata[trip_id]="
+  );
+});
+
+test("prices read the way a person says them", () => {
+  assert.equal(formatPrice({ unit_amount: 2900, currency: "usd", recurring: null }), "$29");
+  assert.equal(formatPrice({ unit_amount: 499, currency: "usd", recurring: { interval: "month" } }), "$4.99/mo");
+  assert.equal(formatPrice({ unit_amount: 3999, currency: "usd", recurring: { interval: "year" } }), "$39.99/yr");
+});
+
+test("after paying, people only ever land back inside the app", () => {
+  assert.equal(safeReturnPath("/manage/ABC"), "/manage/ABC");
+  assert.equal(safeReturnPath("https://evil.example"), "/home");
+  assert.equal(safeReturnPath("//evil.example"), "/home");
+  assert.equal(safeReturnPath(undefined), "/home");
+  assert.equal(withParam("/choose-avatar?next=/t/X", "upgraded", "boss"), "/choose-avatar?next=/t/X&upgraded=boss");
+});

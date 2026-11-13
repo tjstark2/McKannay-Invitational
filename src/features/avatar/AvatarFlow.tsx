@@ -140,13 +140,21 @@ export function AvatarFlow({
   }
   async function handleBossUpgrade() {
     setUpgrading(true);
+    let result;
     try {
-      await upgrade();
+      result = await upgrade();
     } finally {
       setUpgrading(false);
     }
+    // Off to checkout: they pick the bird again when they come back paid.
+    // Saving it now would hand over a premium bird before the payment.
+    if (result.leaving) return;
     setUpsellMode(null);
-    await saveSelected();
+    if (result.error) {
+      showToast(result.error);
+      return;
+    }
+    if (result.granted) await saveSelected();
   }
   function handleBossClose() {
     const mode = upsellMode;

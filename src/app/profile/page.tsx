@@ -14,6 +14,8 @@ import { BrandHeaderMark } from "@/features/trip/components/Brand";
 import { AccountMenu } from "@/features/account/AccountMenu";
 import { NotificationSettings } from "@/features/account/NotificationSettings";
 import { AccountDangerZone } from "@/features/account/AccountDangerZone";
+import { priceNote, useBillingConfig } from "@/lib/billing";
+import { BOSS_FEATURES } from "@/features/account/birdieBoss";
 
 type Profile = {
   first_name: string | null;
@@ -27,12 +29,6 @@ type Profile = {
   avatar_id: string | null;
 };
 
-const BOSS_FEATURES = [
-  "Every avatar unlocked (except the Founder)",
-  "Exclusive Boss reaction stickers in Clubhouse & chat",
-  "Ad-free across the app",
-  "More Boss perks coming shortly",
-];
 
 export default function ProfilePage() {
   const { user, loading } = useAuth();
@@ -41,12 +37,15 @@ export default function ProfilePage() {
   const { isBoss, upgrade } = useBirdieBoss();
   const { frameId } = useCosmetics();
   const [upgrading, setUpgrading] = useState(false);
+  const [bossError, setBossError] = useState<string | null>(null);
+  const billing = useBillingConfig();
   const [showFeatures, setShowFeatures] = useState(false);
 
   async function becomeBoss() {
     setUpgrading(true);
     try {
-      await upgrade();
+      const r = await upgrade();
+      if (r.error) setBossError(r.error);
     } finally {
       setUpgrading(false);
     }
@@ -214,7 +213,7 @@ export default function ProfilePage() {
                   </div>
                 ))}
                 <div className="mt-3 rounded-xl bg-sand-50 p-3 text-center text-xs font-bold text-slate-500">
-                  Free while in preview - no card required.
+                  {priceNote(billing, "boss")}
                 </div>
                 <button
                   onClick={becomeBoss}
@@ -223,6 +222,7 @@ export default function ProfilePage() {
                 >
                   {upgrading ? "Upgrading…" : "Become a Birdie Boss"}
                 </button>
+                {bossError ? <p className="mt-2 text-center text-xs font-bold text-red-700">{bossError}</p> : null}
               </div>
             </div>
           )}
