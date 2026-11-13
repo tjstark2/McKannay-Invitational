@@ -241,6 +241,20 @@ export async function setMemberRole(
   return !error;
 }
 
+/**
+ * Hand the tournament to another active member. Owner only; the old owner
+ * stays on as an admin. Returns an error message, or null on success.
+ */
+export async function transferOwnership(
+  supabase: SupabaseClient,
+  tripId: string,
+  newOwnerId: string
+): Promise<string | null> {
+  const { error } = await supabase.rpc("transfer_trip_ownership", { p_trip: tripId, p_new_owner: newOwnerId });
+  if (!error) return null;
+  return error.message.includes("function") ? "Handing over isn't set up yet." : error.message;
+}
+
 // decline a request / remove a member
 export async function removeMember(
   supabase: SupabaseClient,

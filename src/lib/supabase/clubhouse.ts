@@ -152,6 +152,8 @@ type TripMessageRow = {
   round_id?: string | null;
   hole?: number | null;
   parent_id?: string | null;
+  edited_at?: string | null;
+  deleted_at?: string | null;
 };
 
 type ReactionRow = {
@@ -171,7 +173,21 @@ function mapMessage(row: TripMessageRow): TripMessage {
     roundId: row.round_id ?? null,
     hole: row.hole ?? null,
     parentId: row.parent_id ?? null,
+    editedAt: row.edited_at ?? null,
+    deletedAt: row.deleted_at ?? null,
   };
+}
+
+/** Change the text of your own chat message. */
+export async function editMessage(supabase: SupabaseClient, messageId: string, body: string): Promise<void> {
+  const { error } = await supabase.rpc("edit_trip_message", { mid: messageId, new_body: body });
+  if (error) throw new Error(error.message.includes("function") ? "Editing isn't set up yet." : error.message);
+}
+
+/** Delete a message - your own, or anyone's if you organize the tournament. */
+export async function deleteMessage(supabase: SupabaseClient, messageId: string): Promise<void> {
+  const { error } = await supabase.rpc("delete_trip_message", { mid: messageId });
+  if (error) throw new Error(error.message.includes("function") ? "Deleting isn't set up yet." : error.message);
 }
 
 /** Oldest-first list of a trip's chat messages. */

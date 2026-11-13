@@ -19,6 +19,7 @@ import {
   approveMember,
   removeMember,
   setMemberRole,
+  transferOwnership,
   setMemberHandicap,
   loadTripTeams,
   loadTripPlayers,
@@ -59,6 +60,9 @@ export default function ManagePage() {
   const [ready, setReady] = useState(false);
   const [authorized, setAuthorized] = useState(true);
   const [isOwnerViewer, setIsOwnerViewer] = useState(false);
+  // Handing the tournament over: who it's going to, and any error.
+  const [handOverTo, setHandOverTo] = useState<string | null>(null);
+  const [handOverError, setHandOverError] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [editingSize, setEditingSize] = useState(false);
   const [sizeDraft, setSizeDraft] = useState("12");
@@ -204,6 +208,27 @@ export default function ManagePage() {
       const p = players.find((pl) => pl.accountId === accountId);
       if (p) await removeRosterPlayer(supabase, p.id);
     }
+    await refresh(trip);
+  }
+
+  async function handOver(accountId: string) {
+    const supabase = getSupabaseClient();
+    if (!supabase || !trip) return;
+    setHandOverError(null);
+    const err = await transferOwnership(supabase, trip.id, accountId);
+    if (err) {
+      setHandOverError(err);
+      return;
+    }
+    setHandOverTo(null);
+    setIsOwnerViewer(false);
+    void notify({
+      userIds: [accountId],
+      title: trip.name,
+      message: `You're the owner of ${trip.name} now. It's all yours.`,
+      category: "essential",
+      url: `/manage/${trip.joinCode}`,
+    });
     await refresh(trip);
   }
 
@@ -380,12 +405,23 @@ export default function ManagePage() {
             <span className="ml-auto flex items-center gap-2">
               {isOwnerViewer ? (
                 m.role === "admin" ? (
-                  <button
-                    onClick={() => setRole(m.membershipId, "member")}
-                    className="rounded-full border border-sand-200 bg-white px-3 py-1.5 text-xs font-extrabold text-slate-500"
-                  >
-                    Remove admin
-                  </button>
+                  <>
+                    <button
+                      onClick={() => {
+                        setHandOverError(null);
+                        setHandOverTo(m.profile.id);
+                      }}
+                      className="rounded-full border border-fairway-900/30 bg-white px-3 py-1.5 text-xs font-extrabold text-fairway-900"
+                    >
+                      Make owner
+                    </button>
+                    <button
+                      onClick={() => setRole(m.membershipId, "member")}
+                      className="rounded-full border border-sand-200 bg-white px-3 py-1.5 text-xs font-extrabold text-slate-500"
+                    >
+                      Remove admin
+                    </button>
+                  </>
                 ) : (
                   <button
                     data-tour="mng-makeadmin"
@@ -440,9 +476,42 @@ export default function ManagePage() {
   const filledSpots = admitted.length + (ownerPlaying ? 1 : 0);
   const openSpots = Math.max(0, trip.rosterSize - filledSpots);
 
+  const handOverMember = handOverTo ? members.find((m) => m.profile.id === handOverTo) ?? null : null;
+  const handOverName = handOverMember
+    ? handOverMember.profile.username || handOverMember.profile.first_name || "them"
+    : "";
+
   return (
     <Shell>
       <TourHost />
+      {handOverMember ? (
+        <div className="fixed inset-0 z-[140] flex items-end justify-center bg-black/50 p-4 sm:items-center">
+          <div className="w-full max-w-sm rounded-3xl bg-white p-5">
+            <p className="font-black text-ink">Make {handOverName} the owner?</p>
+            <p className="mt-1 text-[13px] leading-5 text-slate-600">
+              They get full control, including deleting the tournament. You stay on as an admin. Only they can
+              hand it back.
+            </p>
+            {handOverError ? (
+              <p className="mt-3 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">{handOverError}</p>
+            ) : null}
+            <div className="mt-5 flex gap-2">
+              <button
+                onClick={() => setHandOverTo(null)}
+                className="flex-1 rounded-xl border border-line bg-white py-3 font-black text-slate-600"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handOver(handOverMember.profile.id)}
+                className="flex-1 rounded-xl bg-fairway-900 py-3 font-black text-white"
+              >
+                Hand it over
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <p className="text-xs font-extrabold uppercase tracking-wide text-accent-dark">
         Manage tournament
       </p>

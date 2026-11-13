@@ -109,7 +109,8 @@ export function AccountDangerZone() {
           <p className="font-black text-red-900">This cannot be undone</p>
           <p className="mt-1 text-[13px] leading-5 text-red-900">
             Type DELETE to confirm. If you own a tournament you&apos;ll need to
-            hand it over or delete it first.
+            hand it over first (Manage, then Make owner on one of your admins) or
+            delete it.
           </p>
           <input
             value={typed}

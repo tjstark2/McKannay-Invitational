@@ -221,6 +221,10 @@ export type TripMessage = {
   hole?: number | null;
   /** Set when this is a comment hanging under a feed moment. */
   parentId?: string | null;
+  /** Set when the author changed the text after sending. */
+  editedAt?: string | null;
+  /** Set when deleted. The text is wiped on the server; show a placeholder. */
+  deletedAt?: string | null;
 };
 
 export type TripMessageReaction = {

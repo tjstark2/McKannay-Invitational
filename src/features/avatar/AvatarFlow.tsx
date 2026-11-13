@@ -19,7 +19,7 @@ import {
 } from "./sounds";
 import styles from "./AvatarFlow.module.css";
 
-type Step = "intro" | "choose" | "paywall";
+type Step = "intro" | "choose";
 
 export function AvatarFlow({
   avatars,
@@ -333,47 +333,6 @@ export function AvatarFlow({
                 );
               })
             )}
-          </div>
-        </section>
-
-        {/* PAYWALL */}
-        <section className={`${styles.screen} ${styles.paywall} ${step === "paywall" ? styles.on : ""}`}>
-          <div style={{ flex: 1 }} />
-          <div className={styles.sheet}>
-            <div className={styles.crown}>♛</div>
-            <h2>Go Premium</h2>
-            <div className={styles.sub}>
-              You’re all set with <b>{selected?.name ?? "your bird"}</b>. Unlock the rest of the clubhouse:
-            </div>
-            {[
-              ["Premium & Legendary birdies", "the full roster, including Mythic and Ace."],
-              ["Stats & handicap tracking", "trends across every trip."],
-              ["Private tournaments", "invite-only, your rules."],
-              ["Ad-free", "just golf."],
-            ].map(([title, desc], i) => (
-              <div key={title} className={`${styles.perk} ${i === 0 ? styles.perkFirst : ""}`}>
-                <span className={styles.dot}>✦</span>
-                <div>
-                  <b>{title}</b> <span>- {desc}</span>
-                </div>
-              </div>
-            ))}
-            <button
-              className={styles.cta}
-              style={{ marginTop: 18 }}
-              onClick={() => showToast("Payments coming soon - this is a placeholder.")}
-            >
-              Upgrade - $4.99/mo
-            </button>
-            <button
-              className={`${styles.cta} ${styles.ghost}`}
-              style={{ marginTop: 10 }}
-              onClick={complete}
-              disabled={busy}
-            >
-              {busy ? "Setting your bird…" : "Maybe later"}
-            </button>
-            <div className={styles.stub}>Placeholder - no real payment. First login only.</div>
           </div>
         </section>
 

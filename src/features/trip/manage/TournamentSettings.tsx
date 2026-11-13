@@ -1,5 +1,6 @@
 "use client";
 
+import { PRO_FEATURES } from "@/features/pro/proFeatures";
 import { useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import {
@@ -364,21 +365,7 @@ export function TournamentSettings({
               {s.isPro ? "What you have" : "What Pro unlocks"}
             </p>
             <div className="mb-2 rounded-2xl border border-sand-200 bg-[#f7f6f1] p-3">
-              {[
-                ["Hole-by-hole live scoring", "Every score as it happens, with a live leaderboard the whole group watches."],
-                ["Real stroke play", "Strokes given on the right holes off each course's handicap index, with per-round allowances."],
-                ["Scoring that works with no signal", "Scores save on the phone and sync themselves when the signal comes back."],
-                ["Matchup draws", "Slot machine, hat draw, spinning wheel, captain's draft and handicap auto-balance."],
-                ["Captain's Draft for teams", "Coin toss, then the captains take turns picking the whole roster."],
-                ["Balanced tee-time groups", "Field rounds split into groups that mix low and high handicaps evenly."],
-                ["Callouts and the snowman", "Birdies, eagles and blow-ups posted as they happen - an 8 puts a snowman on your avatar until you play it off."],
-                ["The Clubhouse", "Photos and group chat that live with the tournament."],
-                ["House rules", "Settle gimmes, mulligans and breakfast balls before the first tee."],
-                ["Post-round awards", "Vote for MVP, three-putt king and the rest after every round."],
-                ["Trip Wrapped and the champion moment", "A full-screen finish for the winning side, then a shareable recap of the trip."],
-                ["Custom backgrounds", "Your own imagery behind the tournament."],
-                ["Push notifications", "Tee times, matchups and live drama, each player choosing what they get."],
-              ].map(([t, d]) => (
+              {PRO_FEATURES.map(({ title: t, detail: d }) => (
                 <div key={t} className="mt-2 flex items-start gap-2 first:mt-0">
                   <span className={`mt-0.5 ${s.isPro ? "text-accent-dark" : "text-slate-300"}`}>
                     {s.isPro ? "✓" : "🔒"}
@@ -422,27 +409,6 @@ export function TournamentSettings({
             </div>
           </div>
 
-          {/* 4. coming soon */}
-          <div>
-            <p className="mb-1.5 text-xs font-black uppercase tracking-wide text-slate-500">Coming soon</p>
-            <div className="rounded-2xl border border-sand-200 bg-[#f7f6f1] p-3">
-              {[
-                ["Clubhouse controls", "Turn photos or chat off for a tournament."],
-                ["Round backgrounds", "Custom imagery behind each round."],
-                ["Season series", "Carry results across years and keep a running cup."],
-              ].map(([t, d]) => (
-                <div key={t} className="mt-2 flex items-start gap-2 first:mt-0">
-                  <span className="mt-0.5 rounded-full bg-white px-1.5 py-0.5 text-[10px] font-black uppercase text-slate-400">
-                    Soon
-                  </span>
-                  <span className="flex-1">
-                    <span className="block text-[13px] font-black text-ink">{t}</span>
-                    <span className="block text-[12px] leading-5 text-slate-500">{d}</span>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       ) : null}
 

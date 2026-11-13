@@ -1,5 +1,7 @@
 "use client";
 
+import { PRO_HEADLINES } from "@/features/pro/proFeatures";
+
 // The Pro upsell shown at the end of tournament creation AND from Admin when
 // upgrading an existing tournament. Same screen, different surrounding chrome.
 export function ProUpsell({
@@ -49,16 +51,15 @@ export function ProUpsell({
         </div>
 
         <div className="space-y-2.5 p-5">
-          {[
-            "Pro features for the whole crew (placeholder)",
-            "More to come - coming soon",
-            "More to come - coming soon",
-          ].map((b, i) => (
-            <div key={i} className="flex items-start gap-2.5">
+          {PRO_HEADLINES.map((f) => (
+            <div key={f.title} className="flex items-start gap-2.5">
               <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-mint/20 text-[11px] font-black text-green">
                 ✓
               </span>
-              <span className="text-sm font-semibold text-slate-600">{b}</span>
+              <span className="flex-1">
+                <span className="block text-sm font-black text-ink">{f.title}</span>
+                <span className="block text-[12px] leading-5 text-slate-500">{f.detail}</span>
+              </span>
             </div>
           ))}
 

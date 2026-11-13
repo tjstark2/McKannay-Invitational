@@ -4,7 +4,7 @@ Running log. Newest session at the top of each section. When something ships,
 move it to "Recently shipped" with the date, don't delete it - the history is
 what stops us rebuilding something twice.
 
-Last updated: 17 August 2026
+Last updated: 13 November 2026
 
 ---
 
@@ -32,21 +32,16 @@ These are the things that stop you inviting people who are not you.
 - **More than two teams.** Structural - teams are A and B throughout the
   scoring engine, the draw engine and the leaderboard.
 - **Other tournament templates** beyond the current Ryder-Cup shape.
-- **Handing a tournament to another owner.** Also the reason account deletion
-  refuses while you own one - there is no way to pass it on first.
 
 ## Known incomplete in the app
 
 - **Tutorials are out of date.** The Manage hub, matchup draws, teams and
   house rules have all changed shape since the walkthroughs were written.
 - **Create-a-tournament flow** does not match how Manage actually behaves now.
-- `ProUpsell.tsx` renders "More to come - coming soon" twice as literal
-  feature bullets.
 - Coin toss uses team colours and names - teams have no logo field to draw.
-- Create flow says custom course upload is "coming soon".
 - Landing page has a "Coming soon" block.
-- Avatar payments are a placeholder toast.
-- Clubhouse chat has no way to edit or delete a message.
+- Pro and Birdie Boss can both be switched on free - no billing yet.
+- Feed comments can't be edited or deleted yet (chat can, since Bundle E).
 
 ## Engineering debt
 
@@ -111,6 +106,26 @@ These are the things that stop you inviting people who are not you.
 - The Nest: live block moved to the top, and the Front 9 / Final counters -
   which read 0 of 8 all day on a hole-by-hole round - are replaced by cards
   going and furthest thru while a round is live.
+
+## Bundle E - polish (needs bundleE_polish.sql first)
+
+- **One Pro feature list.** The create intro, the create finish screen, the
+  upgrade screen and Settings each had their own list and had drifted - two
+  "More to come - coming soon" placeholder bullets, and awards still sold as
+  "vote for Three-Putt king". All four now read from one list
+  (src/features/pro/proFeatures.ts) with the new awards description.
+- **Removed "Coming soon" promises:** the Settings block (Season series has
+  shipped; the rest isn't planned), and "Pro tournaments (coming soon)" in the
+  create flow - custom photos already work on Pro.
+- **Removed the fake avatar paywall** ("Upgrade - $4.99/mo", ad-free, private
+  tournaments). It was unreachable but listed features that don't exist.
+- **Chat: edit and delete.** Tap the dots on your own message to edit or
+  delete it; organizers can delete anyone's. Edits show "(edited)". A delete
+  wipes the text on the server, not just on screen. Updates live for
+  everyone. Chat tab only - Feed comments not yet.
+- **Hand a tournament to a new owner.** Manage, then Make owner on an admin's
+  card. The old owner stays an admin. This also unblocks deleting your account
+  if you own a tournament.
 
 ## Bundle D3 - the reveal and the vote
 

@@ -8,11 +8,14 @@ import { ReactionControls } from "@/features/trip/screens/clubhouse/ReactionCont
 import { NewPill } from "@/features/trip/screens/clubhouse/NewPill";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useAuth } from "@/features/auth/AuthContext";
+import { useViewer } from "@/features/trip/state/ViewerContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { notifyEvent } from "@/lib/notify";
 import {
   loadMessages,
   loadReactions,
+  editMessage,
+  deleteMessage,
   sendMessage,
   toggleReaction,
   loadReadState,
@@ -32,6 +35,12 @@ function clockTime(iso: string): string {
 export function ChatTab({ onRead }: { onRead?: () => void }) {
   const { trip, players } = useTripState();
   const { user } = useAuth();
+  const { canManage } = useViewer();
+
+  // The message whose actions are open, and the one being edited.
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
 
   const [messages, setMessages] = useState<TripMessage[]>([]);
   const [reactions, setReactions] = useState<TripMessageReaction[]>([]);
@@ -175,6 +184,26 @@ export function ChatTab({ onRead }: { onRead?: () => void }) {
       )
       .on(
         "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "trip_messages",
+          filter: `trip_id=eq.${trip.id}`,
+        },
+        (payload) => {
+          // An edit or a delete, by anyone - keep everyone's screen in step.
+          const row = payload.new as { id: string; body: string; edited_at?: string | null; deleted_at?: string | null };
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === row.id
+                ? { ...m, body: row.body, editedAt: row.edited_at ?? null, deletedAt: row.deleted_at ?? null }
+                : m
+            )
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
         { event: "INSERT", schema: "public", table: "trip_message_reactions" },
         (payload) => {
           const r = payload.new as {
@@ -259,6 +288,39 @@ export function ChatTab({ onRead }: { onRead?: () => void }) {
     }
   }
 
+  async function saveEdit() {
+    if (!editing) return;
+    const text = editing.text.trim();
+    if (!text) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    const { id } = editing;
+    const before = messages.find((m) => m.id === id);
+    setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, body: text, editedAt: new Date().toISOString() } : m)));
+    setEditing(null);
+    try {
+      await editMessage(supabase, id, text);
+    } catch (e: unknown) {
+      if (before) setMessages((prev) => prev.map((m) => (m.id === id ? before : m)));
+      setError(e instanceof Error ? e.message : "Couldn't edit that message.");
+    }
+  }
+
+  async function removeMessage(id: string) {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    const before = messages.find((m) => m.id === id);
+    setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, body: "Message deleted", deletedAt: new Date().toISOString() } : m)));
+    setConfirmDelete(null);
+    setMenuFor(null);
+    try {
+      await deleteMessage(supabase, id);
+    } catch (e: unknown) {
+      if (before) setMessages((prev) => prev.map((m) => (m.id === id ? before : m)));
+      setError(e instanceof Error ? e.message : "Couldn't delete that message.");
+    }
+  }
+
   async function react(messageId: string, emoji: string) {
     if (!user) return;
     const isOn = reactions.some(
@@ -338,20 +400,100 @@ export function ChatTab({ onRead }: { onRead?: () => void }) {
             <span className="h-px flex-1 bg-team-north/30" />
           </div>
         ) : null}
-        <div className="flex items-end gap-1.5">
-          <p
-            className={`inline-block max-w-full whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm font-medium ${
-              isMine
-                ? "bg-fairway-50 text-ink"
-                : "border border-line bg-white text-ink"
-            }`}
-          >
-            {m.body}
-          </p>
-          {isNew ? <NewPill /> : null}
-        </div>
+        {editing?.id === m.id ? (
+          <div className="rounded-2xl border border-fairway-900/30 bg-white p-2">
+            <textarea
+              value={editing.text}
+              onChange={(e) => setEditing({ id: m.id, text: e.target.value })}
+              rows={2}
+              autoFocus
+              aria-label="Edit message"
+              className="w-full resize-none rounded-xl px-2 py-1 text-sm font-medium text-ink outline-none"
+            />
+            <div className="mt-1 flex justify-end gap-2">
+              <button onClick={() => setEditing(null)} className="rounded-full px-3 py-1 text-xs font-black text-slate-500">
+                Cancel
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={!editing.text.trim()}
+                className="rounded-full bg-fairway-900 px-3 py-1 text-xs font-black text-white disabled:opacity-40"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-end gap-1.5">
+            {m.deletedAt ? (
+              <p className="inline-block rounded-2xl border border-dashed border-line px-3 py-2 text-sm italic text-slate-400">
+                Message deleted
+              </p>
+            ) : (
+              <p
+                className={`inline-block max-w-full whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm font-medium ${
+                  isMine
+                    ? "bg-fairway-50 text-ink"
+                    : "border border-line bg-white text-ink"
+                }`}
+              >
+                {m.body}
+                {m.editedAt ? <span className="ml-1.5 text-[11px] font-semibold text-slate-400">(edited)</span> : null}
+              </p>
+            )}
+            {isNew ? <NewPill /> : null}
+            {!m.deletedAt && (isMine || canManage) ? (
+              <button
+                onClick={() => {
+                  setConfirmDelete(null);
+                  setMenuFor(menuFor === m.id ? null : m.id);
+                }}
+                aria-label="Message options"
+                className="mb-1 rounded-full px-1.5 text-base font-black leading-none text-slate-400"
+              >
+                ⋯
+              </button>
+            ) : null}
+          </div>
+        )}
 
-        <ReactionControls summary={rx} onToggle={(e) => react(m.id, e)} tripId={trip.id} />
+        {menuFor === m.id && !editing ? (
+          <div className="mt-1 flex gap-2">
+            {confirmDelete === m.id ? (
+              <>
+                <span className="py-1 text-xs font-bold text-slate-500">Delete for everyone?</span>
+                <button onClick={() => removeMessage(m.id)} className="rounded-full bg-team-north px-3 py-1 text-xs font-black text-white">
+                  Delete
+                </button>
+                <button onClick={() => setConfirmDelete(null)} className="rounded-full px-3 py-1 text-xs font-black text-slate-500">
+                  Keep it
+                </button>
+              </>
+            ) : (
+              <>
+                {isMine ? (
+                  <button
+                    onClick={() => {
+                      setEditing({ id: m.id, text: m.body });
+                      setMenuFor(null);
+                    }}
+                    className="rounded-full border border-line bg-white px-3 py-1 text-xs font-black text-fairway-900"
+                  >
+                    Edit
+                  </button>
+                ) : null}
+                <button
+                  onClick={() => setConfirmDelete(m.id)}
+                  className="rounded-full border border-line bg-white px-3 py-1 text-xs font-black text-team-north"
+                >
+                  Delete
+                </button>
+              </>
+            )}
+          </div>
+        ) : null}
+
+        {m.deletedAt ? null : <ReactionControls summary={rx} onToggle={(e) => react(m.id, e)} tripId={trip.id} />}
       </div>
     );
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import { PRO_HEADLINES } from "@/features/pro/proFeatures";
 import { useEffect, useMemo, useState } from "react";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { useRouter } from "next/navigation";
@@ -425,9 +426,9 @@ export default function CreatePage() {
               <div className="mt-4 rounded-2xl border-[1.5px] border-emerald-200 bg-emerald-50 p-4 text-left">
                 <p className="font-black text-emerald-900">✨ Pro is on - you unlocked:</p>
                 <ul className="mt-2 space-y-1.5 text-[13.5px] text-emerald-900">
-                  <li>🏅 Post-round awards &amp; voting (toggle in Admin → Scoring)</li>
-                  <li>🎬 Trip Wrapped auto-generates when you End the tournament</li>
-                  <li>🖼️ Custom round backgrounds + Clubhouse chat &amp; photos</li>
+                  {PRO_HEADLINES.map((f) => (
+                    <li key={f.title}>{f.emoji} {f.title}</li>
+                  ))}
                 </ul>
                 <p className="mt-3 text-[13px] font-bold text-emerald-900">Next: invite players, assign teams, and start Round 1 on the course.</p>
               </div>
@@ -435,9 +436,9 @@ export default function CreatePage() {
               <div className="mt-4 rounded-2xl border-[1.5px] border-amber-200 bg-amber-50 p-4 text-left">
                 <p className="font-black text-amber-900">💡 You&apos;re on Free - Pro would add:</p>
                 <ul className="mt-2 space-y-1.5 text-[13.5px] text-amber-900">
-                  <li>🏅 Post-round awards &amp; voting</li>
-                  <li>🎬 Trip Wrapped shareable recap</li>
-                  <li>🖼️ Custom backgrounds + Clubhouse chat &amp; photos</li>
+                  {PRO_HEADLINES.map((f) => (
+                    <li key={f.title}>{f.emoji} {f.title}</li>
+                  ))}
                 </ul>
                 <button onClick={upgradeNow} disabled={upgrading} className="mt-3 w-full rounded-2xl bg-accent px-4 py-3 font-black text-ink disabled:opacity-50">{upgrading ? "Upgrading…" : "Upgrade to Pro ✨"}</button>
               </div>
@@ -666,8 +667,7 @@ export default function CreatePage() {
               <button onClick={() => setCourses((p) => [...p, { name: "", par: "72", bg: null }])} className="w-full rounded-2xl border-[1.5px] border-dashed border-sand-200 py-3 text-sm font-bold text-slate-500">+ Add another course</button>
               <p className="text-xs text-slate-400">
                 Pick a background per course now from our scene library. Pro
-                tournaments (coming soon) will let you upload your own course
-                photos.
+                tournaments can also upload your own course photos.
               </p>
               {realCourses.length === 0 ? <p className="text-sm text-slate-400">You can skip this and add courses later in Admin, but you&apos;ll need at least one before setting up rounds.</p> : null}
             </div>
@@ -776,12 +776,7 @@ function Paywall({
   onNext: () => void;
   onCancel: () => void;
 }) {
-  const proFeatures = [
-    { t: "Post-round awards & voting", d: "Sandman, First Beer, Three-Putt - players vote." },
-    { t: "Trip Wrapped", d: "A shareable, downloadable recap at the end." },
-    { t: "Custom round backgrounds", d: "Your own course photos set the vibe." },
-    { t: "Clubhouse chat & photos", d: "A group feed for smack talk and shots." },
-  ];
+  const proFeatures = PRO_HEADLINES.map((f) => ({ t: f.title, d: f.detail }));
   return (
     <div className="-mx-5 -mt-2 overflow-hidden rounded-b-3xl bg-[radial-gradient(120%_65%_at_50%_0%,#16b57a_0%,#0c8a5c_45%,#075437_100%)] px-5 pb-6 pt-3 text-emerald-50">
       <img src="/create-mascot.png" alt="TourneyBirdie mascot" className="mx-auto h-52 w-auto drop-shadow-xl" />
