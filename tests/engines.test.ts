@@ -818,7 +818,7 @@ test("a round produces between 3 and 7 awards, at most two per person", () => {
   for (const a of awards) for (const id of a.playerIds) count.set(id, (count.get(id) ?? 0) + 1);
   assert.ok([...count.values()].every((n) => n <= 2), "nobody takes more than two");
   assert.equal(new Set(awards.map((a) => a.momentId)).size, awards.length, "one award per moment");
-  assert.equal(voteable.length, 2, "shot of the day and worst decision go to a vote");
+  assert.equal(voteable.length, 4, "the four things the scores cannot see go to a vote");
   assert.ok(awards.every((a) => a.line.length > 0 && !a.line.includes("{")), "every line fully filled");
 });
 
@@ -846,7 +846,7 @@ test("every award line only uses values its moment actually provides", () => {
     free_square: ["name", "count"], sandbagger: ["name", "vs"], no_show: ["name", "vs"],
     mip: ["name", "gain", "before", "after"], cinderella: ["name", "opponent", "shots", "margin"],
     escape_artist: ["name", "opponent", "shots", "margin"], the_comeback: ["name", "opponent", "down"],
-    the_closer: ["name", "opponent", "hole"], shot_of_the_day: ["name"], worst_decision: ["name"],
+    the_closer: ["name", "opponent", "hole"], shot_of_the_day: ["name"], worst_decision: ["name"], firstbeer: ["name"], sundial: ["name"],
   };
   for (const m of MOMENTS) {
     assert.ok(provides[m.id], `${m.id} is listed`);
@@ -945,4 +945,61 @@ test("a bad or missing AI reply falls back to the hand-written line", () => {
   assert.equal(m.line, AWARD.line);
   const [ok] = mergeCopy([AWARD], [{ id: "santas_helper", line: "Hank and his 3 snowmen. Book the sleigh." }]);
   assert.equal(ok.byAi, true);
+});
+
+/* ------------------------------------------------------- the vote and reveal */
+
+import { suggestVotes, revealOrder } from "../src/features/awards/vote";
+import { BALLOT_KEYS, AWARDS as ALL_AWARD_DEFS } from "../src/features/voting/awards";
+
+test("the ballot and the voted moments are the same list", () => {
+  assert.deepEqual(MOMENTS.filter((m) => m.voteable).map((m) => m.id), BALLOT_KEYS);
+  for (const k of BALLOT_KEYS) assert.ok(ALL_AWARD_DEFS.find((a) => a.key === k), `${k} has a badge or emoji`);
+});
+
+test("suggested picks come from my group's scores, and only when they're earned", () => {
+  const holes = [
+    { hole: 1, par: 4, si: 9 },
+    { hole: 2, par: 5, si: 1 },
+    { hole: 3, par: 3, si: 17 },
+  ];
+  const s = suggestVotes({
+    holes,
+    holeScores: [
+      { playerId: "a", hole: 1, strokes: 3 }, // birdie on SI 9
+      { playerId: "b", hole: 2, strokes: 4 }, // birdie on SI 1 - harder, wins the tie
+      { playerId: "c", hole: 3, strokes: 7 }, // quad
+      { playerId: "x", hole: 2, strokes: 2 }, // albatross, but not in my group
+    ],
+    playerIds: ["a", "b", "c"],
+  });
+  assert.equal(s.shot_of_the_day, "b", "birdie on the harder hole");
+  assert.equal(s.worst_decision, "c");
+
+  const quiet = suggestVotes({
+    holes,
+    holeScores: [{ playerId: "a", hole: 1, strokes: 4 }, { playerId: "a", hole: 2, strokes: 7 }],
+    playerIds: ["a"],
+  });
+  assert.equal(quiet.shot_of_the_day, undefined, "a par is not a shot of the day");
+  assert.equal(quiet.worst_decision, undefined, "a double is not a dumb decision");
+});
+
+test("the reveal opens with the group's votes and ends on the biggest award", () => {
+  const cards = revealOrder(
+    [
+      { momentId: "medalist", title: "Medalist", playerIds: ["w"], line: "big", stat: "s", position: 0 },
+      { momentId: "santas_helper", title: "Santa's Helper", playerIds: ["h"], line: "small", stat: "s", position: 2 },
+      { momentId: "par_train", title: "Par Train", playerIds: ["k"], line: "mid", stat: "s", position: 1 },
+    ],
+    [
+      { key: "firstbeer", title: "First Beer", winnerIds: ["t"], count: 3 },
+      { key: "sundial", title: "The Sundial", winnerIds: [], count: 0 },
+    ],
+    (id) => ({ t: "TJ" } as Record<string, string>)[id] ?? id,
+    "r1"
+  );
+  assert.deepEqual(cards.map((c) => c.key), ["firstbeer", "santas_helper", "par_train", "medalist"]);
+  assert.ok(cards[0].line.includes("TJ"), "voted line names the winner");
+  assert.equal(cards[0].stat, "3 votes");
 });

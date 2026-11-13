@@ -344,6 +344,26 @@ export async function computeTripResult(
 }
 
 /**
+ * Claim the right to close a round, exactly once per close.
+ *
+ * The guard used to be a single "finalized" mark. After an organizer reopened
+ * a round, that mark was still there, so finishing it again silently did
+ * nothing: the round stayed open forever while the screen said "Round
+ * finished". Every close now gets its own mark - the first is "finalized",
+ * the close after one reopen is "finalized:1", and so on. Two closes racing
+ * for the same one still only let one through.
+ */
+async function claimClose(admin: SupabaseClient, roundId: string): Promise<boolean> {
+  const { count } = await admin
+    .from("reminder_log")
+    .select("round_id", { count: "exact", head: true })
+    .eq("round_id", roundId)
+    .like("kind", "finalized%");
+  const n = count ?? 0;
+  return onceForRound(admin, roundId, n === 0 ? "finalized" : `finalized:${n}`);
+}
+
+/**
  * Close a round. Idempotent: the reminder log makes sure it only ever runs
  * once per round, however many cron ticks see it as due.
  */
@@ -354,7 +374,7 @@ export async function finalizeRound(
   players: PlayerRow[],
   allRounds: RoundSetup[]
 ): Promise<number> {
-  if (!(await onceForRound(admin, setup.id, "finalized"))) return 0;
+  if (!(await claimClose(admin, setup.id))) return 0;
 
   const { data: hs } = await admin
     .from("hole_scores")

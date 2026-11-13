@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminClient, organizerIds } from "@/lib/server/push";
-import { polishRoundAwards, writeRoundAwards } from "@/lib/server/roundAwards";
+import { claimPolish, polishRoundAwards, writeRoundAwards } from "@/lib/server/roundAwards";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -58,6 +58,7 @@ export async function POST(req: Request) {
   await admin.from("ai_usage_log").insert({ user_id: caller.id, route: "round-awards", scope: roundId });
 
   const written = await writeRoundAwards(admin, roundId);
-  const polished = written > 0 ? await polishRoundAwards(admin, roundId) : 0;
+  // Claiming the pass here stops the cron polishing the same awards again.
+  const polished = written > 0 && (await claimPolish(admin, roundId)) ? await polishRoundAwards(admin, roundId) : 0;
   return NextResponse.json({ ok: true, awards: written, aiLines: polished });
 }

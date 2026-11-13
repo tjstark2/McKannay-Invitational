@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { configureWebPush, getAdminClient, organizerIds } from "@/lib/server/push";
 import { finalizeRoundById } from "@/lib/server/roundEngine";
-import { polishRoundAwards } from "@/lib/server/roundAwards";
-import { onceForRound } from "@/lib/server/push";
+import { claimPolish, polishRoundAwards } from "@/lib/server/roundAwards";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -46,7 +45,7 @@ export async function POST(req: Request) {
   const result = await finalizeRoundById(admin, roundId);
   // A manual finish has time to spare, so polish the award lines now rather
   // than waiting for the next cron tick. Same once-only guard as the cron.
-  if (result.ok && (await onceForRound(admin, roundId, "awards_ai"))) {
+  if (result.ok && (await claimPolish(admin, roundId))) {
     await polishRoundAwards(admin, roundId);
   }
   return NextResponse.json(result, { status: result.ok ? 200 : 400 });

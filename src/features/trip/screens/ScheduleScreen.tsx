@@ -12,6 +12,7 @@ import { roundLifecycle, lifecycleLabel } from "@/features/trip/roundLifecycle";
 import { RoundLifecycleButton } from "@/features/trip/components/RoundLifecycleButton";
 import type { Screen } from "@/types";
 import { CourseBackground } from "@/features/trip/components/CourseBackground";
+import { RoundAwardsButtons } from "@/features/voting/RoundAwardsButtons";
 
 export function ScheduleScreen({
   setActiveScreen,
@@ -118,6 +119,8 @@ export function ScheduleScreen({
                   <RoundLifecycleButton round={round} />
                 </div>
               ) : null}
+
+              {life === "finished" ? <RoundAwardsButtons round={round} /> : null}
 
               <div className="mt-4 space-y-2">
                 {round.teeTimes.map((tee, index) => (

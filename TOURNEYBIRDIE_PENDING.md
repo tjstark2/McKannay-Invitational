@@ -112,6 +112,41 @@ These are the things that stop you inviting people who are not you.
   which read 0 of 8 all day on a hole-by-hole round - are replaced by cards
   going and furthest thru while a round is live.
 
+## Bundle D3 - the reveal and the vote
+
+No SQL. Pro tournaments only, like all awards.
+
+- **The vote is one screen.** Four quick calls - Shot of the Day, Dumbest
+  Decision, First Beer, The Sundial - the things the scores can't see.
+  Everything the scores CAN see is awarded outright. Where your group's scores
+  saw something (a birdie on a hard hole, a triple or worse) the pick is
+  pre-filled, so Send it untouched is a full vote. Your own group is listed
+  first. Voting for yourself is allowed.
+- **Retired from the ballot:** Shortest Drive, Three-Putt, Sandman. Older trips
+  still show them in Wrapped.
+- **The reveal is one at a time.** Title first ("and it goes to..."), tap for
+  the winner, the line and the stat. The group's votes go first, then the
+  awards the scores proved, smallest to biggest - the headliner lands last.
+- **Waits for the AI, but not long:** after an automatic close the reveal
+  holds up to 12 minutes for the polished lines, then shows what it has.
+- **"See the awards"** on every finished round in the Schedule, to replay the
+  reveal. Organizers also get **Rebuild** (from the current scores).
+- **The "awards are in" push** now goes out for rounds with awards from the
+  scores, not only rounds with votes. Pro only, and never for a rebuilt
+  round more than a day old.
+- **Bug fixed - Finish round on the Schedule screen** still just stamped the
+  round finished, skipping results, totals and awards (the September bug,
+  fixed on the Manage screen but not here). Every Finish button now runs the
+  full close.
+- **Bug fixed - reopen, then finish again, did nothing.** The "close once"
+  lock remembered the first close, so the round stayed open forever while the
+  screen said finished. Each close now gets its own lock. Same for the AI
+  pass, so re-closed rounds get freshly polished lines.
+- 3 more tests, 72 total.
+
+Still to come for awards: the trip-level awards at the end (MVP is already in
+Wrapped), and voting results in Wrapped using the new reveal style.
+
 ## Bundle D2 - awards are made and saved when a round closes
 
 Still nothing new on screen - D3 shows them. Needs bundleD2_awards.sql first.
@@ -133,8 +168,6 @@ Still nothing new on screen - D3 shows them. Needs bundleD2_awards.sql first.
   Frees a slot for the funnier detail.
 - Spunky rewrite (D1b): 131 lines, tone turned up, vote questions reworded.
 - 5 more tests, 69 total.
-
-Next: D3 is the one-at-a-time reveal and the single-screen vote.
 
 ## Bundle D1 - the awards brain (not wired up yet)
 

@@ -271,6 +271,24 @@ export async function polishRoundAwards(admin: SupabaseClient, roundId: string):
 }
 
 /**
+ * Claim the one AI pass for a round's CURRENT awards. Keyed on when they were
+ * written, so a round that is reopened and closed again - new awards - gets a
+ * fresh pass instead of being stuck on the hand-written lines.
+ */
+export async function claimPolish(admin: SupabaseClient, roundId: string): Promise<boolean> {
+  const { data } = await admin
+    .from("round_awards")
+    .select("created_at")
+    .eq("round_id", roundId)
+    .order("created_at")
+    .limit(1)
+    .maybeSingle();
+  const at = (data as { created_at?: string } | null)?.created_at;
+  if (!at) return false;
+  return onceForRound(admin, roundId, `awards_ai:${at}`);
+}
+
+/**
  * The cron's share: polish a couple of recently closed rounds per tick. Each
  * round is only ever attempted once, so a failing model can't be retried into
  * a big bill.
@@ -287,7 +305,7 @@ export async function polishPendingAwards(admin: SupabaseClient, max = 2): Promi
   let done = 0;
   for (const id of roundIds) {
     if (done >= max) break;
-    if (!(await onceForRound(admin, id, "awards_ai"))) continue;
+    if (!(await claimPolish(admin, id))) continue;
     await polishRoundAwards(admin, id);
     done += 1;
   }

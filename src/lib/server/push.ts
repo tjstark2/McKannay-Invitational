@@ -279,8 +279,9 @@ function concluded(round: RoundRow, all: RoundRow[], now: number): boolean {
 }
 
 /**
- * Finds every round whose voting has concluded, has real votes, and hasn't had
- * its "results are in" push yet, then sends it to the trip's active members.
+ * Finds every round whose voting has concluded, has real votes or awards from
+ * the scores (Pro only), and hasn't had its "awards are in" push yet, then
+ * sends it to the trip's active members.
  * Safe to run any number of times (reminder_log dedupes); pass a tripId to
  * limit the sweep, or nothing to sweep everything (the cron does the latter).
  */
@@ -317,21 +318,31 @@ export async function sweepConcludedVoting(
     );
   const voted = new Set(((voteRows ?? []) as { round_id: string }[]).map((v) => v.round_id));
 
+  // Rounds the scores gave awards to, closed in the last day. The window
+  // stops a rebuild of an old round from announcing itself months later.
+  const recent = due.filter((r) => r.finished_at && now - new Date(r.finished_at).getTime() < 24 * 3600000);
+  const { data: awardRows } = recent.length
+    ? await admin.from("round_awards").select("round_id").in("round_id", recent.map((r) => r.id))
+    : { data: [] };
+  const awarded = new Set(((awardRows ?? []) as { round_id: string }[]).map((a) => a.round_id));
+
   let sent = 0;
   for (const r of due) {
-    if (!voted.has(r.id)) continue;
-    if (!(await onceForRound(admin, r.id, "results_revealed"))) continue;
+    if (!voted.has(r.id) && !awarded.has(r.id)) continue;
     const { data: trip } = await admin
       .from("trips")
-      .select("name,join_code")
+      .select("name,join_code,is_pro")
       .eq("id", r.trip_id)
       .maybeSingle();
-    const t = (trip ?? {}) as { name?: string; join_code?: string };
+    const t = (trip ?? {}) as { name?: string; join_code?: string; is_pro?: boolean | null };
+    // Awards are a Pro feature - free tournaments get no reveal to announce.
+    if (!t.is_pro) continue;
+    if (!(await onceForRound(admin, r.id, "results_revealed"))) continue;
     const members = await activeMemberIds(admin, r.trip_id);
     sent += await sendPushToUsers(admin, {
       userIds: members,
       title: t.name ?? "TourneyBirdie",
-      message: `The votes are in for ${r.title}. Open the app for the awards reveal.`,
+      message: `The awards are in for ${r.title}. Open the app and find out who's getting roasted.`,
       category: "awards",
       url: t.join_code ? `/t/${t.join_code}` : "/home",
     });

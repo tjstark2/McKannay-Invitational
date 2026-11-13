@@ -66,10 +66,12 @@ export function WrappedStory({ onClose }: { onClose: () => void }) {
 
   const cumulative = useMemo(
     () =>
+      // Only awards this trip actually voted on - the ballot changed over
+      // time, and a grid of "No winner" tiles is not a flex.
       AWARDS.map((a) => {
         const w = tripAwardWinners(votes, a.key);
         return { key: a.key, title: a.title, names: w.winnerIds.map(nameFor) };
-      }),
+      }).filter((a) => a.names.length > 0).slice(0, 6),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [votes, players]
   );
@@ -180,7 +182,11 @@ export function WrappedStory({ onClose }: { onClose: () => void }) {
                           key={a.key}
                           className="flex items-center gap-3 rounded-2xl bg-white/5 p-3"
                         >
-                          <img src={a.badge} alt="" className="h-12 w-auto" />
+                          {a.badge ? (
+                            <img src={a.badge} alt="" className="h-12 w-auto" />
+                          ) : (
+                            <span className="flex h-12 w-12 items-center justify-center text-3xl">{a.emoji}</span>
+                          )}
                           <div className="text-left">
                             <div className="font-anton text-xs tracking-wide text-[#d6b66a]">
                               {a.title}

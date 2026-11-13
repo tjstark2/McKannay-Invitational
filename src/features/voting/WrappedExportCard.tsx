@@ -15,8 +15,7 @@ export type WrappedData = {
 // Fixed 1080x1920 (Instagram story) card used for the PNG download.
 export const WrappedExportCard = forwardRef<HTMLDivElement, { data: WrappedData }>(
   function WrappedExportCard({ data }, ref) {
-    const badge = (key: string) =>
-      AWARDS.find((a) => a.key === key)?.badge ?? "";
+    const def = (key: string) => AWARDS.find((a) => a.key === key);
     return (
       <div
         ref={ref}
@@ -85,7 +84,11 @@ export const WrappedExportCard = forwardRef<HTMLDivElement, { data: WrappedData 
                 textAlign: "center",
               }}
             >
-              <img src={badge(a.key)} alt="" style={{ height: 130, width: "auto" }} />
+              {def(a.key)?.badge ? (
+                <img src={def(a.key)!.badge!} alt="" style={{ height: 130, width: "auto" }} />
+              ) : (
+                <div style={{ height: 130, fontSize: 96, lineHeight: "130px" }}>{def(a.key)?.emoji ?? "🏆"}</div>
+              )}
               <div style={{ fontFamily: "Anton, sans-serif", fontSize: 30, color: "#d6b66a", marginTop: 8 }}>
                 {a.title}
               </div>

@@ -3,6 +3,7 @@ import type { Round } from "@/types/domain";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useViewer } from "@/features/trip/state/ViewerContext";
 import { roundLifecycle } from "@/features/trip/roundLifecycle";
+import { finishRound } from "@/lib/roundActions";
 
 // Players in a round who do not yet have a full (gross) score recorded.
 export function unscoredPlayers(
@@ -32,6 +33,8 @@ export function RoundLifecycleButton({
   const { players, scores, updateRound, trip } = useTripState();
   const { canManage } = useViewer();
   const [confirm, setConfirm] = useState<null | "start" | "finish">(null);
+  const [finishing, setFinishing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!canManage) return null;
   if (trip.wrappedAt) return null; // tournament locked
@@ -43,7 +46,19 @@ export function RoundLifecycleButton({
     updateRound(round.id, { startedAt: new Date().toISOString() });
     setConfirm(null);
   };
-  const doFinish = () => {
+  // The full close on the server - results, totals, awards, everyone told.
+  // This button used to just stamp the round finished, which skipped all of
+  // it: the same shortcut that lost points on the 2026 trip.
+  const doFinish = async () => {
+    setFinishing(true);
+    setError(null);
+    const result = await finishRound(round.id, trip.id);
+    setFinishing(false);
+    if (!result.ok) {
+      setError(`Couldn't finish ${round.title}: ${result.error ?? "try again"}`);
+      return;
+    }
+    // Reflect it straight away; the server has already written it.
     updateRound(round.id, { finishedAt: new Date().toISOString() });
     setConfirm(null);
   };
@@ -118,8 +133,8 @@ export function RoundLifecycleButton({
                   Finish {round.title}?
                 </h3>
                 <p className="mt-1 text-sm text-slate-600">
-                  This closes the round and ends its voting. You can reopen it
-                  later if needed.
+                  This closes the round, posts the points and hands out the
+                  awards. You can reopen it later if needed.
                 </p>
                 {missing.length > 0 ? (
                   <div className="mt-3 rounded-2xl border border-accent/40 bg-accent/10 p-3">
@@ -135,6 +150,9 @@ export function RoundLifecycleButton({
                     Everyone has entered a full score.
                   </p>
                 )}
+                {error ? (
+                  <p className="mt-3 rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700">{error}</p>
+                ) : null}
                 <div className="mt-5 flex gap-2">
                   <button
                     onClick={() => setConfirm(null)}
@@ -144,9 +162,10 @@ export function RoundLifecycleButton({
                   </button>
                   <button
                     onClick={doFinish}
-                    className="flex-1 rounded-xl border-2 border-accent bg-accent/10 py-3 font-black text-[#a07a06]"
+                    disabled={finishing}
+                    className="flex-1 rounded-xl border-2 border-accent bg-accent/10 py-3 font-black text-[#a07a06] disabled:opacity-60"
                   >
-                    Finish round
+                    {finishing ? "Finishing..." : "Finish round"}
                   </button>
                 </div>
               </>

@@ -622,6 +622,32 @@ export const MOMENTS: Moment[] = [
       ],
     },
   },
+  {
+    id: "firstbeer",
+    title: "First Beer",
+    voteable: true,
+    question: "Who cracked one open first today?",
+    lines: {
+      default: [
+        "First beer of the day goes to {name}. Hydration is a mindset.",
+        "{name} cracked the first one. The group respects the commitment, if not the timing.",
+        "Voted first beer: {name}. Some people warm up with range balls. Some people don't.",
+      ],
+    },
+  },
+  {
+    id: "sundial",
+    title: "The Sundial",
+    voteable: true,
+    question: "Slowest player out there?",
+    lines: {
+      default: [
+        "The Sundial goes to {name}. Pace of play has filed a missing persons report.",
+        "{name}, voted slowest out there. The group behind you sends its regards.",
+        "{name} takes The Sundial. Five practice swings, one real one, zero urgency.",
+      ],
+    },
+  },
 ];
 
 /** Net to par the way a golfer writes it. */
