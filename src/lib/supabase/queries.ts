@@ -141,7 +141,7 @@ async function attachTripStats(
 
   const [pl, rd] = await Promise.all([
     supabase.from("players").select("trip_id").in("trip_id", ids),
-    supabase.from("rounds").select("id,trip_id").in("trip_id", ids),
+    supabase.from("rounds").select("id,trip_id,started_at,finished_at").in("trip_id", ids),
   ]);
 
   const playerCount = new Map<string, number>();
@@ -151,9 +151,21 @@ async function attachTripStats(
 
   const roundCount = new Map<string, number>();
   const roundToTrip = new Map<string, string>();
-  for (const r of (rd.data ?? []) as { id: string; trip_id: string }[]) {
+  // Round state straight from the rounds themselves - the same source every
+  // screen reads. Counting published scores (below) said a hole-by-hole trip
+  // was unfinished, because totals are only published at close.
+  const startedByTrip = new Set<string>();
+  const unfinishedByTrip = new Set<string>();
+  for (const r of (rd.data ?? []) as {
+    id: string;
+    trip_id: string;
+    started_at: string | null;
+    finished_at: string | null;
+  }[]) {
     roundCount.set(r.trip_id, (roundCount.get(r.trip_id) ?? 0) + 1);
     roundToTrip.set(r.id, r.trip_id);
+    if (r.started_at) startedByTrip.add(r.trip_id);
+    if (!r.finished_at) unfinishedByTrip.add(r.trip_id);
   }
 
   const finalByTrip = new Map<string, number>(); // # of final (gross) scores
@@ -191,12 +203,16 @@ async function attachTripStats(
     const expected = pc * rc;
     t.playerCount = pc;
     t.roundCount = rc;
-    if (rc === 0 || (finals === 0 && !anyByTrip.has(t.id))) {
-      t.status = "not_started";
-    } else if (expected > 0 && finals >= expected) {
+    // Every round closed means the trip is over. Any round opened, or any
+    // score in (older trips scored before rounds had a start), means it is
+    // under way. The score counts stay only as a fallback for those older
+    // trips that never stamped their rounds.
+    if (rc > 0 && !unfinishedByTrip.has(t.id)) {
       t.status = "finished";
+    } else if (startedByTrip.has(t.id) || anyByTrip.has(t.id)) {
+      t.status = expected > 0 && finals >= expected ? "finished" : "in_progress";
     } else {
-      t.status = "in_progress";
+      t.status = "not_started";
     }
   }
 }

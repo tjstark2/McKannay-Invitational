@@ -994,24 +994,9 @@ export function getTournamentAwards(
 }
 // ===================== Overview insights (Batch A) =====================
 
-export type RoundStatus = "not_started" | "live" | "complete";
-
-export function getRoundStatus(
-  round: Round,
-  players: Player[],
-  scores: ScoreEntry[]
-): RoundStatus {
-  const roundScores = scores.filter((s) => s.roundId === round.id);
-  const finals = roundScores.filter(
-    (s) => typeof s.grossScore === "number"
-  ).length;
-  const fronts = roundScores.filter(
-    (s) => typeof s.frontNineScore === "number"
-  ).length;
-  if (players.length > 0 && finals >= players.length) return "complete";
-  if (finals > 0 || fronts > 0) return "live";
-  return "not_started";
-}
+// getRoundStatus() lived here. It decided a round's state by counting
+// published scores, which disagreed with the round's own start and finish -
+// see features/trip/scoring/roundPhase.ts, which replaces it everywhere.
 
 export type AwardResult = { players: Player[]; detail: string } | null;
 

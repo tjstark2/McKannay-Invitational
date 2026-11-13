@@ -7,6 +7,7 @@ import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import { loadCourseHoles, loadCourseTees, type CourseHole } from "@/lib/supabase/courseHoles";
 import { loadRoundSetups, type RoundSetup } from "@/lib/supabase/roundSegments";
 import { allocateForMatch, holesInPlay } from "@/features/trip/scoring/strokeIndex";
+import { basisForFormat } from "@/features/trip/scoring/liveStandings";
 
 type Row = {
   playerId: string;
@@ -108,6 +109,12 @@ export function LiveLeaderboard({ roundId }: { roundId: string }) {
         holesCount: (round.holesCount === 9 ? 9 : 18) as 9 | 18,
         nine: round.nine,
         allowancePct: seg?.allowancePct ?? 100,
+        // A net-score round is a field-wide competition: everyone plays off
+        // their own full handicap. Without this the table showed strokes
+        // relative to your playing partners - the exact bug fixed on every
+        // other screen after the 2026 trip, which survived here because this
+        // table did its own maths instead of sharing it.
+        basis: basisForFormat(round.format),
       }).forEach((a) => strokesByPlayer.set(a.playerId, a.byHole));
     });
 

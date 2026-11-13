@@ -3,7 +3,8 @@ import { PlayerAvatar } from "@/features/avatar/PlayerAvatar";
 import { CourseBackground } from "@/features/trip/components/CourseBackground";
 import { formatRoundFormat } from "@/lib/format";
 import { useTripState } from "@/features/trip/state/TripStateContext";
-import type { RoundStatus } from "@/lib/scoring";
+/** How the card shows a round. Derived from roundPhase by the caller. */
+type RoundStatus = "not_started" | "live" | "complete";
 import type { Round, Screen } from "@/types";
 
 export function NextRoundCard({

@@ -18,6 +18,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useLiveRound } from "@/features/trip/scoring/useLiveRound";
 import type { Screen, TeamId } from "@/types";
+import { focusRound } from "@/features/trip/scoring/roundPhase";
 
 function MatchStatusPill({
   status,
@@ -69,7 +70,7 @@ export function MatchCenterScreen({
   } = useTripState();
 
   const [selectedRoundId, setSelectedRoundId] = useState<string>(
-    currentRoundId || rounds[0]?.id || ""
+    focusRound(rounds, currentRoundId)?.id ?? ""
   );
 
   const selectedRound =

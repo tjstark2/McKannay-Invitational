@@ -7,7 +7,6 @@ import {
   getBiggestMover,
   getCurrentRoundRace,
   getOverviewAwards,
-  getRoundStatus,
   getTournamentProgress,
   type AwardResult,
 } from "@/lib/scoring";
@@ -19,6 +18,7 @@ import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useLiveRound } from "@/features/trip/scoring/useLiveRound";
 import { toParLabel } from "@/features/trip/scoring/liveStandings";
 import type { Screen } from "@/types";
+import { focusRound, roundPhase } from "@/features/trip/scoring/roundPhase";
 
 function AwardTile({
   img,
@@ -66,18 +66,11 @@ export function OverviewScreen({
 
   const [showAllLeaders, setShowAllLeaders] = useState(false);
 
-  // Featured round: the admin's active round unless it's complete, in which
-  // case auto-advance to the first round that isn't finished yet.
-  const adminRound = rounds.find((round) => round.id === currentRoundId);
-  const adminComplete = adminRound
-    ? getRoundStatus(adminRound, players, scores) === "complete"
-    : false;
-  const featuredRound =
-    (adminRound && !adminComplete ? adminRound : null) ??
-    rounds.find((round) => getRoundStatus(round, players, scores) !== "complete") ??
-    rounds[rounds.length - 1] ??
-    adminRound ??
-    rounds[0];
+  // The round the Nest is about. Decided by the round's own start and finish
+  // - the same answer every screen gets - rather than by counting published
+  // scores, which on a hole-by-hole round don't exist until it closes. That
+  // mismatch is why the Nest kept showing a round that had already finished.
+  const featuredRound = focusRound(rounds, currentRoundId);
 
   if (!featuredRound) {
     return (
@@ -92,7 +85,9 @@ export function OverviewScreen({
     );
   }
 
-  const featuredStatus = getRoundStatus(featuredRound, players, scores);
+  const phase = roundPhase(featuredRound);
+  const featuredStatus: "not_started" | "live" | "complete" =
+    phase === "final" ? "complete" : phase === "live" ? "live" : "not_started";
 
   const progress = getTournamentProgress(
     trip.totalPoints,
@@ -208,7 +203,7 @@ export function OverviewScreen({
       ? "live"
       : "not_started";
 
-  const dispStatus = isGroupedRound ? groupStatus : featuredStatus;
+  const dispStatus = phase === "final" || phase === "upcoming" || !isGroupedRound ? featuredStatus : groupStatus;
   const dispFrontIn = isGroupedRound ? groupFrontIn : frontNineSubmitted;
   const dispFinalIn = isGroupedRound ? groupFinalIn : finalSubmitted;
   const dispTotal = isGroupedRound ? totalSides : players.length;

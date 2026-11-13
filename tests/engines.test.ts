@@ -607,3 +607,56 @@ test("the trip result reads as it finished", () => {
     "Not finished"
   );
 });
+
+/* ---------------------------------------------------------------- round phase */
+
+import { roundPhase, focusRound, liveRound, allRoundsFinal } from "../src/features/trip/scoring/roundPhase";
+
+const R = (n: number, started?: string, finished?: string) => ({
+  id: `r${n}`,
+  roundNumber: n,
+  startedAt: started ?? null,
+  finishedAt: finished ?? null,
+});
+
+test("a round's phase comes from its own start and finish, nothing else", () => {
+  assert.equal(roundPhase(R(1)), "upcoming");
+  assert.equal(roundPhase(R(1, "2026-12-11T12:00Z")), "live");
+  assert.equal(roundPhase(R(1, "2026-12-11T12:00Z", "2026-12-11T18:00Z")), "final");
+});
+
+test("the app focuses on the round being played", () => {
+  const rounds = [R(1, "x", "y"), R(2, "x"), R(3)];
+  assert.equal(focusRound(rounds)?.id, "r2");
+});
+
+test("a finished round can never be the focus while another is still to play", () => {
+  // The Nest showed "Next round: Thursday" on Friday: the organizer's pointer
+  // still named Thursday after it had finished. That pointer is now ignored
+  // once the round it names is final.
+  const rounds = [R(1, "x", "y"), R(2), R(3)];
+  assert.equal(focusRound(rounds, "r1")?.id, "r2");
+});
+
+test("the organizer's choice still wins between rounds", () => {
+  const rounds = [R(1, "x", "y"), R(2), R(3)];
+  assert.equal(focusRound(rounds, "r3")?.id, "r3", "they can point ahead to Saturday");
+});
+
+test("when every round is done, the focus is the last one played", () => {
+  const rounds = [R(1, "x", "y"), R(2, "x", "y")];
+  assert.equal(focusRound(rounds)?.id, "r2");
+  assert.equal(allRoundsFinal(rounds), true);
+});
+
+test("a live round outranks the organizer's pointer", () => {
+  const rounds = [R(1, "x"), R(2)];
+  assert.equal(focusRound(rounds, "r2")?.id, "r1");
+  assert.equal(liveRound(rounds)?.id, "r1");
+});
+
+test("no rounds means no focus, not a crash", () => {
+  assert.equal(focusRound([]), null);
+  assert.equal(liveRound([]), null);
+  assert.equal(allRoundsFinal([]), false);
+});

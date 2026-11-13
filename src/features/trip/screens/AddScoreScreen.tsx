@@ -13,6 +13,7 @@ import { roundLifecycle } from "@/features/trip/roundLifecycle";
 import { RoundLifecycleButton } from "@/features/trip/components/RoundLifecycleButton";
 import { HoleByHoleEntry } from "@/features/trip/screens/HoleByHoleEntry";
 import { notify } from "@/lib/notify";
+import { focusRound } from "@/features/trip/scoring/roundPhase";
 
 type LastSavedScore = {
   playerName: string;
@@ -45,7 +46,7 @@ export function AddScoreScreen() {
   const ownPlayer = players.find(
     (player) => player.accountId && player.accountId === user?.id
   );
-  const [roundId, setRoundId] = useState(currentRoundId || rounds[0]?.id || "");
+  const [roundId, setRoundId] = useState(focusRound(rounds, currentRoundId)?.id ?? "");
   const [playerId, setPlayerId] = useState(
     ownPlayer?.id || selectablePlayers[0]?.id || ""
   );

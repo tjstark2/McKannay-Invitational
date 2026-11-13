@@ -112,6 +112,38 @@ These are the things that stop you inviting people who are not you.
   which read 0 of 8 all day on a hole-by-hole round - are replaced by cards
   going and furthest thru while a round is live.
 
+## Bundle A - foundations
+
+Invisible to users. Makes every later change safer.
+
+- **One answer for where a round is.** The life of a round was worked out in
+  seven separate places that disagreed - most importantly getRoundStatus(),
+  which counted PUBLISHED scores and ignored the round's own start and finish.
+  On a hole-by-hole round totals only publish at close, so a finished round
+  read as unfinished: that is why the Nest showed "Next round: Thursday" on
+  Friday. New roundPhase.ts - upcoming, live, final - read from the round's own
+  timestamps, used by the Nest, the app shell, score entry, matches and the
+  dashboard. getRoundStatus() is removed so nothing can reach for it again.
+- **The organizer's round pointer can no longer point at a finished round.**
+  It still wins between rounds, so you can point ahead to Saturday.
+- **The dashboard's trip status** now comes from the rounds themselves, so a
+  finished hole-by-hole trip stops reading "in progress".
+- **Fixed: the live table in score entry still used group-relative strokes on
+  net-score rounds** - the exact bug fixed everywhere else after 2026, which
+  survived here because this table did its own maths. The Round screen showed
+  correct numbers in the match card and wrong ones directly beneath.
+- **One handicap.** It lived in players AND trip_members, synced by a second
+  write whose failure was ignored. players.handicap_index (what scoring uses)
+  is the truth; the database now keeps the other copy in step itself.
+- **Removed seven dead files** nothing referenced: GuidedTour, VotingGate,
+  PasswordGate, ProUpgradeAdmin, ChevronButton, FlairCard, ClickableRow.
+- 7 more tests, 49 total.
+
+Known, not changed: voting still concludes 7 hours after a round's first score
+as a fallback. The engine normally closes a round long before that, so it
+rarely matters - worth folding into roundPhase when the card state is named
+(Bundle C).
+
 ## Bundle 4 - the Series
 
 - **A Series sits above Trips.** "McKannay Invitational" owns MCK2026 and

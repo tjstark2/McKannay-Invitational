@@ -14,6 +14,7 @@ import { Sheet } from "@/features/trip/components/Sheet";
 import { FirstVisitHint } from "@/features/trip/components/FirstVisitHint";
 import { RoundHome } from "@/features/trip/screens/RoundHome";
 import { LiveRoundProvider } from "@/features/trip/scoring/useLiveRound";
+import { liveRound } from "@/features/trip/scoring/roundPhase";
 import { StandingsScreen } from "@/features/trip/screens/StandingsScreen";
 import { TripScreen } from "@/features/trip/screens/TripScreen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -126,7 +127,7 @@ function TripAppInner() {
   const [tripSection, setTripSection] = useState<"schedule" | "teams" | "players" | "rules">("schedule");
   // The round being played right now, if any. While one is live, Home IS the
   // round - score entry, your match, the standings - instead of a separate tab.
-  const activeRound = rounds.find((r) => r.startedAt && !r.finishedAt) ?? null;
+  const activeRound = liveRound(rounds);
   const [clubhouseTab, setClubhouseTab] = useState<ClubhouseTab>("photos");
   const [unread, setUnread] = useState<ClubhouseUnread>({ photos: 0, chat: 0 });
   const [activityBanner, setActivityBanner] = useState<

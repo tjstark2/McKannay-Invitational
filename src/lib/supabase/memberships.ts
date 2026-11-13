@@ -177,18 +177,21 @@ export async function setMemberHandicap(
   handicap: number,
   confirmed: boolean
 ): Promise<boolean> {
+  // The player row is the one scoring reads, so it goes first and its failure
+  // counts. This used to be a second write whose error was thrown away - a
+  // handicap could "save" while the number strokes are worked from stayed
+  // unchanged. The database now keeps the membership copy in step with it.
+  const { error: playerError } = await supabase
+    .from("players")
+    .update({ handicap_index: handicap })
+    .eq("trip_id", tripId)
+    .eq("account_id", userId);
   const { error } = await supabase
     .from("trip_members")
     .update({ handicap, handicap_confirmed: confirmed })
     .eq("trip_id", tripId)
     .eq("user_id", userId);
-  // Keep their roster player's handicap in sync, if they're on a team.
-  await supabase
-    .from("players")
-    .update({ handicap_index: handicap })
-    .eq("trip_id", tripId)
-    .eq("account_id", userId);
-  return !error;
+  return !error && !playerError;
 }
 
 export async function listJoinRequests(
