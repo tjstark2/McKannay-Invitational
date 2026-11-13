@@ -107,7 +107,9 @@ export type Round = {
   roundDate?: string | null; // scheduled calendar date (yyyy-mm-dd)
   startedAt?: string | null; // owner opened the round (gates scoring)
   finishedAt?: string | null; // owner finished the round (concludes voting)
-  firstScoreAt?: string | null; // first score logged (drives 7h voting close)
+  firstScoreAt?: string | null; // first score logged
+  /** Latest score entered. Set by the database; the engine closes the round 3h after it. */
+  lastScoreAt?: string | null;
 };
 
 export type ManualMatchResult = Winner;

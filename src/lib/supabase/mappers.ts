@@ -116,6 +116,7 @@ export type RoundRow = {
   started_at?: string | null;
   finished_at?: string | null;
   first_score_at?: string | null;
+  last_score_at?: string | null;
   tee_times: TeeTimeRow[] | null;
   matches: MatchRow[] | null;
 };
@@ -243,6 +244,7 @@ export function mapRound(row: RoundRow): Round {
     startedAt: row.started_at ?? null,
     finishedAt: row.finished_at ?? null,
     firstScoreAt: row.first_score_at ?? null,
+    lastScoreAt: row.last_score_at ?? null,
   };
 }
 

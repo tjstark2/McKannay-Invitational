@@ -26,6 +26,12 @@ import {
   teeOffAt,
 } from "@/features/trip/scoring/roundClock";
 import { activeMemberIds, onceForRound, organizerIds, sendPushToUsers } from "@/lib/server/push";
+import {
+  cardState,
+  everyoneConfirmed,
+  groupFinished,
+  holesInPlayFor,
+} from "@/features/trip/scoring/cardState";
 
 type Trip = {
   id: string;
@@ -204,17 +210,24 @@ async function publishTotals(
     byPlayer.set(s.playerId, list);
   }
 
+  const inPlay = holesInPlayFor(setup.holesCount, setup.nine);
   for (const playerId of setup.teeTimes.flatMap((t) => t.playerIds)) {
-    const card = byPlayer.get(playerId) ?? [];
-    if (card.length < holesNeeded) {
-      if (card.length > 0) incomplete.push(playerId);
+    // One score per hole in play - a duplicate row or a stray hole outside
+    // the round can no longer inflate a total or complete a card early.
+    const perHole = new Map<number, number>();
+    for (const sc of byPlayer.get(playerId) ?? []) {
+      if (inPlay.includes(sc.hole)) perHole.set(sc.hole, sc.strokes);
+    }
+    const state = cardState({ holesEntered: [...perHole.keys()], holesInPlay: inPlay, confirmed: false });
+    if (state !== "complete") {
+      if (state === "in_progress") incomplete.push(playerId);
       continue;
     }
     if (published.has(playerId)) continue;
-    const gross = card.reduce((sum, s) => sum + s.strokes, 0);
+    const gross = [...perHole.values()].reduce((sum, v) => sum + v, 0);
     const front = holesNeeded === 9
       ? gross
-      : card.filter((s) => s.hole <= 9).reduce((sum, s) => sum + s.strokes, 0);
+      : [...perHole.entries()].filter(([h]) => h <= 9).reduce((sum, [, v]) => sum + v, 0);
     await admin.from("score_entries").upsert(
       {
         round_id: setup.id,
@@ -569,13 +582,16 @@ export async function runLifecycle(admin: SupabaseClient, now = new Date()): Pro
 
       if (trip.scoring_mode !== "hole_by_hole") continue;
 
-      const holesNeeded = setup.holesCount === 9 ? 9 : 18;
       const { data: hs } = await admin
         .from("hole_scores")
         .select("player_id,hole_number")
         .eq("round_id", setup.id);
-      const counts = new Map<string, number>();
-      for (const r of (hs ?? []) as { player_id: string }[]) counts.set(r.player_id, (counts.get(r.player_id) ?? 0) + 1);
+      const holesByPlayer = new Map<string, number[]>();
+      for (const r of (hs ?? []) as { player_id: string; hole_number: number }[]) {
+        const list = holesByPlayer.get(r.player_id) ?? [];
+        list.push(r.hole_number);
+        holesByPlayer.set(r.player_id, list);
+      }
 
       const { data: cRows } = await admin
         .from("round_confirmations")
@@ -583,13 +599,18 @@ export async function runLifecycle(admin: SupabaseClient, now = new Date()): Pro
         .eq("round_id", setup.id);
       const confirmed = new Set(((cRows ?? []) as { player_id: string }[]).map((c) => c.player_id));
 
+      // Each player's card, from the one shared definition.
+      const inPlay = holesInPlayFor(setup.holesCount, setup.nine);
+      const stateOf = (id: string) =>
+        cardState({ holesEntered: holesByPlayer.get(id) ?? [], holesInPlay: inPlay, confirmed: confirmed.has(id) });
+
       // A group's last score is in: tell them to confirm and vote. This is
       // the hook into the awards, not a certification chore.
       for (const tt of setup.teeTimes) {
-        const done = tt.playerIds.length > 0 && tt.playerIds.every((id) => (counts.get(id) ?? 0) >= holesNeeded);
+        const done = groupFinished(tt.playerIds.map(stateOf));
         if (done && (await onceForRound(admin, setup.id, `group_done:${tt.id}`))) {
           sent += await sendPushToUsers(admin, {
-            userIds: accountsFor(players, tt.playerIds.filter((id) => !confirmed.has(id))),
+            userIds: accountsFor(players, tt.playerIds.filter((id) => stateOf(id) !== "confirmed")),
             title: "Your round is in",
             message: "Come see how bad it was. Confirm your card and vote for the awards.",
             category: "my_card",
@@ -602,7 +623,7 @@ export async function runLifecycle(admin: SupabaseClient, now = new Date()): Pro
 
       // Everyone confirmed - no reason to wait for the timer.
       const seated = setup.teeTimes.flatMap((t) => t.playerIds);
-      const allConfirmed = seated.length > 0 && seated.every((id) => confirmed.has(id));
+      const allConfirmed = everyoneConfirmed(seated.map(stateOf));
 
       const closesAt = roundClosesAt(row.last_score_at, row.round_date, tz);
       if (!allConfirmed && closesAt) {

@@ -210,7 +210,7 @@ export function RoundConfirm({
     <div className="rounded-2xl border-2 border-fairway-900 bg-white p-4">
       <p className="font-anton text-2xl tracking-tight text-ink">Your round is in</p>
       <p className="mt-1 text-[13px] leading-5 text-slate-600">
-        Every player in the group signs off. Once everyone has, the round locks and the awards vote opens.
+        Everyone in the group confirms their card. Once everyone has, points post and the awards vote opens.
       </p>
 
       <div className="mt-3 space-y-1.5">

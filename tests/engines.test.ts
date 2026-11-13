@@ -674,3 +674,70 @@ test("the bird pages only ever send people back into the app", () => {
   assert.equal(safeNext("https://evil.example"), "");
   assert.equal(safeNext("//evil.example"), "", "protocol-relative is another site");
 });
+
+/* ------------------------------------------------------------- card state */
+
+import {
+  cardState,
+  groupFinished,
+  everyoneConfirmed,
+  holesInPlayFor,
+} from "../src/features/trip/scoring/cardState";
+import { votingConcluded } from "../src/features/voting/votingStatus";
+
+const ALL18 = holesInPlayFor(18);
+
+test("a card moves through its states as holes go in", () => {
+  assert.equal(cardState({ holesEntered: [], holesInPlay: ALL18, confirmed: false }), "not_started");
+  assert.equal(cardState({ holesEntered: [1, 2, 3], holesInPlay: ALL18, confirmed: false }), "in_progress");
+  assert.equal(cardState({ holesEntered: ALL18, holesInPlay: ALL18, confirmed: false }), "complete");
+  assert.equal(cardState({ holesEntered: ALL18, holesInPlay: ALL18, confirmed: true }), "confirmed");
+});
+
+test("a duplicate hole cannot complete a card early", () => {
+  // 17 distinct holes, one entered twice = 18 rows. The engine used to count
+  // rows, which would have called this card complete.
+  const holes = [...Array.from({ length: 17 }, (_, i) => i + 1), 17];
+  assert.equal(holes.length, 18);
+  assert.equal(cardState({ holesEntered: holes, holesInPlay: ALL18, confirmed: false }), "in_progress");
+});
+
+test("a back-nine round only needs holes 10 to 18", () => {
+  const back = holesInPlayFor(9, "back");
+  assert.deepEqual(back, [10, 11, 12, 13, 14, 15, 16, 17, 18]);
+  assert.equal(cardState({ holesEntered: back, holesInPlay: back, confirmed: false }), "complete");
+  assert.equal(
+    cardState({ holesEntered: [1, 2, 3, 4, 5, 6, 7, 8, 9], holesInPlay: back, confirmed: false }),
+    "not_started",
+    "front-nine scores don't count toward a back-nine round"
+  );
+});
+
+test("a group is finished when every card has every hole", () => {
+  assert.equal(groupFinished(["complete", "confirmed"]), true);
+  assert.equal(groupFinished(["complete", "in_progress"]), false);
+  assert.equal(groupFinished([]), false, "an empty group is not finished");
+});
+
+test("everyone confirmed means confirmed, not merely complete", () => {
+  assert.equal(everyoneConfirmed(["confirmed", "confirmed"]), true);
+  assert.equal(everyoneConfirmed(["confirmed", "complete"]), false);
+});
+
+test("voting lasts exactly as long as an engine-managed round", () => {
+  const first = "2026-12-11T12:00:00.000Z";
+  const now = new Date("2026-12-11T20:00:00.000Z").getTime(); // 8 hours after the first score
+  const live = { id: "r1", roundNumber: 1, startedAt: first, finishedAt: null, firstScoreAt: first, lastScoreAt: "2026-12-11T19:30:00.000Z" };
+  // Eight hours in, still live - the round is still being played, so voting stays open.
+  assert.equal(votingConcluded(live as never, [live as never], now), false);
+  // The moment it's final, voting concludes.
+  const closed = { ...live, finishedAt: "2026-12-11T20:00:00.000Z" };
+  assert.equal(votingConcluded(closed as never, [closed as never], now), true);
+});
+
+test("older rounds the engine never managed still get the 7 hour safety net", () => {
+  const first = "2026-09-10T14:00:00.000Z";
+  const now = new Date("2026-09-10T22:00:00.000Z").getTime();
+  const legacy = { id: "r1", roundNumber: 1, startedAt: first, finishedAt: null, firstScoreAt: first, lastScoreAt: null };
+  assert.equal(votingConcluded(legacy as never, [legacy as never], now), true);
+});

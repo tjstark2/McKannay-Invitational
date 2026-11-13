@@ -112,6 +112,22 @@ These are the things that stop you inviting people who are not you.
   which read 0 of 8 all day on a hole-by-hole round - are replaced by cards
   going and furthest thru while a round is live.
 
+## Bundle C - the card
+
+- **One definition of a player's card:** not started, in progress, complete,
+  confirmed. It was worked out separately in the engine, the confirm screen
+  and score entry - the thing that stalled every round of the 2026 trip.
+- **Fixed: the engine counted score ROWS, not holes.** A duplicate row could
+  mark a card complete early and publish a total. It now counts distinct holes
+  in play, so a stray hole or duplicate cannot inflate a total either.
+- **Back-nine rounds handled properly** - only holes 10-18 count.
+- **Voting now lasts exactly as long as the round.** It used to shut 7 hours
+  after the FIRST score while the round closed 3 hours after the LAST, so
+  either could end first. Engine-managed rounds now close voting only when the
+  round is final. Older rounds keep the 7 hour safety net.
+- Last "signs off" wording on the confirm screen reworded.
+- 7 more tests, 57 total.
+
 ## Bundle B - everyone gets a bird
 
 - **The bird picker now appears on first login wherever you land.** It used to
