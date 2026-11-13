@@ -11,6 +11,7 @@ import "@fontsource/inter/700.css";
 import "@fontsource/inter/800.css";
 import "./globals.css";
 import { AuthProvider } from "@/features/auth/AuthContext";
+import { BirdGate } from "@/features/avatar/BirdGate";
 
 export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
@@ -23,7 +24,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <BirdGate />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

@@ -660,3 +660,17 @@ test("no rounds means no focus, not a crash", () => {
   assert.equal(liveRound([]), null);
   assert.equal(allRoundsFinal([]), false);
 });
+
+/* ------------------------------------------------------------ onboarding */
+
+import { safeNext } from "../src/features/avatar/BirdGate";
+
+test("the bird pages only ever send people back into the app", () => {
+  assert.equal(safeNext("/t/ENGINE1"), "/t/ENGINE1", "an invite destination survives");
+  assert.equal(safeNext("/t/ENGINE1?x=1"), "/t/ENGINE1?x=1");
+  assert.equal(safeNext(null), "");
+  assert.equal(safeNext(""), "");
+  // Never somewhere else on the internet.
+  assert.equal(safeNext("https://evil.example"), "");
+  assert.equal(safeNext("//evil.example"), "", "protocol-relative is another site");
+});

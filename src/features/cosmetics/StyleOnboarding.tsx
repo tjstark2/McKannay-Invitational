@@ -10,6 +10,7 @@ import { AvatarWithFrame } from "./AvatarWithFrame";
 import { Nameplate } from "./Nameplate";
 import { FRAMES, FOUNDER_EMAIL, type FrameDef } from "./frames";
 import { NAMEPLATES, type PlateDef } from "./nameplates";
+import { safeNext } from "@/features/avatar/BirdGate";
 
 const GOLD = "#e7c869";
 
@@ -80,8 +81,13 @@ export function StyleOnboarding({
     void equipFrame(f.id);
   }
 
-  const advance = () =>
-    step === "plate" ? setStep("frame") : router.replace("/home");
+  const advance = () => {
+    if (step === "plate") return setStep("frame");
+    // Back to wherever they were heading - usually the tournament an invite
+    // pointed at - rather than always Home.
+    const next = safeNext(new URLSearchParams(window.location.search).get("next"));
+    router.replace(next || "/home");
+  };
 
   const cats = step === "plate" ? PLATE_CATS : frameCats;
   const activeCat = step === "plate" ? plateCat : frameCat;

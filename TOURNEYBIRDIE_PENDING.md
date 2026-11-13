@@ -112,6 +112,20 @@ These are the things that stop you inviting people who are not you.
   which read 0 of 8 all day on a hole-by-hole round - are replaced by cards
   going and furthest thru while a round is live.
 
+## Bundle B - everyone gets a bird
+
+- **The bird picker now appears on first login wherever you land.** It used to
+  run only on the Home page, and an invite link sends a new player straight
+  into the tournament - so most players on the 2026 trip never picked a bird.
+  That likely explains the survey saying nobody noticed anyone's avatar.
+- **It returns you to where you were heading.** An invited player signs up,
+  picks their bird, nameplate and frame, and lands in the tournament ready to
+  join - not on Home with the invite lost.
+- One check instead of two: Home's own copy is gone.
+- Sign-up form unchanged, by decision - every field is still asked up front.
+- The landing page rewrite moves to the END, once the app is final, so it can
+  use real screenshots. Image slots will be marked pending.
+
 ## Bundle A - foundations
 
 Invisible to users. Makes every later change safer.

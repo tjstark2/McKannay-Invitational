@@ -11,6 +11,7 @@ import {
 } from "@/features/avatar/data";
 import { AvatarFlow } from "@/features/avatar/AvatarFlow";
 import type { Avatar } from "@/features/avatar/catalog";
+import { safeNext } from "@/features/avatar/BirdGate";
 
 export default function ChooseAvatarPage() {
   const { user, loading } = useAuth();
@@ -31,7 +32,7 @@ export default function ChooseAvatarPage() {
       if (!active) return;
       // Already chosen -> this screen is first-time only.
       if (mine && mine.selectedAt) {
-        router.replace("/home");
+        router.replace(nextPath() || "/home");
         return;
       }
       const [a, g] = await Promise.all([fetchAvatars(), fetchMyGrants()]);
@@ -59,9 +60,18 @@ export default function ChooseAvatarPage() {
       grantedIds={grants}
       onComplete={async (id) => {
         const res = await setMyAvatar(id);
-        if (res.ok) router.replace("/choose-style");
+        if (res.ok) {
+          const next = nextPath();
+          router.replace(next ? `/choose-style?next=${encodeURIComponent(next)}` : "/choose-style");
+        }
         return res;
       }}
     />
   );
+}
+
+/** Where the player was heading before they were asked to pick a bird. */
+function nextPath(): string {
+  if (typeof window === "undefined") return "";
+  return safeNext(new URLSearchParams(window.location.search).get("next"));
 }

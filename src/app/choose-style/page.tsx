@@ -26,7 +26,7 @@ export default function ChooseStylePage() {
       if (!active) return;
       // No bird chosen yet -> send them to the birdie chooser first.
       if (!mine?.avatarId) {
-        router.replace("/choose-avatar");
+        router.replace(`/choose-avatar${window.location.search}`);
         return;
       }
       const avatars = await fetchAvatars();
