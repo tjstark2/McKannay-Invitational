@@ -10,6 +10,7 @@ import {
   sweepConcludedVoting,
 } from "@/lib/server/push";
 import { runLifecycle } from "@/lib/server/roundEngine";
+import { polishPendingAwards } from "@/lib/server/roundAwards";
 
 /**
  * The heartbeat. Run it EVERY 10 MINUTES from cron-job.org - hourly is too
@@ -25,6 +26,8 @@ import { runLifecycle } from "@/lib/server/roundEngine";
  *     next round) when it is done.
  *  2. Voting results reveal for rounds that have concluded.
  *  3. Anything held overnight for quiet hours, now that morning has come.
+ *  4. The AI pass over one freshly closed round's award lines. Last, and one
+ *     round per tick, so a slow model can only ever use up spare time.
  *
  * Env: CRON_SECRET, VAPID keys, SUPABASE_SERVICE_ROLE_KEY.
  */
@@ -41,7 +44,7 @@ export async function GET(req: Request) {
   }
 
   // Each step is isolated, so one failure never stops the others running.
-  const result = { lifecycle: 0, voting: 0, held: 0, errors: [] as string[] };
+  const result = { lifecycle: 0, voting: 0, held: 0, awards: 0, errors: [] as string[] };
 
   try {
     result.lifecycle = await runLifecycle(admin);
@@ -57,6 +60,12 @@ export async function GET(req: Request) {
     result.held = await flushHeldNotifications(admin);
   } catch (e) {
     result.errors.push(`held: ${e instanceof Error ? e.message : String(e)}`);
+  }
+
+  try {
+    result.awards = await polishPendingAwards(admin, 1);
+  } catch (e) {
+    result.errors.push(`awards: ${e instanceof Error ? e.message : String(e)}`);
   }
 
   return NextResponse.json({ ok: result.errors.length === 0, ...result });

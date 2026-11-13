@@ -32,8 +32,9 @@ import {
   groupFinished,
   holesInPlayFor,
 } from "@/features/trip/scoring/cardState";
+import { writeRoundAwards } from "@/lib/server/roundAwards";
 
-type Trip = {
+export type Trip = {
   id: string;
   name: string;
   join_code: string;
@@ -48,7 +49,7 @@ type RoundRow = {
   last_score_at: string | null;
 };
 
-type PlayerRow = {
+export type PlayerRow = {
   id: string;
   display_name: string;
   handicap_index: number | null;
@@ -253,7 +254,7 @@ async function publishTotals(
  * Recomputing later from matches alone would have said 4-6 when the real
  * answer was 6-9, which is why this is recorded rather than re-derived.
  */
-async function computeTripResult(
+export async function computeTripResult(
   admin: SupabaseClient,
   trip: Trip,
   setups: RoundSetup[],
@@ -411,6 +412,10 @@ export async function finalizeRound(
       // Never let the trip summary stop the round closing.
     }
   }
+
+  // The round's awards, with the hand-written lines. Database only and never
+  // throws, so it can't hold the close up. The AI polishes them afterwards.
+  if (trip.scoring_mode === "hole_by_hole") await writeRoundAwards(admin, setup.id);
 
   let sent = 0;
   const members = await activeMemberIds(admin, trip.id);

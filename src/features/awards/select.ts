@@ -43,6 +43,17 @@ const MAX_AWARDS = 7;
 const STRONG = 52;
 const REPEAT_DECAY = 0.6;
 const MAX_PER_PLAYER = 2;
+/**
+ * Awards that tell the same story about one person. Wooden Spoon and No-Show
+ * both say "worst in the field"; Medalist and Sandbagger both say "best". A
+ * person can take one from each group per round, so a bad day leaves room
+ * for the funnier detail - the snowmen, the collapse.
+ */
+const SAME_STORY: string[][] = [
+  ["medalist", "sandbagger"],
+  ["wooden_spoon", "no_show"],
+];
+const storyOf = (momentId: string) => SAME_STORY.findIndex((g) => g.includes(momentId));
 
 export function selectAwards(input: {
   roundId: string;
@@ -76,15 +87,24 @@ export function selectAwards(input: {
 
   const usedMoments = new Set<string>();
   const perPlayer = new Map<string, number>();
+  const storiesTold = new Set<string>();
   const chosen: typeof scored = [];
 
-  const fits = (c: (typeof scored)[number]) =>
-    !usedMoments.has(c.momentId) && c.playerIds.every((id) => (perPlayer.get(id) ?? 0) < MAX_PER_PLAYER);
+  const fits = (c: (typeof scored)[number]) => {
+    const story = storyOf(c.momentId);
+    return (
+      !usedMoments.has(c.momentId) &&
+      c.playerIds.every((id) => (perPlayer.get(id) ?? 0) < MAX_PER_PLAYER) &&
+      (story === -1 || c.playerIds.every((id) => !storiesTold.has(`${story}:${id}`)))
+    );
+  };
 
   const take = (c: (typeof scored)[number]) => {
     chosen.push(c);
     usedMoments.add(c.momentId);
     for (const id of c.playerIds) perPlayer.set(id, (perPlayer.get(id) ?? 0) + 1);
+    const story = storyOf(c.momentId);
+    if (story !== -1) for (const id of c.playerIds) storiesTold.add(`${story}:${id}`);
   };
 
   for (const c of scored) {

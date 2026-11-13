@@ -857,3 +857,92 @@ test("every award line only uses values its moment actually provides", () => {
     }
   }
 });
+
+/* ------------------------------------------------------- awards, end to end */
+
+import { buildRoundAwards, standingFor } from "../src/features/awards/build";
+import { checkLine, mergeCopy, parseCopyReply } from "../src/features/awards/copy";
+
+const SI18 = Array.from({ length: 18 }, (_, i) => ({ hole: i + 1, par: 4, si: i + 1 }));
+const hs = (playerId: string, strokes: number[]) =>
+  strokes.map((s, i) => ({ roundId: "r1", playerId, hole: i + 1, strokes: s }));
+
+test("a closed round turns hole scores into filled awards, with match stories", () => {
+  // Wade (2) gives Kody (20) a pile of shots, goes 3 up, and loses. Hank
+  // builds snowmen in the other group.
+  const players = [
+    { id: "w", name: "Wade", handicapIndex: 2, team: "A" },
+    { id: "k", name: "Kody", handicapIndex: 20, team: "B" },
+    { id: "h", name: "Hank", handicapIndex: 12, team: "A" },
+    { id: "t", name: "TJ", handicapIndex: 13, team: "B" },
+  ];
+  const built = buildRoundAwards({
+    roundId: "r1",
+    holes: SI18,
+    holesCount: 18,
+    nine: null,
+    tee: { rating: 72, slope: 113, par: 72 },
+    format: "match_play",
+    groups: [
+      { playerIds: ["w", "k"], allowancePct: 100 },
+      { playerIds: ["h", "t"], allowancePct: 100 },
+    ],
+    players,
+    holeScores: [
+      ...hs("w", [3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]),
+      ...hs("k", [6, 6, 6, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4]),
+      ...hs("h", [8, 9, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]),
+      ...hs("t", [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]),
+    ],
+    matches: [{ id: "m1", aPlayers: ["w"], bPlayers: ["k"] }],
+    previousNetToPar: {},
+    history: [],
+    points: { a: 0, b: 1 },
+    stage: "opener",
+  });
+
+  assert.equal(built.facts.length, 4, "everyone with a card gets facts");
+  const m = built.matchFacts[0];
+  assert.equal(m.underdog, "B", "Kody received the shots");
+  assert.equal(m.winner, "B", "and won");
+  assert.ok(m.comeback >= 3, "from 3 down");
+  assert.ok(built.awards.length >= 3 && built.awards.length <= 7);
+  assert.ok(built.awards.some((a) => a.momentId === "santas_helper" && a.playerIds[0] === "h"), "Hank's snowmen");
+  assert.ok(built.awards.every((a) => !a.line.includes("{")), "every line filled");
+  const hank = built.awards.filter((a) => a.playerIds.includes("h")).map((a) => a.momentId);
+  assert.ok(!(hank.includes("wooden_spoon") && hank.includes("no_show")), "one 'worst in the field' story per person");
+});
+
+test("standing reads from the player's own team, and only the last round is decided", () => {
+  assert.equal(standingFor("A", { a: 5, b: 3 }, "middle"), "leading");
+  assert.equal(standingFor("B", { a: 5, b: 3 }, "middle"), "trailing");
+  assert.equal(standingFor("A", { a: 4, b: 4 }, "finale"), "tied");
+  assert.equal(standingFor("B", { a: 5, b: 3 }, "finale"), "decided");
+  assert.equal(standingFor(null, { a: 5, b: 3 }, "middle"), "tied", "no team, no side");
+});
+
+const AWARD = {
+  momentId: "santas_helper", title: "Santa's Helper", playerIds: ["h"], names: ["Hank"],
+  line: "3 snowmen from Hank. It's not even cold out.", stat: "3 holes of 8 or worse",
+  variant: "default" as const, tier: 1, score: 80,
+};
+
+test("an AI line has to name the winner and can't invent a number", () => {
+  assert.equal(checkLine("Hank built 3 snowmen. Olaf is suing.", AWARD), "Hank built 3 snowmen. Olaf is suing.");
+  assert.equal(checkLine("Built 3 snowmen. Olaf is suing.", AWARD), null, "winner missing");
+  assert.equal(checkLine("Hank built 4 snowmen. Olaf is suing.", AWARD), null, "4 is not in the facts");
+  assert.equal(checkLine("Hank built {count} snowmen today.", AWARD), null, "unfilled");
+  assert.equal(checkLine("Hank — 3 snowmen, zero shame.", AWARD), "Hank - 3 snowmen, zero shame.", "em dash becomes a hyphen");
+  assert.equal(checkLine("Hank " + "very ".repeat(60), AWARD), null, "too long");
+});
+
+test("a bad or missing AI reply falls back to the hand-written line", () => {
+  assert.deepEqual(parseCopyReply("not json at all"), []);
+  const reply = parseCopyReply('```json\n{"awards":[{"id":"santas_helper","line":"Hank: 7 snowmen."}]}\n```');
+  assert.equal(reply.length, 1);
+  const [m] = mergeCopy([AWARD], reply);
+  assert.equal(m.byAi, false, "7 was invented");
+  assert.equal(m.line, AWARD.line);
+  const [ok] = mergeCopy([AWARD], [{ id: "santas_helper", line: "Hank and his 3 snowmen. Book the sleigh." }]);
+  assert.equal(ok.byAi, true);
+});

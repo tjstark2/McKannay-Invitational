@@ -112,6 +112,30 @@ These are the things that stop you inviting people who are not you.
   which read 0 of 8 all day on a hole-by-hole round - are replaced by cards
   going and furthest thru while a round is live.
 
+## Bundle D2 - awards are made and saved when a round closes
+
+Still nothing new on screen - D3 shows them. Needs bundleD2_awards.sql first.
+
+- **On close:** every hole-by-hole round works out its awards and saves them
+  (new tables round_awards and round_award_facts). Hand-written lines, no AI,
+  under a second - it can never hold a round open.
+- **Then the AI polishes the wording:** one call per round, Pro tournaments
+  only. Runs straight after a manual Finish round, or on the next cron tick
+  for automatic closes (one round per tick, tried once, never retried).
+- **Every AI line is checked:** it must name the winners exactly, may only
+  use numbers that are in the stats, and must be short. Fail any check and
+  that award keeps the hand-written line.
+- **Rebuild:** organizers can rebuild a finished round's awards (up to 5 times
+  per round) - for rounds that closed before awards existed, or after a score
+  fix. Endpoint: /api/rounds/awards. D3 adds the button.
+- **One story per person:** Wooden Spoon and No-Show can no longer both go to
+  the same person in a round (same joke twice), nor Medalist and Sandbagger.
+  Frees a slot for the funnier detail.
+- Spunky rewrite (D1b): 131 lines, tone turned up, vote questions reworded.
+- 5 more tests, 69 total.
+
+Next: D3 is the one-at-a-time reveal and the single-screen vote.
+
 ## Bundle D1 - the awards brain (not wired up yet)
 
 Changes nothing users can see. The engine that decides the awards, built and
@@ -131,9 +155,6 @@ tested on its own before it is connected to the app.
   The Big Number). The Big Number now only covers blowups that aren't
   already snowmen.
 - 7 more tests, 64 total.
-
-Next: D2 stores the awards and has the AI rewrite each line, with the
-hand-written line as the backup. D3 is the reveal and the vote.
 
 ## Bundle C - the card
 
