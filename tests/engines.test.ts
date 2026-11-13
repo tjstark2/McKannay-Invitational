@@ -741,3 +741,119 @@ test("older rounds the engine never managed still get the 7 hour safety net", ()
   const legacy = { id: "r1", roundNumber: 1, startedAt: first, finishedAt: null, firstScoreAt: first, lastScoreAt: null };
   assert.equal(votingConcluded(legacy as never, [legacy as never], now), true);
 });
+
+/* ------------------------------------------------------------------ awards */
+
+import { computePlayerFacts, computeMatchFacts, median } from "../src/features/awards/detectors";
+import { MOMENTS, variantFor, lineFor, fill } from "../src/features/awards/moments";
+import { selectAwards } from "../src/features/awards/select";
+
+const CARD18 = Array.from({ length: 18 }, (_, i) => ({ hole: i + 1, par: 4, si: i + 1 }));
+const card = (scores: number[]) => Object.fromEntries(scores.map((s, i) => [i + 1, s]));
+const facts = (id: string, name: string, scores: number[], hcp = 12, team: string | null = "A", field = 0) =>
+  computePlayerFacts({ playerId: id, name, handicapIndex: hcp, team, holes: CARD18, scores: card(scores), strokes: {}, fieldMedianNetToPar: field })!;
+
+test("detectors count snowmen, streaks and the worst hole from the card", () => {
+  const f = facts("w", "Wade", [4, 4, 4, 4, 8, 9, 6, 6, 6, 4, 4, 4, 4, 4, 4, 4, 4, 4]);
+  assert.equal(f.snowmen, 2);
+  assert.equal(f.worstHole?.strokes, 9);
+  assert.equal(f.parStreak, 9, "holes 10-18 all at par");
+  assert.equal(f.doubleStreak, 5, "holes 5-9 all double or worse");
+  assert.equal(f.frontNine, 51);
+  assert.equal(f.backNine, 36);
+});
+
+test("a match records the comeback and when it was decided", () => {
+  // B goes 3 up, then A wins the last five holes.
+  const holes = [
+    { hole: 1, winner: "B" as const }, { hole: 2, winner: "B" as const }, { hole: 3, winner: "B" as const },
+    { hole: 4, winner: "A" as const }, { hole: 5, winner: "A" as const }, { hole: 6, winner: "A" as const },
+    { hole: 7, winner: "T" as const }, { hole: 8, winner: "A" as const },
+  ];
+  const m = computeMatchFacts({ matchId: "m", aPlayers: ["a"], bPlayers: ["b"], holes, strokesA: 10, strokesB: 2 })!;
+  assert.equal(m.winner, "A");
+  assert.equal(m.comeback, 3, "climbed out of 3 down");
+  assert.equal(m.underdog, "A", "A received more shots");
+  assert.equal(m.strokesGiven, 8);
+  assert.equal(m.decidedOn, 8, "took the lead for good on 8");
+});
+
+test("the most specific line wins: repeat, then finale, then standing, then band", () => {
+  const santa = MOMENTS.find((m) => m.id === "santas_helper")!;
+  const base = { tier: 1, standing: "tied" as const, band: "mid" as const, stage: "middle" as const };
+  assert.equal(variantFor(santa, base), "default");
+  assert.equal(variantFor(santa, { ...base, band: "low" }), "low");
+  assert.equal(variantFor(santa, { ...base, stage: "finale" }), "finale");
+  assert.equal(variantFor(santa, { ...base, tier: 2, stage: "finale" }), "tier2", "a repeat outranks the finale");
+  assert.equal(variantFor(santa, { ...base, tier: 3 }), "tier3");
+});
+
+test("lines are filled only from the facts", () => {
+  assert.equal(fill("{name} made {count}", { name: "Wade", count: 2 }), "Wade made 2");
+  assert.equal(fill("{name} {missing}", { name: "Wade" }).trim(), "Wade", "no invented values");
+});
+
+test("the same round always gets the same line, so it never changes on refresh", () => {
+  const santa = MOMENTS.find((m) => m.id === "santas_helper")!;
+  const ctx = { tier: 1, standing: "tied" as const, band: "mid" as const, stage: "middle" as const };
+  const a = lineFor(santa, ctx, { name: "Wade", count: 2 }, "r1:santas_helper");
+  const b = lineFor(santa, ctx, { name: "Wade", count: 2 }, "r1:santas_helper");
+  assert.equal(a, b);
+});
+
+test("a round produces between 3 and 7 awards, at most two per person", () => {
+  const players = [
+    facts("w", "Wade", [4, 4, 4, 4, 8, 9, 6, 6, 6, 7, 7, 7, 4, 4, 4, 4, 4, 4], 10, "A"),
+    facts("t", "TJ", [4, 3, 3, 4, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4], 13, "B"),
+    facts("k", "Kody", [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5], 16, "A"),
+  ];
+  const fieldMed = median(players.map((p) => p.netToPar));
+  const withField = players.map((p) => ({ ...p, vsField: fieldMed - p.netToPar }));
+  const { awards, voteable } = selectAwards({
+    roundId: "r1", players: withField, matches: [], previousNetToPar: {}, history: [],
+    standingOf: () => "tied", stage: "middle",
+  });
+  assert.ok(awards.length >= 3 && awards.length <= 7, `got ${awards.length}`);
+  const count = new Map<string, number>();
+  for (const a of awards) for (const id of a.playerIds) count.set(id, (count.get(id) ?? 0) + 1);
+  assert.ok([...count.values()].every((n) => n <= 2), "nobody takes more than two");
+  assert.equal(new Set(awards.map((a) => a.momentId)).size, awards.length, "one award per moment");
+  assert.equal(voteable.length, 2, "shot of the day and worst decision go to a vote");
+  assert.ok(awards.every((a) => a.line.length > 0 && !a.line.includes("{")), "every line fully filled");
+});
+
+test("winning the same award again needs a worse performance", () => {
+  // Two snowmen and nothing else remarkable - no long par run, no birdies -
+  // so the snowmen are Wade's standout moment and the per-person cap of two
+  // doesn't squeeze them out.
+  const p = facts("w", "Wade", [4, 4, 5, 4, 4, 5, 4, 8, 8, 4, 4, 5, 4, 4, 5, 4, 4, 5], 10, "A", 10);
+  const run = (history: { momentId: string; playerId: string }[]) =>
+    selectAwards({ roundId: "r2", players: [p], matches: [], previousNetToPar: {}, history, standingOf: () => "tied", stage: "middle" })
+      .awards.find((a) => a.momentId === "santas_helper");
+  const first = run([]);
+  const repeat = run([{ momentId: "santas_helper", playerId: "w" }]);
+  assert.ok(first && repeat);
+  assert.ok(repeat!.score < first!.score, "a repeat is discounted");
+  assert.equal(repeat!.tier, 2);
+  assert.equal(repeat!.variant, "tier2", "and gets the repeat line");
+});
+
+test("every award line only uses values its moment actually provides", () => {
+  const provides: Record<string, string[]> = {
+    medalist: ["name", "net"], wooden_spoon: ["name", "net"], santas_helper: ["name", "count"],
+    big_number: ["name", "strokes", "hole"], the_vanisher: ["name", "front", "back"],
+    par_train: ["name", "streak"], bogey_express: ["name", "streak"], bird_watcher: ["name", "count", "eagles"],
+    free_square: ["name", "count"], sandbagger: ["name", "vs"], no_show: ["name", "vs"],
+    mip: ["name", "gain", "before", "after"], cinderella: ["name", "opponent", "shots", "margin"],
+    escape_artist: ["name", "opponent", "shots", "margin"], the_comeback: ["name", "opponent", "down"],
+    the_closer: ["name", "opponent", "hole"], shot_of_the_day: ["name"], worst_decision: ["name"],
+  };
+  for (const m of MOMENTS) {
+    assert.ok(provides[m.id], `${m.id} is listed`);
+    assert.ok((m.lines.default?.length ?? 0) > 0, `${m.id} has a default line`);
+    for (const lines of Object.values(m.lines)) for (const line of lines ?? []) {
+      for (const [, key] of line.matchAll(/\{(\w+)\}/g)) assert.ok(provides[m.id].includes(key), `${m.id}: {${key}} in "${line}"`);
+      assert.ok(!line.includes("—"), `${m.id}: plain hyphens only`);
+    }
+  }
+});

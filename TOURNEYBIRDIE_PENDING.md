@@ -112,6 +112,29 @@ These are the things that stop you inviting people who are not you.
   which read 0 of 8 all day on a hole-by-hole round - are replaced by cards
   going and furthest thru while a round is live.
 
+## Bundle D1 - the awards brain (not wired up yet)
+
+Changes nothing users can see. The engine that decides the awards, built and
+tested on its own before it is connected to the app.
+
+- **Detectors** read what actually happened from the hole scores: snowmen, the
+  worst hole, birdies and eagles, par runs, double runs, front versus back,
+  shots wasted, and each match's comeback, underdog and when it was decided.
+  Pure maths - the AI never works out a number.
+- **The inventory**: 18 moments, 83 hand-written lines. Each moment has lines
+  for different situations - a repeat winner, the final round, their team
+  leading or behind or the trip decided, and low, mid or high handicap. The
+  most specific line wins.
+- **Selection**: 3 to 7 awards a round, one per moment, at most two per
+  person, and a repeat only wins again if it is genuinely worse.
+- Fixed while testing: one bad hole could pay out twice (Santa's Helper and
+  The Big Number). The Big Number now only covers blowups that aren't
+  already snowmen.
+- 7 more tests, 64 total.
+
+Next: D2 stores the awards and has the AI rewrite each line, with the
+hand-written line as the backup. D3 is the reveal and the vote.
+
 ## Bundle C - the card
 
 - **One definition of a player's card:** not started, in progress, complete,
