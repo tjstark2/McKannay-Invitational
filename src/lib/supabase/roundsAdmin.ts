@@ -99,7 +99,7 @@ export async function loadRoster(
 export async function createRound(
   supabase: SupabaseClient,
   tripId: string,
-  input: { title: string; roundNumber: number; courseId: string | null; dateLabel: string; arrivalTime: string }
+  input: { title: string; roundNumber: number; courseId: string | null; dateLabel: string; arrivalTime: string; roundDate?: string | null }
 ): Promise<{ ok: boolean; error?: string; id?: string }> {
   const { data, error } = await supabase
     .from("rounds")
@@ -109,6 +109,7 @@ export async function createRound(
       title: input.title,
       course_id: input.courseId,
       date_label: input.dateLabel,
+      round_date: input.roundDate ?? null,
       arrival_time: input.arrivalTime,
       format: "best_ball",
       group_size: 2,

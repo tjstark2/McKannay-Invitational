@@ -1,5 +1,7 @@
 "use client";
 
+import { addDays, dateLabelFor } from "@/lib/roundDates";
+
 import { useCallback, useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { TripStateProvider } from "@/features/trip/state/TripStateContext";
@@ -540,8 +542,16 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
                   </label>
                   <label>
                     <span className={labelClass}>Date</span>
-                    <input className={inputClass} defaultValue={r.dateLabel} placeholder="Sept 14"
-                      onBlur={(e) => patchRound(r.id, { date_label: e.target.value })} />
+                    <input className={inputClass} type="date" value={r.roundDate ?? ""}
+                      onChange={(e) => {
+                        const ymd = e.target.value || null;
+                        patchRound(r.id, { round_date: ymd, date_label: dateLabelFor(ymd) }, ymd ? "Date set" : undefined);
+                      }} />
+                    {!r.roundDate ? (
+                      <span className="mt-1 block text-[11px] font-bold leading-4 text-amber-700">
+                        Needed for the round to open, warn and close by itself.
+                      </span>
+                    ) : null}
                   </label>
                   <label>
                     <span className={labelClass}>Arrival time</span>
@@ -766,11 +776,15 @@ export function RoundsTab({ tripId, joinCode }: { tripId: string; joinCode?: str
       <button type="button"
         onClick={async () => {
           const sb = getSupabaseClient(); if (!sb) return;
+          // A new round defaults to the day after the last one with a date.
+          const lastDate = [...rounds].reverse().find((x) => x.roundDate)?.roundDate ?? null;
+          const roundDate = lastDate ? addDays(lastDate, 1) : null;
           const res = await createRound(sb, tripId, {
             title: `Round ${rounds.length + 1}`,
             roundNumber: rounds.length + 1,
             courseId: courses[0]?.id ?? null,
-            dateLabel: "",
+            dateLabel: dateLabelFor(roundDate),
+            roundDate,
             arrivalTime: "",
           });
           if (!res.ok) return setError(res.error || "Couldn't add a round.");

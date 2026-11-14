@@ -15,7 +15,8 @@ import { STOCK_BACKGROUNDS } from "@/lib/backgrounds";
 import { setHeaderBackground } from "@/lib/supabase/backgrounds";
 import { StateSelect } from "@/features/account/identity";
 import { loadFriendsData } from "@/lib/supabase/friends";
-import { startSpotlightTour, type SpotStep } from "@/features/trip/tour/spotlight";
+import { addDays, dateLabelFor, timeZoneForState } from "@/lib/roundDates";
+import { buildOrganizerSetup, startSpotlightTour, type SpotStep } from "@/features/trip/tour/spotlight";
 
 type FmtOpt = {
   id: string;
@@ -38,7 +39,7 @@ const FORMATS: FmtOpt[] = [
 ];
 
 type CourseDraft = { name: string; par: string; tees?: string; yardage?: string; rating?: string; slope?: string; bg?: string | null };
-type RoundDraft = { presetId: string; courseIdx: number; arrival: string; teeTimes: string[] };
+type RoundDraft = { presetId: string; courseIdx: number; arrival: string; teeTimes: string[]; date?: string };
 
 function teeCountFor(roster: number, teePer: number) {
   return Math.max(1, Math.ceil((roster || 4) / teePer));
@@ -255,6 +256,14 @@ export default function CreatePage() {
   function presetById(id: string): FmtOpt {
     return FORMATS.find((f) => f.id === id) ?? FORMATS[0];
   }
+  /** Round i plays on day i of the trip, unless they picked a date. Never past the last day. */
+  function roundDateFor(r: RoundDraft, i: number): string {
+    if (r.date) return r.date;
+    if (!startDate) return "";
+    const d = addDays(startDate, i);
+    return endDate && d > endDate ? endDate : d;
+  }
+
   function newRound(): RoundDraft {
     const p = availableFormats[0] ?? FORMATS[0];
     return { presetId: p.id, courseIdx: 0, arrival: "", teeTimes: Array(teeCountFor(roster, p.teePer)).fill("") };
@@ -321,7 +330,12 @@ export default function CreatePage() {
       try {
         await supabase
           .from("trips")
-          .update({ state: stateAbbr.trim() || null })
+          .update({
+            state: stateAbbr.trim() || null,
+            // Where the golf is: the state they named, else this phone's zone.
+            // The round engine runs every tee time on this clock.
+            time_zone: timeZoneForState(stateAbbr) ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+          })
           .eq("id", tripId);
       } catch {
         /* non-fatal */
@@ -352,6 +366,7 @@ export default function CreatePage() {
       if (setRoundsNow) {
         let n = 0;
         for (const r of rounds) {
+          const roundDate = roundDateFor(r, n) || null;
           n += 1;
           const p = presetById(r.presetId);
           const teeTimes = r.teeTimes.map((t, idx) => normTee(t, idx));
@@ -359,7 +374,8 @@ export default function CreatePage() {
           const roundId = await insertRound(supabase, tripId, {
             roundNumber: n,
             title: `Round ${n}`,
-            dateLabel: "",
+            dateLabel: dateLabelFor(roundDate),
+            roundDate,
             courseId: courseIds[r.courseIdx] ?? courseIds[0] ?? "",
             format: p.format,
             groupSize: p.groupSize,
@@ -500,17 +516,7 @@ export default function CreatePage() {
             ) : null}
 
             <button onClick={() => {
-              const mng = `/manage/${createdCode}`;
-              const trn = `/t/${createdCode}`;
-              const steps: SpotStep[] = [
-                { path: "/home", title: `"${name}" is live! 🎉`, body: "This is your home base - every tournament you run or join lives here. I'll walk you through setup: first managing members & teams, then running the tournament itself." },
-                { path: mng, anchor: "mng-invite", title: "Invite players", body: "Invite people by username and they'll see it on their dashboard. Anyone can also just enter your join code to request in." },
-                { path: mng, anchor: "mng-requests", title: "Approve who joins", body: "When someone requests to join, they land here - approve or decline with one tap. Approved players move into your roster." },
-                { path: mng, anchor: "mng-roster", title: "Assign teams", body: "Your roster lives here. Add each player and tap a team to put them on it - keep the two sides even so scoring stays fair." },
-                { path: mng, anchor: "mng-makeadmin", title: "Make a member an admin", body: "On any player's card, tap 'Make admin' to share control - admins can edit rounds, enter scores, and manage settings alongside you. Only you, the owner, can delete the tournament." },
-                { path: mng, anchor: "mng-teams", title: "Name your teams", body: "Rename your two teams whatever you like - these names show up all over the leaderboard and scorecards." },
-                { path: mng, anchor: "mng-delete", title: "Delete tournament", body: "The red Danger Zone permanently deletes the tournament and everything in it. It's owner-only and always asks you to confirm first." },
-              ];
+              const steps: SpotStep[] = buildOrganizerSetup(createdCode, name, { fromCreate: true });
               startSpotlightTour(steps);
               router.push("/home");
             }} className="mt-6 w-full rounded-2xl bg-fairway-900 px-4 py-4 font-black text-white">Go to tournament →</button>
@@ -627,7 +633,7 @@ export default function CreatePage() {
         {step === 6 ? (
           <div>
             <StepHead n="6" title="Courses" />
-            <p className="mt-1 text-sm text-slate-500">Add the course(s) you&apos;re playing - just a name and par for now. Every round links to a course.</p>
+            <p className="mt-1 text-sm text-slate-500">Add the course(s) you&apos;re playing - name, par, rating and slope. After you create the tournament, add each hole&apos;s par and stroke index in Manage, Courses (you can snap the scorecard). Live hole-by-hole scoring needs them.</p>
 
             <div className="mt-4 rounded-2xl border-[1.5px] border-sand-200 bg-white p-3">
               <p className="text-sm font-bold text-ink">Tournament banner</p>
@@ -662,7 +668,7 @@ export default function CreatePage() {
                     <input className="rounded-xl border-[1.5px] border-sand-200 px-3 py-2 text-sm outline-none focus:border-fairway-900" inputMode="decimal" value={c.rating ?? ""} onChange={(e) => setCourses((p) => p.map((x, j) => (j === i ? { ...x, rating: e.target.value.replace(/[^0-9.]/g, "").slice(0, 5) } : x)))} placeholder="Rating (e.g. 72.3)" />
                     <input className="rounded-xl border-[1.5px] border-sand-200 px-3 py-2 text-sm outline-none focus:border-fairway-900" inputMode="numeric" value={c.slope ?? ""} onChange={(e) => setCourses((p) => p.map((x, j) => (j === i ? { ...x, slope: e.target.value.replace(/[^0-9]/g, "").slice(0, 3) } : x)))} placeholder="Slope (e.g. 131)" />
                   </div>
-                  <p className="mt-1 text-[11px] text-slate-400"><b className="text-slate-500">Rating & Slope are required</b> for net (handicap) scoring to calculate correctly. Tees and yardage are optional. Add or edit any of these later in Admin.</p>
+                  <p className="mt-1 text-[11px] text-slate-400"><b className="text-slate-500">Rating & Slope are required</b> for net (handicap) scoring to calculate correctly. Tees and yardage are optional. Add or edit any of these later in Manage.</p>
                   <button
                     type="button"
                     onClick={() => setBgPickerIdx(i)}
@@ -681,7 +687,7 @@ export default function CreatePage() {
                 Pick a background per course now from our scene library. Pro
                 tournaments can also upload your own course photos.
               </p>
-              {realCourses.length === 0 ? <p className="text-sm text-slate-400">You can skip this and add courses later in Admin, but you&apos;ll need at least one before setting up rounds.</p> : null}
+              {realCourses.length === 0 ? <p className="text-sm text-slate-400">You can skip this and add courses later in Manage, but you&apos;ll need at least one before setting up rounds.</p> : null}
             </div>
             <NavRow onBack={() => setStep(5)} onNext={() => setStep(7)} />
           </div>
@@ -690,7 +696,7 @@ export default function CreatePage() {
         {step === 7 ? (
           <div>
             <StepHead n="7" title="Rounds" />
-            <p className="mt-1 text-sm text-slate-500">Add a round for each day - pick the course, format, and tee times. You can change anything later in Admin.</p>
+            <p className="mt-1 text-sm text-slate-500">Add a round for each day - pick the date, course, format, and tee times. You'll draw the matchups in Manage once your players are in.</p>
 
             {realCourses.length === 0 ? <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Add at least one course first (Back) - every round needs a course so scores can be calculated.</div> : null}
 
@@ -705,6 +711,17 @@ export default function CreatePage() {
                         {rounds.length > 1 ? <button aria-label="Remove round" onClick={() => setRounds((pr) => pr.filter((_, j) => j !== i))} className="tb-tap-target text-sm font-bold text-slate-400">✕</button> : null}
                       </div>
                       <div className="mt-2 space-y-2">
+                        <div>
+                          <span className="mb-1 block text-xs font-bold text-slate-500">Date</span>
+                          <input
+                            type="date"
+                            className={inp}
+                            min={startDate || undefined}
+                            max={endDate || undefined}
+                            value={roundDateFor(r, i)}
+                            onChange={(e) => setRounds((pr) => pr.map((x, j) => (j === i ? { ...x, date: e.target.value } : x)))}
+                          />
+                        </div>
                         <select className={inp} value={r.courseIdx} onChange={(e) => setRounds((pr) => pr.map((x, j) => (j === i ? { ...x, courseIdx: Number(e.target.value) } : x)))}>
                           {realCourses.map((c, ci) => <option key={ci} value={ci}>{c.name.trim() || `Course ${ci + 1}`}</option>)}
                         </select>
@@ -739,7 +756,7 @@ export default function CreatePage() {
                   );
                 })}
                 <button onClick={() => setRounds((p) => [...p, newRound()])} className="w-full rounded-2xl border-[1.5px] border-dashed border-sand-200 py-3 text-sm font-bold text-slate-500">+ Add another round</button>
-                {rounds.some((r) => r.teeTimes.some((t) => !t.trim()) || !r.arrival.trim()) ? <p className="text-sm text-slate-400">Blank tee/arrival times will be defaulted for now - adjust anytime in Admin.</p> : null}
+                {rounds.some((r) => r.teeTimes.some((t) => !t.trim()) || !r.arrival.trim()) ? <p className="text-sm text-slate-400">Blank tee/arrival times will be defaulted for now - adjust anytime in Manage.</p> : null}
               </div>
             ) : null}
 
@@ -748,7 +765,7 @@ export default function CreatePage() {
               <button onClick={() => setStep(6)} className="rounded-2xl px-4 py-3 text-sm font-bold text-slate-500">Back</button>
               <button onClick={finish} disabled={busy || (setRoundsNow && realCourses.length === 0)} className="flex-1 rounded-2xl bg-accent px-4 py-4 font-black text-ink disabled:opacity-50">{busy ? "Creating…" : "Create Tournament"}</button>
             </div>
-            <button onClick={() => { setSetRoundsNow(false); finish(); }} disabled={busy} className="mt-2 w-full text-center text-sm font-bold text-slate-500 disabled:opacity-50">I&apos;ll set up rounds later in Admin</button>
+            <button onClick={() => { setSetRoundsNow(false); finish(); }} disabled={busy} className="mt-2 w-full text-center text-sm font-bold text-slate-500 disabled:opacity-50">I&apos;ll set up rounds later in Manage</button>
           </div>
         ) : null}
       </div>

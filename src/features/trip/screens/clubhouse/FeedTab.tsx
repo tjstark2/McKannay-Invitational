@@ -9,15 +9,22 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { loadMessages, sendMessage } from "@/lib/supabase/clubhouse";
+import { deleteMessage, editMessage, loadMessages, sendMessage } from "@/lib/supabase/clubhouse";
 import { useTripState } from "@/features/trip/state/TripStateContext";
 import { useAuth } from "@/features/auth/AuthContext";
+import { useViewer } from "@/features/trip/state/ViewerContext";
 import { AvatarWithFrame } from "@/features/cosmetics/AvatarWithFrame";
 import type { TripMessage } from "@/types";
 
 export function FeedTab({ onRead }: { onRead?: () => void }) {
   const { trip, rounds, players } = useTripState();
   const { user } = useAuth();
+  const { canManage } = useViewer();
+  // Comment actions: whose menu is open, a pending delete, an edit in progress.
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [messages, setMessages] = useState<TripMessage[]>([]);
   const [roundFilter, setRoundFilter] = useState<string | "all">("all");
   const [openThread, setOpenThread] = useState<string | null>(null);
@@ -49,7 +56,9 @@ export function FeedTab({ onRead }: { onRead?: () => void }) {
     const channel = supabase.channel(`feed-${trip.id}`);
     channel.on(
       "postgres_changes",
-      { event: "*", schema: "public", table: "trip_messages" },
+      // This tournament only - unfiltered, every comment in every tournament
+      // made everyone's feed reload.
+      { event: "*", schema: "public", table: "trip_messages", filter: `trip_id=eq.${trip.id}` },
       () => load()
     );
     channel.subscribe();
@@ -102,6 +111,33 @@ export function FeedTab({ onRead }: { onRead?: () => void }) {
       /* non-blocking */
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function saveEdit() {
+    const supabase = getSupabaseClient();
+    if (!supabase || !editing || !editing.text.trim()) return;
+    setActionError(null);
+    try {
+      await editMessage(supabase, editing.id, editing.text);
+      setEditing(null);
+      await load();
+    } catch (e: unknown) {
+      setActionError(e instanceof Error ? e.message : "Couldn't edit that comment.");
+    }
+  }
+
+  async function removeComment(id: string) {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    setActionError(null);
+    try {
+      await deleteMessage(supabase, id);
+      setConfirmDelete(null);
+      setMenuFor(null);
+      await load();
+    } catch (e: unknown) {
+      setActionError(e instanceof Error ? e.message : "Couldn't delete that comment.");
     }
   }
 
@@ -200,15 +236,90 @@ export function FeedTab({ onRead }: { onRead?: () => void }) {
                         playerId={p?.id}
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[12px] font-black text-ink">
-                          {nameFor(c.userId)}
-                        </p>
-                        <p className="text-[13px] leading-5 text-slate-600">{c.body}</p>
+                        <div className="flex items-center gap-1">
+                          <p className="text-[12px] font-black text-ink">{nameFor(c.userId)}</p>
+                          {!c.deletedAt && (c.userId === user?.id || canManage) ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setConfirmDelete(null);
+                                setMenuFor(menuFor === c.id ? null : c.id);
+                              }}
+                              aria-label="Comment options"
+                              className="ml-auto px-1 text-sm font-black leading-none text-slate-400"
+                            >
+                              ⋯
+                            </button>
+                          ) : null}
+                        </div>
+                        {editing?.id === c.id ? (
+                          <div className="mt-1 flex gap-1.5">
+                            <input
+                              value={editing.text}
+                              onChange={(e) => setEditing({ id: c.id, text: e.target.value })}
+                              autoFocus
+                              aria-label="Edit comment"
+                              className="min-w-0 flex-1 rounded-lg border-[1.5px] border-sand-200 px-2 py-1 text-[13px] outline-none focus:border-fairway-900"
+                            />
+                            <button type="button" onClick={() => setEditing(null)} className="px-1 text-[12px] font-black text-slate-500">
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={saveEdit}
+                              disabled={!editing.text.trim()}
+                              className="rounded-lg bg-fairway-900 px-2 text-[12px] font-black text-white disabled:opacity-40"
+                            >
+                              Save
+                            </button>
+                          </div>
+                        ) : c.deletedAt ? (
+                          <p className="text-[13px] italic leading-5 text-slate-400">Comment deleted</p>
+                        ) : (
+                          <p className="text-[13px] leading-5 text-slate-600">
+                            {c.body}
+                            {c.editedAt ? <span className="ml-1 text-[11px] text-slate-400">(edited)</span> : null}
+                          </p>
+                        )}
+                        {menuFor === c.id && !editing ? (
+                          <div className="mt-1 flex items-center gap-2">
+                            {confirmDelete === c.id ? (
+                              <>
+                                <span className="text-[12px] font-bold text-slate-500">Delete it?</span>
+                                <button type="button" onClick={() => removeComment(c.id)} className="rounded-full bg-team-north px-2.5 py-0.5 text-[12px] font-black text-white">
+                                  Delete
+                                </button>
+                                <button type="button" onClick={() => setConfirmDelete(null)} className="text-[12px] font-black text-slate-500">
+                                  Keep it
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                {c.userId === user?.id ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditing({ id: c.id, text: c.body });
+                                      setMenuFor(null);
+                                    }}
+                                    className="text-[12px] font-black text-fairway-900"
+                                  >
+                                    Edit
+                                  </button>
+                                ) : null}
+                                <button type="button" onClick={() => setConfirmDelete(c.id)} className="text-[12px] font-black text-team-north">
+                                  Delete
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   );
                 })}
 
+                {actionError ? <p className="text-[12px] font-bold text-red-700">{actionError}</p> : null}
                 <div className="flex gap-2">
                   <input
                     value={draft}

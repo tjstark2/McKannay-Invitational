@@ -1,6 +1,7 @@
 "use client";
 
 import { PRO_FEATURES } from "@/features/pro/proFeatures";
+import { TIME_ZONES } from "@/lib/roundDates";
 import { useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import {
@@ -208,6 +209,32 @@ export function TournamentSettings({
           </div>
 
           <div>
+            <label className={labelClass}>Time zone of the course</label>
+            <select
+              className={inputClass}
+              value={s.timeZone ?? ""}
+              disabled={!canManage}
+              onChange={(e) => {
+                const tz = e.target.value || null;
+                set("timeZone", tz);
+                void save({ timeZone: tz });
+              }}
+            >
+              <option value="">Not set - runs on Eastern</option>
+              {[...TIME_ZONES, ...(s.timeZone && !TIME_ZONES.some((z) => z.id === s.timeZone) ? [{ id: s.timeZone, label: s.timeZone }] : [])].map(
+                (z) => (
+                  <option key={z.id} value={z.id}>
+                    {z.label}
+                  </option>
+                )
+              )}
+            </select>
+            <p className="mt-1 text-[12px] leading-5 text-slate-500">
+              Tee times, scoring opening and the night-before message all run on this clock.
+            </p>
+          </div>
+
+          <div>
             <label className={labelClass}>Join Code</label>
             <div className="flex items-center gap-2 rounded-xl border-[1.5px] border-dashed border-sand-200 bg-[#f7f6f1] px-3 py-2">
               <span className="font-anton text-lg tracking-wider text-ink">{s.joinCode}</span>
@@ -264,11 +291,11 @@ export function TournamentSettings({
       ) : null}
 
 
-      {tab === "courses" ? <CourseHolesTab tripId={tripId} joinCode={joinCode} /> : null}
+      {tab === "courses" ? <div data-tour="mng-panel-courses"><CourseHolesTab tripId={tripId} joinCode={joinCode} /></div> : null}
 
-      {tab === "rounds" ? <RoundsTab tripId={tripId} joinCode={joinCode} /> : null}
+      {tab === "rounds" ? <div data-tour="mng-panel-rounds"><RoundsTab tripId={tripId} joinCode={joinCode} /></div> : null}
 
-      {tab === "teams" ? <TeamsPanel tripId={tripId} /> : null}
+      {tab === "teams" ? <div data-tour="mng-panel-teams"><TeamsPanel tripId={tripId} /></div> : null}
 
       {tab === "basics" && joinCode ? (
         <div className="mt-4 overflow-hidden">

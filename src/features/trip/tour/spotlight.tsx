@@ -59,7 +59,7 @@ export function buildMemberSpotlight(code: string, isPro: boolean): SpotStep[] {
     { path: p, anchor: "nav-clubhouse", title: "Clubhouse", body: "Chat, photos, and a feed of the best and worst moments as they happen." },
   ];
   if (isPro) {
-    steps.push({ path: p, title: "After every round", body: "When your group finishes you'll get a nudge to check your card and vote for the awards. That's what posts your points." });
+    steps.push({ path: p, title: "After every round", body: "When your group finishes you'll get a nudge to check your card and vote on four quick awards. The scores hand out the rest - revealed one at a time once the round closes." });
   }
   steps.push({ path: p, appScreen: "overview", title: "That's it", body: "Good luck out there." });
   return steps;
@@ -75,6 +75,37 @@ export function buildAdminSpotlight(code: string, isPro: boolean): SpotStep[] {
     body: "Rounds open on their own 30 minutes before the first tee and close themselves once everyone's done. You'll be told if a round isn't ready - usually matchups not drawn - and exactly what's missing. Everything else is in Manage.",
   });
   steps.push(last);
+  return steps;
+}
+
+/**
+ * The organizer's setup tour, right after creating a tournament (and from
+ * "Show me around" in Manage). It follows the Manage tabs left to right, which
+ * is the order setup actually happens in, and switches tabs as it goes - the
+ * old one pointed at the Players tab while Manage opened on Basics, so every
+ * step searched, gave up, and showed a floating card.
+ */
+export function buildOrganizerSetup(code: string, name: string, opts: { fromCreate?: boolean } = {}): SpotStep[] {
+  const mng = `/manage/${code}`;
+  const steps: SpotStep[] = [];
+  if (opts.fromCreate) {
+    steps.push({
+      path: "/home",
+      title: `"${name}" is live`,
+      body: "Every tournament you run or join lives here. Two minutes and you'll know how to set the whole thing up.",
+    });
+  }
+  steps.push(
+    { path: mng, adminTab: "basics", anchor: "mng-tabs", title: "Set up runs left to right", body: "Each tab is one step - basics, players, teams, courses, rounds. Do them in order and the trip is ready." },
+    { path: mng, adminTab: "players", anchor: "mng-invite", title: "Get your players in", body: `Invite people by username, or send them the code ${code} - they request in and you approve them right below.` },
+    { path: mng, adminTab: "players", anchor: "mng-requests", title: "Approve who joins", body: "Join requests land here. One tap to let them in. Each player sets their handicap when they join." },
+    { path: mng, adminTab: "teams", anchor: "mng-panel-teams", title: "Pick the teams", body: "Put everyone on a side yourself, or name two captains and run a Captain's Draft. Teams lock once the first round starts." },
+    { path: mng, adminTab: "courses", anchor: "mng-panel-courses", title: "Add each course", body: "Par and stroke index for every hole, from the scorecard you'll actually play. Check them against the real card - strokes land on the wrong holes if one is off." },
+    { path: mng, adminTab: "rounds", anchor: "mng-panel-rounds", title: "Build the rounds", body: "Tee times, the format, and the matchups. The night before, everyone gets their tee time. You'll be warned 12 hours out if anything is missing, and exactly what." },
+    { path: mng, adminTab: "rounds", title: "Then it runs itself", body: "Scoring opens 30 minutes before the first tee and closes once everyone's done - points post, awards go out. You only step in if you want to finish a round early." },
+    { path: mng, adminTab: "players", title: "Share the load", body: "Make a player an admin from their card and they can run rounds and scores with you. You can also hand the whole tournament over with Make owner." },
+    { path: mng, anchor: "mng-enter", title: "That's setup", body: "Enter the tournament to see what your players see. You can replay this from Show me around at the bottom of Manage." },
+  );
   return steps;
 }
 

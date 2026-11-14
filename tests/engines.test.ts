@@ -1014,12 +1014,12 @@ test("billing only goes live when every key is there", () => {
   const all = {
     BILLING_MODE: "live", STRIPE_SECRET_KEY: "sk", STRIPE_WEBHOOK_SECRET: "wh",
     STRIPE_PRICE_PRO: "price_pro", STRIPE_PRICE_BOSS: "price_boss",
-  } as NodeJS.ProcessEnv;
+  } as unknown as NodeJS.ProcessEnv;
   assert.equal(billingEnv(all).live, true);
   assert.equal(billingEnv({ ...all, BILLING_MODE: "preview" }).live, false, "switched off");
   assert.equal(billingEnv({ ...all, STRIPE_WEBHOOK_SECRET: "" }).live, false, "can't take money it can't confirm");
   assert.equal(billingEnv({ ...all, STRIPE_PRICE_BOSS: undefined }).live, false);
-  assert.equal(billingEnv({} as NodeJS.ProcessEnv).live, false, "nothing set is the free preview");
+  assert.equal(billingEnv({} as unknown as NodeJS.ProcessEnv).live, false, "nothing set is the free preview");
 });
 
 test("a webhook is only trusted with the right, recent signature", () => {
@@ -1054,4 +1054,24 @@ test("after paying, people only ever land back inside the app", () => {
   assert.equal(safeReturnPath("//evil.example"), "/home");
   assert.equal(safeReturnPath(undefined), "/home");
   assert.equal(withParam("/choose-avatar?next=/t/X", "upgraded", "boss"), "/choose-avatar?next=/t/X&upgraded=boss");
+});
+
+/* ------------------------------------------------------------ round dates */
+
+import { addDays, dateLabelFor, timeZoneForState } from "../src/lib/roundDates";
+
+test("round dates read like a schedule and roll over months", () => {
+  assert.equal(dateLabelFor("2026-12-10"), "Thu, Dec 10");
+  assert.equal(dateLabelFor(null), "");
+  assert.equal(dateLabelFor("Sept 14"), "", "a free-text label is not a date");
+  assert.equal(addDays("2026-12-31", 1), "2027-01-01");
+  assert.equal(addDays("2026-03-07", 1), "2026-03-08", "across the clocks changing");
+});
+
+test("a tournament's clock comes from where the golf is", () => {
+  assert.equal(timeZoneForState("SC"), "America/New_York");
+  assert.equal(timeZoneForState("ca"), "America/Los_Angeles");
+  assert.equal(timeZoneForState("AZ"), "America/Phoenix", "no daylight saving");
+  assert.equal(timeZoneForState("ZZ"), null);
+  assert.equal(timeZoneForState(null), null);
 });

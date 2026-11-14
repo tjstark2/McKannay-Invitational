@@ -37,7 +37,7 @@ import {
   type RosterPlayer,
 } from "@/lib/supabase/memberships";
 import { handleAndLocation, searchUsers, type PublicProfile } from "@/lib/supabase/friends";
-import { TourHost } from "@/features/trip/tour/spotlight";
+import { TourHost, buildOrganizerSetup, startSpotlightTour } from "@/features/trip/tour/spotlight";
 import { TournamentSettings, type ManageTab, MANAGE_TABS } from "@/features/trip/manage/TournamentSettings";
 import { ProUpsellModal, type UpsellTopic } from "@/features/trip/manage/ProUpsellModal";
 
@@ -67,6 +67,15 @@ export default function ManagePage() {
   const [upsellError, setUpsellError] = useState<string | null>(null);
   // Back from Stripe: ?upgraded=pro (done) or ?upgraded=pending (paid, still landing).
   const [upgradedNote, setUpgradedNote] = useState<string | null>(null);
+  // The setup tour switches tabs as it walks through them.
+  useEffect(() => {
+    const onTab = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail as ManageTab;
+      if (MANAGE_TABS.some((t) => t.id === id)) setMtab(id);
+    };
+    window.addEventListener("tb-tour-admintab", onTab);
+    return () => window.removeEventListener("tb-tour-admintab", onTab);
+  }, []);
   useEffect(() => {
     const v = new URLSearchParams(window.location.search).get("upgraded");
     if (v === "pro") setUpgradedNote("You're Pro. Everyone in this tournament has it now.");
@@ -540,6 +549,7 @@ export default function ManagePage() {
         <button
           type="button"
           onClick={() => router.push(`/t/${trip.joinCode}`)}
+          data-tour="mng-enter"
           className="mt-6 w-full rounded-2xl bg-fairway-900 px-4 py-3.5 font-black text-white"
         >
           Enter Tournament &rsaquo;
@@ -547,7 +557,7 @@ export default function ManagePage() {
       ) : null}
 
       {trip && isOwnerViewer ? (
-        <div className="mt-7 flex gap-1.5 overflow-x-auto pb-1">
+        <div data-tour="mng-tabs" className="mt-7 flex gap-1.5 overflow-x-auto pb-1">
           {MANAGE_TABS.map((t) => (
             <button
               key={t.id}
@@ -828,6 +838,16 @@ export default function ManagePage() {
             await refresh(trip);
           }}
         />
+      ) : null}
+
+      {trip && isOwnerViewer ? (
+        <button
+          type="button"
+          onClick={() => startSpotlightTour(buildOrganizerSetup(trip.joinCode, trip.name))}
+          className="mt-10 w-full rounded-2xl border border-sand-200 bg-white px-4 py-3 text-sm font-black text-fairway-900"
+        >
+          🧭 Show me around
+        </button>
       ) : null}
 
       {/* danger zone - owner only */}

@@ -35,13 +35,9 @@ These are the things that stop you inviting people who are not you.
 
 ## Known incomplete in the app
 
-- **Tutorials are out of date.** The Manage hub, matchup draws, teams and
-  house rules have all changed shape since the walkthroughs were written.
-- **Create-a-tournament flow** does not match how Manage actually behaves now.
 - Coin toss uses team colours and names - teams have no logo field to draw.
 - Landing page has a "Coming soon" block.
 - Pro and Birdie Boss are free until billing is switched on (Bundle F).
-- Feed comments can't be edited or deleted yet (chat can, since Bundle E).
 
 ## Engineering debt
 
@@ -106,6 +102,40 @@ These are the things that stop you inviting people who are not you.
 - The Nest: live block moved to the top, and the Front 9 / Final counters -
   which read 0 of 8 all day on a hole-by-hole round - are replaced by cards
   going and furthest thru while a round is live.
+
+## Bundle G - rounds that run themselves for everyone, setup tour, Feed edits
+
+No SQL.
+
+- **BIG FIX - rounds had no real date.** Nothing in the app set a round's
+  calendar date: Manage had a free-text "Date" label ("Sept 14") and the create
+  flow left it blank. The round engine skips any round without a real date, so
+  for every tournament not set up by hand in SQL, scoring never opened itself,
+  nobody got the night-before or tee warnings, rounds never closed themselves
+  and no awards went out. Now:
+  - Manage, Rounds: a real date picker, with a warning on any round without one.
+  - New rounds default to the day after the last one.
+  - The create flow gives each round a date: day 1, day 2... of the trip, editable.
+- **BIG FIX - every tournament ran on US Eastern time.** The time zone was
+  never set, so a trip in California would open scoring and send tee warnings
+  three hours early. New tournaments take it from the state you enter (or your
+  phone); Manage, Basics has a time zone setting.
+- **Buying Pro switches on hole-by-hole scoring** - the main thing Pro buys -
+  as long as no round has started yet.
+- **The organizer setup tour was broken.** Manage opens on Basics but the tour
+  pointed at the Players tab and couldn't switch, so every step searched and
+  gave up. Rewritten: it walks the Manage tabs in setup order (players, teams,
+  courses, rounds), switching as it goes, and explains that rounds now run
+  themselves. "Show me around" at the bottom of Manage replays it.
+- **Player tour fix:** it said confirming your card "is what posts your
+  points" - untrue since rounds close themselves.
+- **Create flow matches Manage:** says Manage (not Admin), tells you to add
+  each hole's par and stroke index after creating (live scoring needs them),
+  and that matchups are drawn in Manage once players are in.
+- **Feed comments can be edited and deleted**, like chat. The Feed also stops
+  reloading for every comment in every other tournament.
+- Fixed a type error in a Bundle F test (build and deploy were unaffected).
+- 2 more tests, 79 total.
 
 ## Bundle F - payments (needs bundleF_billing.sql first)
 

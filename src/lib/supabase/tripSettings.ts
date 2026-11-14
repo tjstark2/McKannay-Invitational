@@ -22,6 +22,8 @@ export type TripSettings = {
   isPro: boolean;
   scoringMode: ScoringMode;
   wrappedAt: string | null;
+  /** Where the golf is. The round engine opens, warns and closes on this clock. */
+  timeZone: string | null;
 };
 
 /** Round progress - drives the scoring-mode toggle guardrails. */
@@ -38,7 +40,7 @@ export async function loadTripSettings(
   const { data } = await supabase
     .from("trips")
     .select(
-      "id,name,join_code,location,state,dates,lodging_name,lodging_address,logistics_notes,total_points,winning_number,retain_number,is_pro,scoring_mode,wrapped_at"
+      "id,name,join_code,location,state,dates,lodging_name,lodging_address,logistics_notes,total_points,winning_number,retain_number,is_pro,scoring_mode,wrapped_at,time_zone"
     )
     .eq("id", tripId)
     .maybeSingle();
@@ -60,6 +62,7 @@ export async function loadTripSettings(
     isPro: Boolean(t.is_pro),
     scoringMode: ((t.scoring_mode as string) ?? "basic_918") as ScoringMode,
     wrappedAt: (t.wrapped_at as string) ?? null,
+    timeZone: (t.time_zone as string) ?? null,
   };
 }
 
@@ -91,6 +94,7 @@ export type TripSettingsPatch = Partial<{
   winningNumber: number | null;
   retainNumber: number | null;
   scoringMode: ScoringMode;
+  timeZone: string | null;
 }>;
 
 // NOTE: join_code is deliberately NOT updatable - it is display-only once created.
@@ -111,6 +115,7 @@ export async function saveTripSettings(
   if (patch.winningNumber !== undefined) row.winning_number = patch.winningNumber;
   if (patch.retainNumber !== undefined) row.retain_number = patch.retainNumber;
   if (patch.scoringMode !== undefined) row.scoring_mode = patch.scoringMode;
+  if (patch.timeZone !== undefined) row.time_zone = patch.timeZone;
   if (Object.keys(row).length === 0) return { ok: true };
   const { error } = await supabase.from("trips").update(row).eq("id", tripId);
   return error ? { ok: false, error: error.message } : { ok: true };

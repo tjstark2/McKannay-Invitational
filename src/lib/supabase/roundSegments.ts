@@ -36,6 +36,8 @@ export type RoundSetup = {
   courseId: string | null;
   teeId: string | null;
   dateLabel: string;
+  /** The real calendar date (yyyy-mm-dd) the engine runs the round on. */
+  roundDate: string | null;
   arrivalTime: string;
   format: string;
   groupSize: number | null;
@@ -68,7 +70,7 @@ export async function loadRoundSetups(
     // Every column mapped below has to be listed here. started_at and
     // finished_at were missing, so a started round always read back as "not
     // started" - the Start round button worked, but the tab never showed it.
-    .select("id,round_number,title,holes_count,nine,course_id,tee_id,started_at,finished_at,format,group_size,date_label,arrival_time,tee_times(id,tee_time,tee_time_players(player_id))")
+    .select("id,round_number,title,holes_count,nine,course_id,tee_id,started_at,finished_at,format,group_size,date_label,round_date,arrival_time,tee_times(id,tee_time,tee_time_players(player_id))")
     .eq("trip_id", tripId)
     .order("round_number");
   const list = (rounds ?? []) as Record<string, unknown>[];
@@ -111,6 +113,7 @@ export async function loadRoundSetups(
       courseId: (r.course_id as string) ?? null,
       teeId: (r.tee_id as string) ?? null,
       dateLabel: (r.date_label as string) ?? "",
+      roundDate: r.round_date ? String(r.round_date).slice(0, 10) : null,
       arrivalTime: (r.arrival_time as string) ?? "",
       format: (r.format as string) ?? "best_ball",
       groupSize: (r.group_size as number) ?? null,

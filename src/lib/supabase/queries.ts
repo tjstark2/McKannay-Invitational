@@ -841,6 +841,8 @@ export async function insertRound(
     roundNumber: number;
     title: string;
     dateLabel: string;
+    /** The real date (yyyy-mm-dd) - what the round engine runs on. */
+    roundDate?: string | null;
     courseId: string;
     format: Round["format"];
     groupSize?: number | null;
@@ -856,6 +858,7 @@ export async function insertRound(
       round_number: round.roundNumber,
       title: round.title,
       date_label: round.dateLabel,
+      round_date: round.roundDate ?? null,
       format: round.format,
       group_size: round.groupSize ?? null,
       points_available: round.pointsAvailable,

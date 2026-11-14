@@ -44,6 +44,7 @@ export async function grant(admin: SupabaseClient, g: Grant): Promise<boolean> {
       .eq("id", g.tripId!)
       .eq("is_pro", false)
       .select("id");
+    if (!error && data?.length) await switchOnLiveScoring(admin, g.tripId!);
     // Already Pro counts as granted.
     return !error && (Boolean(data?.length) || (await isPro(admin, g.tripId!)));
   }
@@ -52,6 +53,21 @@ export async function grant(admin: SupabaseClient, g: Grant): Promise<boolean> {
     .update({ is_birdie_boss: true, birdie_boss_since: now })
     .eq("id", g.userId);
   return !error;
+}
+
+/**
+ * Hole-by-hole live scoring is the main thing Pro buys, so turn it on - but
+ * only before the first round starts. Switching scoring mode mid-trip would
+ * strand the scores already entered.
+ */
+async function switchOnLiveScoring(admin: SupabaseClient, tripId: string): Promise<void> {
+  const { count } = await admin
+    .from("rounds")
+    .select("id", { count: "exact", head: true })
+    .eq("trip_id", tripId)
+    .not("started_at", "is", null);
+  if ((count ?? 0) > 0) return;
+  await admin.from("trips").update({ scoring_mode: "hole_by_hole" }).eq("id", tripId);
 }
 
 export async function isPro(admin: SupabaseClient, tripId: string): Promise<boolean> {
